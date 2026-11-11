@@ -1,8 +1,6 @@
-# Current project status — 10 November 2026
+# Current project status — 11 November 2026
 
-> Update11November2026: a real Vercel deployment failed with `Invalid export` because Express auto-detected the named-only app factory, and direct `/login` returned404. The repair adds a valid default/lazy Express entry and Services SPA routing. Local server checks passed227tests; see [incident evidence](login-deployment-incident-2026-11-11.md). The earlier local test results below never proved this deployment was working. Live replacement-deployment verification is recorded separately.
-
-> Authorized deployment update: `0f9d467` is pushed to GitHub `main` and Vercel reports deployment success. Live `/login` and `/health/live` now return200. Readiness/auth capabilities then exposed an invalid `IMAGEKIT_PRIVATE_POLICY_VERIFIED` setting; the names-only owner log confirmed it. The follow-up code disables private uploads for malformed optional flag values without blocking authentication initialization. Production database/login/provider checks remain pending until readiness succeeds. The original GitHub Actions `check:isolated` step failed remotely; anonymous logs do not identify the failed submode, and local test passes do not override that evidence.
+> Update 11 November 2026: the login incident is resolved on the deployed site. Commit `5eb0c0f` is pushed to GitHub `main`, Vercel deployment succeeded, and all public startup/login probes return200. The owner explicitly confirmed that existing-account login and page refresh both work. The new GitHub CI run passed all checks. Repairs cover the default Express export, Services SPA deep links, and malformed optional ImageKit privacy flags that previously blocked authentication. Only exact `true` enables private uploads. See [incident evidence and remaining provider checks](login-deployment-incident-2026-11-11.md).
 
 The latest owner request targets GitHub and Vercel, preserves the existing JavaScript/local-JWT/MongoDB/ImageKit project and forbids environment-file/outside-workspace access. Earlier Render/provider reports are historical. This review used no configured customer database or provider credentials in its tests.
 
@@ -18,7 +16,7 @@ The latest owner request targets GitHub and Vercel, preserves the existing JavaS
 
 ## Verification
 
-Current full run: **221 server tests and189 client tests passed**, including disposable local MongoDB transaction/ownership/concurrency tests. Chrome customization, pagination and real local-JWT/customer/admin order-and-quote journeys passed. Linters/builds passed. Source-only credential-pattern check reported no findings while intentionally excluding all environment files. See [verification](review-verification.md) for exact commands/artifacts, initial failures and limits.
+Current local full run: **230 server tests and189 client tests passed**, including disposable MongoDB transaction/ownership/concurrency tests. Earlier Chrome customization, pagination and real local-JWT/customer/admin order-and-quote journeys passed. Current GitHub CI passed both linters, test suites, builds, source scan and production dependency audits. Live readiness confirms configured MongoDB connection/startup indexes; the owner verified login/refresh. Source-only credential-pattern check reported no findings in225files while intentionally excluding all environment files. See [verification](review-verification.md) for earlier commands/artifacts and [incident evidence](login-deployment-incident-2026-11-11.md) for the latest deployment.
 
 Local load fixture:1000 requests,20 concurrent clients,0 errors; about 1542 requests/s and19.42ms p95 on loopback. This does not measure production/database/provider capacity. See [capacity plan](capacity-plan.md).
 
@@ -33,16 +31,17 @@ The earlier server-format sweep was not retried after its rejection. Formatting 
 | Area | Status | Remaining action |
 |---|---|---|
 | Local auth, drafts, pricing, orders, ownership, commerce | Verified | Repeat deployed staging smoke and operational policies |
-| Live production Atlas connectivity/limits | Implemented but unverified | Operator supplies/verifies hosting configuration and production network/indexes |
+| Live production MongoDB connection/startup indexes | Verified | Live readiness200; capacity, full transactions and backup/restore remain unverified |
 | Live ImageKit upload/delivery/private access policy | Implemented but unverified | Verify actual originals/transforms/owner/other-user/expiry; historical47asset import is not a fresh test |
 | Actual reset email/inbox/Google origins | Implemented but unverified | Operator checks optional configuration and performs live smoke; no secret was inspected |
-| Required Vercel variables/domain/commercial plan | Missing configuration | Enter settings in the owner-controlled project; existing local values are uninspected |
-| Deployed route/package/restart/privacy/backup/restore/alerts | Production blocker | Authorized staging deployment, recorded smoke/restore rehearsal and monitoring ownership |
+| Required Vercel startup variables/domain | Verified for current startup | Clean up malformed optional policy flag privately; commercial plan and provider settings still need operator review |
+| Deployed routes/login/refresh | Verified | Public probes200 and owner's existing-account browser confirmation |
+| Private-provider policy/backup/restore/alerts | Production blocker | Recorded provider/restore smoke and monitoring ownership still required |
 | Imported draft applicability/prices/compatibility and body guides | Production blocker | Owner approval/correct guidance before enabling those customer choices |
 | Commercial benefits terms/accounting/production reconciliation | Production blocker for enabling benefits | Keep disabled until owner rules and live smoke are approved |
 | Full screen-reader/language copy audit and dev advisory patch | Optional improvement | Complete wider device/content review and supported tooling update |
 
-GitHub source preparation is complete; no remote push/publish is implied. The frontend/backend are prepared for a Vercel preview. A real-customer launch still requires the external/operational gates above. See [deployment](deployment-vercel.md), [readiness](production-readiness.md), [matrix](requirement-matrix.md), [plan](production-plan.md) and [commerce](commerce.md).
+The authorized GitHub push and Vercel redeployment are complete; deployed login/refresh are verified. A real-customer launch still requires the remaining external/operational gates above. See [deployment](deployment-vercel.md), [readiness](production-readiness.md), [matrix](requirement-matrix.md), [plan](production-plan.md) and [commerce](commerce.md).
 
 ## Historical evidence
 

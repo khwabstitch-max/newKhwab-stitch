@@ -2,11 +2,11 @@
 
 ## Current deployment and incident status
 
-The owner pushed `main` at commit `0f9d467` and Vercel successfully deployed it on 11 November 2026. Public checks of `https://newkhwab-stitch.vercel.app` verify HTML 200 for `/login` and JSON 200 for `/health/live`. Readiness and auth capabilities still return JSON 503 `CONFIGURATION_INVALID`. The owner's safe runtime log identifies `IMAGEKIT_PRIVATE_POLICY_VERIFIED`; configuration validation stops before MongoDB connection or credential verification.
+Commit `5eb0c0fd8a9e0332b11bd889054c8c10f8762f60` is pushed to `main` and Vercel reports successful deployment. At `2026-11-11T09:36:59.967Z`, public GETs of `https://newkhwab-stitch.vercel.app` returned 200 for `/`, `/login`, `/health/live`, `/health/ready` and `/api/auth/capabilities`. Liveness reports `alive`; readiness reports `ready`, verifying configuration, the configured MongoDB connection and required startup indexes.
 
-The latest local repair disables private uploads when this optional flag is missing or malformed, without blocking authentication startup. Only the exact string `true` enables the private-upload gate. A malformed value produces a names-only operational warning; it never enables private storage. This repair is implemented and locally tested but not yet verified on the deployed site. Actual account login, production Atlas, ImageKit delivery privacy and email remain unverified. See the [incident record](login-deployment-incident-2026-11-11.md).
+The deployed repair prevents a missing or malformed optional `IMAGEKIT_PRIVATE_POLICY_VERIFIED` flag from blocking authentication startup. Only the exact string `true` enables new private uploads. Malformed values disable them and produce a names-only warning. The owner confirmed successful existing-account login and page refresh on this deployment. This is owner verification, not an agent password test. Live logout/reset, database transactions, ImageKit delivery privacy and email remain unverified. See the [incident record](login-deployment-incident-2026-11-11.md).
 
-Earlier deployment failures were distinct: Vercel selected an Express factory module without a default application export, and direct `/login` navigation lacked an SPA fallback. The current explicit entry and frontend service routes fix those failures; successful public liveness does not prove application readiness.
+Earlier failures included an invalid Express export, missing SPA fallback and strict rejection of the optional policy flag. Those startup/routing failures no longer reproduce in the latest public probe. Additional API checks verified trusted-origin login preflight 204, untrusted-origin 403 `ORIGIN_FORBIDDEN` and empty login 400 `VALIDATION_ERROR`; none submitted credentials. Complete business/provider workflows remain separate checks.
 
 ## Exact current settings
 
@@ -77,7 +77,7 @@ Preview URLs need exact trusted origins. Prefer a stable preview alias rather th
 
 ## Database and migration order
 
-1. Confirm the intended staging/production database, restricted user and Vercel network access privately. Production Atlas connectivity is unverified. Review stable egress or private networking where available; do not treat an unrestricted network allowlist as a permanent security strategy.
+1. Current readiness verifies connection to the configured MongoDB database and required startup indexes. Independently confirm database identity, restricted user, network policy and transaction behavior before launch. Review stable egress or private networking where available; do not treat an unrestricted network allowlist as a permanent security strategy.
 2. Back up and rehearse restoration to a separate restricted database. Mongo metadata does not back up ImageKit image bytes. Confirm actual retention, recovery targets and media recovery procedures.
 3. From a trusted operator terminal with the intended environment, run `npm --prefix server run db:indexes`. Review backups and legacy credential constraints first. The tool creates required indexes; startup deliberately fails closed if critical indexes are absent. Do not seed production.
 4. Register and independently verify the owner's account, then run `npm --prefix server run admin:provision -- owner@example.com`. Sign in again after promotion. There is no default admin/password or public promotion endpoint.
@@ -85,13 +85,13 @@ Preview URLs need exact trusted origins. Prefer a stable preview alias rather th
 6. Review optional legacy-option migration plans separately. Sleeve length is free in new estimates; do not rewrite historical accepted prices.
 7. Keep commerce programmes disabled until owner-approved terms and deployed finance reconciliation checks pass. Fixture prices are not business prices.
 
-## Current verification and next deployment
+## Current verification and deployment smoke checks
 
-The latest local repair passed 230 server tests, including the privacy-gate/configuration regressions, plus server lint and source validation. Historical broader evidence includes 189 client tests and three isolated Chrome journeys. These use disposable MongoDB and mocked providers, not production credentials.
+The [latest GitHub CI run](https://github.com/khwabstitch-max/newKhwab-stitch/actions/runs/42996486297) passed both linters, 230 server tests, 189 client tests, both builds, source checks and both production dependency audits for `5eb0c0f`. Tests use disposable MongoDB and provider mocks. Three earlier isolated Chrome journeys are separate local evidence. Public readiness now verifies the deployed MongoDB connection/index startup, not full transaction or provider behavior.
 
-For commit `0f9d467`, GitHub Actions passed checkout, Node setup and dependency installation, then failed `npm run check:isolated`; later source/audit steps were skipped. Public logs/artifact downloads require owner authentication, so the failing subcheck is not established. Download the `isolated-check-reports` artifact from the [actual failed job](https://github.com/khwabstitch-max/newKhwab-stitch/actions/runs/42991978077/job/130426800687), inspect the failing report and rerun CI after the repair. A successful Vercel deployment did not validate every CI check.
+The earlier `0f9d467` run failed `check:isolated`; its precise failing subcheck was not available anonymously. That historical failure is superseded by the passing current run. Individual CI steps now expose which check fails.
 
-After deploying the reviewed repair, run:
+After each replacement deployment, repeat:
 
 ```powershell
 node scripts/probe-live.mjs https://newkhwab-stitch.vercel.app
@@ -99,7 +99,7 @@ node scripts/probe-live.mjs https://newkhwab-stitch.vercel.app
 
 This makes public GET requests only. Expect homepage/login HTML 200, liveness JSON 200, and readiness/auth capabilities JSON 200 when remaining configuration, database connectivity and indexes are correct. A request ID identifies the matching safe runtime log. Correct only the named setting or diagnosed stage; do not weaken authentication or index requirements.
 
-Then use authorized isolated accounts to verify signup/duplicate/wrong/correct login, refresh/navigation, temporary failures, logout revocation, real recovery email and single-use reset. Verify guest customization through explicit submission, current quote acceptance, history/tracking, admin CRUD, private uploads/owner isolation, replacement/archive protection, worker access and support flows. Confirm persistence after another deployment. Public health success alone does not verify these workflows.
+Existing-account login and refresh are owner-confirmed. Use authorized isolated accounts to complete signup/duplicate/wrong-password, temporary-failure, logout-revocation, real recovery-email and single-use reset checks. Verify guest customization through explicit submission, current quote acceptance, history/tracking, admin CRUD, private uploads/owner isolation, replacement/archive protection, worker access and support flows. Confirm persistence after another deployment. Public health success alone does not verify these workflows.
 
 Record actual results and request IDs without credentials, signed image URLs or reset links. Live customer launch remains blocked until deployed authentication, provider privacy/recovery, approved business content and operational recovery checks pass.
 
