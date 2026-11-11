@@ -81,11 +81,18 @@ export function createApp(context) {
   app.get("/health/live", (_req, res) =>
     res.json({ data: { status: "alive" } }),
   );
-  app.get("/health/ready", (_req, res) =>
+  app.get("/health/ready", async (_req, res) => {
+    let ready = false;
+    try {
+      ready = Boolean(await context.dbReady());
+    } catch {
+      // Readiness is deliberately a safe boolean, never a raw provider error.
+    }
     res
-      .status(context.dbReady() ? 200 : 503)
-      .json({ data: { status: context.dbReady() ? "ready" : "unavailable" } }),
-  );
+      .set("Cache-Control", "no-store")
+      .status(ready ? 200 : 503)
+      .json({ data: { status: ready ? "ready" : "unavailable" } });
+  });
   registerRoutes(app, { ...context, limitHandler });
   app.use((_req, _res, next) =>
     next(new AppError(404, "NOT_FOUND", "This API endpoint does not exist.")),

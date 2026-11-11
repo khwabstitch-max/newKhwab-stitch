@@ -4,6 +4,7 @@ import pino from "pino";
 import { loadConfig } from "./config.js";
 import { models, transaction } from "./models.js";
 import { imageProvider } from "./imagekit.js";
+import { databaseReady } from "./database-health.js";
 import { createApp } from "./app.js";
 import { assertCredentialIndexes } from "./index-migration.js";
 import { assertGoogleIndexes } from "./routes-google.js";
@@ -32,7 +33,7 @@ const app = createApp({
   models,
   transaction,
   images: imageProvider(config),
-  dbReady: () => mongoose.connection.readyState === 1,
+  dbReady: () => databaseReady(mongoose.connection),
 });
 let server;
 if (!process.env.VERCEL) {

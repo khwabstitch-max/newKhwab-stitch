@@ -1,6 +1,7 @@
 import { t, getLocale } from "../i18n/core";
 let tokenProvider = () => null;
 let unauthorizedHandler = () => {};
+const retryablePublicPaths = new Set(["/settings", "/designs", "/reviews"]);
 export const setUnauthorizedHandler = (handler) => {
   unauthorizedHandler = handler;
 };
@@ -24,6 +25,7 @@ export async function api(
     signal,
     timeout = 75000,
     auth = true,
+    publicRead = false,
   } = {},
 ) {
   const token = auth ? tokenProvider() : null;
@@ -32,25 +34,44 @@ export async function api(
   signal?.addEventListener("abort", abort, { once: true });
   if (signal?.aborted) controller.abort();
   const timer = setTimeout(abort, timeout);
+  // Anonymous public reads may make one extra attempt within the same deadline.
+  const retryAllowed =
+    publicRead && auth === false && method === "GET" &&
+    retryablePublicPaths.has(path.split("?")[0]);
+  const canRetry = () =>
+    retryAllowed && !controller.signal.aborted &&
+    globalThis.navigator?.onLine !== false;
   try {
-    const response = await fetch(
-      `${(import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "")}${path}`,
-      {
-        method,
-        credentials: "omit",
-        signal: controller.signal,
-        headers: {
-          ...(body && !(body instanceof FormData)
-            ? { "Content-Type": "application/json" }
-            : {}),
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...headers,
-        },
-        ...(body
-          ? { body: body instanceof FormData ? body : JSON.stringify(body) }
+    const url = `${(import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "")}${path}`;
+    const request = {
+      method,
+      credentials: "omit",
+      signal: controller.signal,
+      headers: {
+        ...(body && !(body instanceof FormData)
+          ? { "Content-Type": "application/json" }
           : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
       },
-    );
+      ...(body
+        ? { body: body instanceof FormData ? body : JSON.stringify(body) }
+        : {}),
+    };
+    let response;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        response = await fetch(url, request);
+      } catch (error) {
+        if (attempt === 0 && error instanceof TypeError && canRetry()) continue;
+        throw error;
+      }
+      if (attempt === 0 && [502, 503, 504].includes(response.status) && canRetry()) {
+        response.body?.cancel().catch(() => {});
+        continue;
+      }
+      break;
+    }
     const contentType = response.headers.get("content-type") || "";
     let data = null;
     if (contentType.includes("application/json")) {

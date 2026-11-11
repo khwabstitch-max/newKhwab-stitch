@@ -19,6 +19,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 describe("API authentication and mutation safety", () => {
@@ -159,5 +160,103 @@ describe("API authentication and mutation safety", () => {
   it("retains exact paise in accepted-price displays", () => {
     expect(money(12345)).toContain("123.45");
     expect(money(10000)).toContain("100");
+  });
+});
+
+describe("explicit anonymous public-read recovery", () => {
+  const publicRead = { publicRead: true, auth: false };
+  it("does not consult a private token provider for an opted-in public read", async () => {
+    const tokens = vi.fn(() => { throw new Error("Private storage unavailable"); });
+    setTokenProvider(tokens);
+    fetch.mockResolvedValue(json({ data: [] }));
+    await expect(api("/designs?limit=3", publicRead)).resolves.toEqual({ data: [] });
+    expect(tokens).not.toHaveBeenCalled();
+    expect(fetch.mock.calls[0][1].headers).not.toHaveProperty("Authorization");
+  });
+  it("recovers from one fetch transport failure without sending a saved JWT", async () => {
+    setTokenProvider(() => "saved-private-token");
+    fetch.mockRejectedValueOnce(new TypeError("connection reset"))
+      .mockResolvedValue(json({ data: [{ _id: "published-design" }] }));
+    await expect(api("/designs?limit=3", publicRead)).resolves.toMatchObject({ data: [{ _id: "published-design" }] });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    for (const [, options] of fetch.mock.calls) {
+      expect(options.headers).not.toHaveProperty("Authorization");
+      expect(options.credentials).toBe("omit");
+    }
+  });
+  it.each([502, 503, 504])("recovers once from public HTTP%s", async (status) => {
+    fetch.mockResolvedValueOnce(json({ error: { message: "Temporary gateway failure" } }, status))
+      .mockResolvedValue(json({ data: [] }));
+    await expect(api("/reviews?limit=3", publicRead)).resolves.toEqual({ data: [] });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+  it("stops after two transport failures and preserves the honest error state", async () => {
+    fetch.mockRejectedValue(new TypeError("connection reset"));
+    await expect(api("/designs", publicRead)).rejects.toMatchObject({ code: "NETWORK_ERROR" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+  it("stops after two public gateway failures with the final HTTP status", async () => {
+    fetch.mockResolvedValue(json({ error: { code: "DATABASE_UNAVAILABLE", message: "Temporarily unavailable" } }, 503));
+    await expect(api("/settings", publicRead)).rejects.toMatchObject({ status: 503, code: "DATABASE_UNAVAILABLE" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+  it.each([400, 401, 403, 404, 409, 429])("does not replay public HTTP%s", async (status) => {
+    fetch.mockResolvedValue(json({ error: { message: "Request rejected" } }, status));
+    await expect(api("/designs", publicRead)).rejects.toMatchObject({ status });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it.each(["/me", "/orders", "/auth/capabilities"])("does not apply public recovery to %s", async (path) => {
+    fetch.mockRejectedValue(new TypeError("connection reset"));
+    await expect(api(path, publicRead)).rejects.toMatchObject({ code: "NETWORK_ERROR" });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("requires explicit anonymous opt-in for a public endpoint", async () => {
+    fetch.mockRejectedValue(new TypeError("connection reset"));
+    await expect(api("/designs")).rejects.toMatchObject({ code: "NETWORK_ERROR" });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("never replays a mutation even if public recovery was mistakenly requested", async () => {
+    fetch.mockRejectedValue(new TypeError("connection reset"));
+    await expect(api("/designs", { ...publicRead, method: "POST", body: { title: "Test" } })).rejects.toMatchObject({ code: "NETWORK_ERROR" });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("does not retry while the browser reports offline", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    fetch.mockRejectedValue(new TypeError("offline"));
+    await expect(api("/settings", publicRead)).rejects.toMatchObject({ code: "NETWORK_ERROR" });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("does not retry a cancelled request even if fetch rejects with TypeError", async () => {
+    const controller = new AbortController();
+    fetch.mockImplementation(() => {
+      controller.abort();
+      return Promise.reject(new TypeError("cancelled transport"));
+    });
+    await expect(api("/designs", { ...publicRead, signal: controller.signal })).rejects.toBeInstanceOf(ApiError);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("shares one total timeout across both attempts", async () => {
+    vi.useFakeTimers();
+    let rejectFirst;
+    fetch.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectFirst = reject; }))
+      .mockImplementationOnce((_url, { signal }) => new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+      }));
+    const request = api("/settings", { ...publicRead, timeout: 100 });
+    const rejection = expect(request).rejects.toThrow("taking longer");
+    await vi.advanceTimersByTimeAsync(90);
+    rejectFirst(new TypeError("connection reset"));
+    await vi.advanceTimersByTimeAsync(9);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch.mock.calls[1][1].signal).toBe(fetch.mock.calls[0][1].signal);
+    expect(fetch.mock.calls[1][1].signal.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await rejection;
+    expect(fetch.mock.calls[1][1].signal.aborted).toBe(true);
+  });
+  it("does not retry an invalid successful JSON response", async () => {
+    fetch.mockResolvedValue({ ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => { throw new SyntaxError("Malformed response"); } });
+    await expect(api("/settings", publicRead)).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

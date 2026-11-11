@@ -4,6 +4,7 @@ import { loadConfig } from "./config.js";
 import { createModels, transaction } from "./models.js";
 import { createApp } from "./app.js";
 import { imageProvider } from "./imagekit.js";
+import { databaseReady } from "./database-health.js";
 import { assertCredentialIndexes } from "./index-migration.js";
 import { assertEnhancementIndexes } from "./enhancement-indexes.js";
 import { assertGoogleIndexes } from "./routes-google.js";
@@ -25,6 +26,6 @@ export const getApplication = createApplicationLoader(async()=>{
   await startupStep("feature_indexes",()=>assertEnhancementIndexes(models));
   if(config.GOOGLE_CLIENT_ID)await startupStep("google_indexes",()=>assertGoogleIndexes(models));
   await startupStep("deployment_indexes",()=>assertDeploymentIndexes(models));
-  return startupStep("application",()=>createApp({config:{...config,SERVERLESS:true},models,transaction,images:imageProvider(config),logger:pino({level:config.LOG_LEVEL}),dbReady:()=>mongoose.connection.readyState===1}));
+  return startupStep("application",()=>createApp({config:{...config,SERVERLESS:true},models,transaction,images:imageProvider(config),logger:pino({level:config.LOG_LEVEL}),dbReady:()=>databaseReady(mongoose.connection)}));
 });
 export default createServerlessHandler(getApplication);

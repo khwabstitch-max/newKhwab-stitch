@@ -1,6 +1,6 @@
-﻿import { createContext, useContext, useEffect, useState } from "react";
+﻿import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { api } from "./api";
-export function useResource(path) {
+export function useResource(path, { publicRead = false } = {}) {
   const [state, setState] = useState({
     data: null,
     pagination: null,
@@ -8,14 +8,19 @@ export function useResource(path) {
     error: "",
   });
   const [revision, setRevision] = useState(0);
+  const failed = useRef(false);
   useEffect(() => {
     const controller = new AbortController();
+    failed.current = false;
     setState((s) => ({ ...s, loading: true, error: "" }));
     if (!path) {
       setState({ data: null, loading: false, error: "" });
       return;
     }
-    api(path, { signal: controller.signal })
+    api(path, {
+      signal: controller.signal,
+      ...(publicRead ? { publicRead: true, auth: false } : {}),
+    })
       .then((r) => {
         if (!controller.signal.aborted)
           setState({
@@ -26,11 +31,32 @@ export function useResource(path) {
           });
       })
       .catch((e) => {
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
+          failed.current = e.status === 0 || [502, 503, 504].includes(e.status);
           setState((s) => ({ ...s, loading: false, error: e }));
+        }
       });
     return () => controller.abort();
-  }, [path, revision]);
+  }, [path, revision, publicRead]);
+  useEffect(() => {
+    if (!path || !publicRead) return;
+    let wasOffline = navigator.onLine === false;
+    const offline = () => { wasOffline = true; };
+    const online = () => {
+      if (!wasOffline || navigator.onLine === false) return;
+      wasOffline = false;
+      if (failed.current) {
+        failed.current = false;
+        setRevision((value) => value + 1);
+      }
+    };
+    window.addEventListener("offline", offline);
+    window.addEventListener("online", online);
+    return () => {
+      window.removeEventListener("offline", offline);
+      window.removeEventListener("online", online);
+    };
+  }, [path, publicRead]);
   return { ...state, reload: () => setRevision((r) => r + 1) };
 }
 const defaults = {
@@ -46,7 +72,7 @@ const defaults = {
 };
 const SiteContext = createContext(defaults);
 export function SiteProvider({ children }) {
-  const { data } = useResource("/settings");
+  const { data } = useResource("/settings", { publicRead: true });
   return (
     <SiteContext.Provider value={{ ...defaults, ...data }}>
       {children}

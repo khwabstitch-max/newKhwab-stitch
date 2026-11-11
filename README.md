@@ -14,6 +14,8 @@ CI follow-up: the docs-only `60626a4` rerun exposed an exact-copy test clicking 
 
 The deployed repair treats malformed optional private-policy values as disabled; only exact `true` enables private uploads. The owner confirmed that existing-account login and page refresh both work on this deployment; no password was shared with or tested by the agent. Live transactions, private ImageKit delivery, email, logout/reset, backup/restore and full customer workflows remain unverified. No environment files were accessed. See [project status](docs/project-status.md), [verification](docs/review-verification.md), [deployment incident](docs/login-deployment-incident-2026-11-11.md) and [readiness](docs/production-readiness.md).
 
+Home-collection recovery now explicitly uses anonymous public reads, with one additional attempt after a transient failure and recovery after reconnect. Private requests and mutations keep their existing retry rules. The native MongoDB readiness probe also avoids stale-heartbeat false negatives. The latest local suites passed 234 server and 219 client tests; see the [collection incident evidence and live-probe commands](docs/collection-network-incident-2026-11-11.md) and exact per-commit Actions result.
+
 ## Structure
 
 | Path | Responsibility |

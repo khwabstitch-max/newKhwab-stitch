@@ -6,6 +6,9 @@ The latest owner request targets GitHub and Vercel, preserves the existing JavaS
 
 ## Verified changes
 
+- Home collection/settings/reviews now use explicit anonymous public reads with one bounded transient retry and failed-read recovery after reconnect. Private requests, mutations, cancellation and rejected requests keep their existing semantics. A controlled Chrome connection reset reproduced the original home error on the old deployment. The replacement behavior and original-device confirmation are tracked in the [collection incident](collection-network-incident-2026-11-11.md).
+- Readiness now awaits one bounded native MongoDB ping with `no-store`; it no longer treats Mongoose's stale serverless heartbeat heuristic as a failed database operation. This is a separate diagnostic fix from the browser transport failure.
+
 - Reproduced and fixed valid-session credential401 logout, transient verification retry redirect, stale profile overwrite, delayed local logout and malformed profile acceptance. Protected routes wait for verification; transient failures preserve the token and open form state.
 - Fixed static guide images/prices overriding live admin catalogue data, unknown publication statuses leaking into selectors/pricing, reference gallery fetch/branching, inaccurate three-quarter illustration matching, and mixed loading/error/empty states. Added explicit refetch. No hardcoded business option was inserted.
 - Sleeve length remains free, included components are not charged twice, and the requested test-only ₹300 + ₹50 + ₹0 + ₹30 + ₹20 subtotal is ₹400. Legacy option repair defaults to an offline plan and never auto-publishes imported drafts.
@@ -15,6 +18,8 @@ The latest owner request targets GitHub and Vercel, preserves the existing JavaS
 - Preserved logo, supplied photos, ivory/teal/champagne/charcoal tokens, Hindi/English mechanisms and reduced-motion/touch/focus behavior. Split framework/icon bundles for caching and a smaller main production chunk.
 
 ## Verification
+
+Latest collection-recovery local runs: **234 server tests and 219 client tests passed**, plus lint/build checks. The client suite used one worker to respect local memory limits. Exact hosted CI and browser fault-recovery evidence are linked in the collection incident report; earlier results below are retained as the login/pricing baseline.
 
 Current local full runs: **230 server tests and190 client tests passed**, including disposable MongoDB transaction/ownership/concurrency tests and deferred current-estimate readiness. The client suite used one worker after an earlier parallel run exhausted local memory. Earlier Chrome customization, pagination and real local-JWT/customer/admin order-and-quote journeys passed. The passing `5eb0c0f` CI baseline covered both linters, test suites, builds, source scan and production dependency audits; inspect [Actions](https://github.com/khwabstitch-max/newKhwab-stitch/actions) for the exact deployed commit's checks. Live readiness confirms configured MongoDB connection/startup indexes; the owner verified login/refresh. Source-only credential-pattern check reported no findings in225files while intentionally excluding all environment files. See [verification](review-verification.md) for earlier commands/artifacts and [incident evidence](login-deployment-incident-2026-11-11.md) for the deployment and subsequent CI race repair.
 

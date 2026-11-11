@@ -28,7 +28,7 @@ export function ErrorMessage({ message, retry }) {
       <div>
         {translateError(message)}
         {retry && (
-          <button className="text-button" onClick={retry}>
+          <button type="button" className="text-button" onClick={retry}>
             {t("Try again")}
           </button>
         )}

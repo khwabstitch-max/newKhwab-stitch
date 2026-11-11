@@ -4,6 +4,8 @@ A successful build or deployment is not a launch decision. Status terms: **Verif
 
 ## Deployment status on 11 November 2026
 
+The collection-network follow-up adds explicit anonymous public-read recovery and a native MongoDB readiness probe. Its local suites passed 234 server and 219 client tests, plus lint/build checks. The earlier deployment/account evidence below remains historical; exact follow-up CI and browser fault-injection results are tracked in the [collection incident](collection-network-incident-2026-11-11.md) and per-commit Actions checks. The original signed-in browser's transport trigger is not established by anonymous browser tests.
+
 Commit `5eb0c0f` is pushed to `main` and Vercel reports successful deployment. The public probe at `2026-11-11T09:36:59.967Z` returned 200 for `/`, `/login`, `/health/live`, `/health/ready` and `/api/auth/capabilities`. Liveness reports `alive`; readiness reports `ready`, verifying configured MongoDB connection and required startup indexes.
 
 The deployed optional-policy repair defaults malformed values to disabled. Only exact `true` enables private uploads; disabled private uploads stop before ImageKit. The passing `5eb0c0f` CI baseline covered 230 server tests, 189 client tests, both linters/builds, source checks and production audits. The owner confirmed existing-account login and refresh work on this deployment; the agent did not receive or submit a password. Live logout/reset, transactions, ImageKit privacy and email remain unverified.

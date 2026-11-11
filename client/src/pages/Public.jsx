@@ -88,7 +88,7 @@ export function DesignCard({ design, index = 0 }) {
 export function Home() {
   useLanguage();
   const site = useSite();
-  const { data, loading, error, reload } = useResource("/designs?limit=3");
+  const { data, loading, error, reload } = useResource("/designs?limit=3", { publicRead: true });
   return (
     <>
       <section className="hero">
@@ -460,7 +460,7 @@ function HomeResume() {
   );
 }
 function SelectedReviews() {
-  const { data } = useResource("/reviews?limit=3");
+  const { data } = useResource("/reviews?limit=3", { publicRead: true });
   if (!data?.length) return null;
   return (
     <section className="section container selected-reviews">

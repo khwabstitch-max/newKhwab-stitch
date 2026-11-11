@@ -37,13 +37,16 @@ Optional email verification/recovery requires configured delivery and real inbox
 
 | Endpoint | Query/visibility | Result/failure |
 |---|---|---|
-| `GET /health/live` / `GET /health/ready` | No auth | Safe process/database status; readiness503 if DB unavailable, not full provider-health proof |
+| `GET /health/live` | No auth | Independent process liveness; no database/provider probe |
+| `GET /health/ready` | No auth | Await one native MongoDB ping using `timeoutMS:2000`; uncached 200 ready or 503 unavailable |
 | `GET /api/designs` | page,limit,search,garment,category,sort (`recent`,`price_asc`,`price_desc`,`title`) | Published safe designs; invalid query400 |
 | `GET /api/designs/:slug` | Published slug | Safe design; drafts/archived/missing404 |
 | `GET /api/categories` | page,limit | Active categories |
 | `GET /api/options` | page,limit,garment,kind | Active design options |
 | `GET /api/measurement-guides` | page,limit,garment,method(body/garment),language(en/hi/und) | Matching published guides plus neutral-language fallback; no wrong-garment substitution |
 | `GET /api/settings` | Public content | Business contact/FAQ/banner, no secrets |
+
+Readiness returns `{data:{status:"ready"}}` or `{data:{status:"unavailable"}}` with `Cache-Control:no-store`. The probe reuses the existing native connection; absent database, ping failure or driver timeout reports unavailable without provider-error details. It does not create a new application-managed pool/reconnect or retry a business mutation. This checks database access, not complete provider or order readiness. Mongoose's stale-heartbeat state after serverless suspension can produce a false disconnected indication while queries work; the corrected probe does not establish the cause of a browser `NETWORK_ERROR`.
 
 Design response: `_id,title,code,slug,garment,description,category,startingPricePaise,currency,images:[{id,url}],coverImageUrl`. UI must display “Stitching starting from” and “Fabric provided by customer.” These are services, not ready-made inventory.
 
