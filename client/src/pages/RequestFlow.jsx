@@ -282,6 +282,7 @@ export function RequestWizard() {
     [uncertain, setUncertain] = useState(false),
     [editing, setEditing] = useState(false),
     [estimate, setEstimate] = useState(null),
+    [pricedKey, setPricedKey] = useState(""),
     [originalSnapshot, setOriginalSnapshot] = useState(null),
     [originalRefresh, setOriginalRefresh] = useState(0),
     [priceError, setPriceError] = useState(""),
@@ -551,14 +552,17 @@ export function RequestWizard() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [saved]);
   const priceKey = JSON.stringify(estimateBody(draft, sleeveless));
+  const hasCurrentEstimate = Boolean(estimate && pricedKey === priceKey);
   useEffect(() => {
     if (restoring || (config.source === "catalogue" && !draft.designId)) {
       setEstimate(null);
+      setPriceBusy(false);
       return;
     }
     const c = new AbortController();
+    setPriceBusy(true);
+    setPriceError("");
     const timer = setTimeout(() => {
-      setPriceBusy(true);
       api("/pricing/estimate", {
         method: "POST",
         auth: false,
@@ -577,6 +581,7 @@ export function RequestWizard() {
             );
           if (!c.signal.aborted) {
             setEstimate(data);
+            setPricedKey(priceKey);
             setPriceError("");
           }
         })
@@ -862,7 +867,7 @@ export function RequestWizard() {
           return;
         }
       }
-      if (!estimate || priceBusy || priceError) {
+      if (!hasCurrentEstimate || priceBusy || priceError) {
         setError("Review a current estimate before submitting.");
         return;
       }
@@ -957,7 +962,7 @@ export function RequestWizard() {
     ? [...new Set(services.data.flatMap((s) => s.itemTypes))]
     : Object.keys(baseFields);
   const priceProps = {
-    data: estimate,
+    data: hasCurrentEstimate ? estimate : null,
     error: priceError,
     loading: priceBusy,
     retry: () => setRefresh((v) => v + 1),
@@ -2371,7 +2376,10 @@ export function RequestWizard() {
             <Button
               className="button"
               busy={busy}
-              disabled={uploading || conflict}
+              disabled={uploading || conflict || (
+                step === "review" && !editing && user && !uncertain &&
+                (!hasCurrentEstimate || priceBusy || Boolean(priceError))
+              )}
             >
               {t(
                 editing

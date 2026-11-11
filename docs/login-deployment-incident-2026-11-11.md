@@ -38,6 +38,14 @@ The [GitHub Actions run for this repair](https://github.com/khwabstitch-max/newK
 
 This login incident is resolved with deployed endpoint and owner-browser evidence. Actual ImageKit upload/privacy policy, email delivery/reset, deployed logout/revocation and the broader launch checklist remain separate checks. Malformed optional media verification remains disabled; do not set it to `true` before provider policy verification.
 
+## CI follow-up: current-estimate submission
+
+A subsequent docs-only rerun at `60626a4` exposed an intermittent client journey failure:188tests passed and the exact-copy retry test failed. The isolated report was retrieved using the existing repository credential transport without printing or persisting its credentials. It expected the uncertain-submission response but received `Review a current estimate before submitting.` The test clicked an enabled submit control before the initial150ms debounced estimate request completed.
+
+The UI now associates each successful estimate with its exact pricing request. Authenticated first submission stays disabled until the matching response arrives, including immediately after quantity/logistics/customization edits and before the debounce timer starts. Stale prices are hidden and aborted/superseded responses cannot restore submission readiness. The submit handler retains the same guard. Guest login continuation and uncertain retries of an already frozen request remain supported.
+
+The regression uses controlled response promises to cover initial loading, immediate quantity-change invalidation, a superseded response and the final matching price. The original exact-copy test waits for observable submission readiness. No sleep, timeout increase, blanket retry or security-check exemption was added. See the [workflow runs](https://github.com/khwabstitch-max/newKhwab-stitch/actions) for the final verification of this follow-up.
+
 ## Verify the replacement deployment
 
 ```powershell

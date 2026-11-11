@@ -87,9 +87,11 @@ Preview URLs need exact trusted origins. Prefer a stable preview alias rather th
 
 ## Current verification and deployment smoke checks
 
-The [latest GitHub CI run](https://github.com/khwabstitch-max/newKhwab-stitch/actions/runs/42996486297) passed both linters, 230 server tests, 189 client tests, both builds, source checks and both production dependency audits for `5eb0c0f`. Tests use disposable MongoDB and provider mocks. Three earlier isolated Chrome journeys are separate local evidence. Public readiness now verifies the deployed MongoDB connection/index startup, not full transaction or provider behavior.
+The [passing CI baseline for `5eb0c0f`](https://github.com/khwabstitch-max/newKhwab-stitch/actions/runs/42996486297) passed both linters, 230 server tests, 189 client tests, both builds, source checks and both production dependency audits for `5eb0c0f`. Tests use disposable MongoDB and provider mocks. Three earlier isolated Chrome journeys are separate local evidence. Public readiness now verifies the deployed MongoDB connection/index startup, not full transaction or provider behavior.
 
-The earlier `0f9d467` run failed `check:isolated`; its precise failing subcheck was not available anonymously. That historical failure is superseded by the passing current run. Individual CI steps now expose which check fails.
+The earlier `0f9d467` run failed `check:isolated`; its precise failing subcheck was not available anonymously. That historical failure is separate from the later identified client-test race. Individual CI steps now expose which check fails.
+
+The docs-only `60626a4` CI rerun passed server/client lint, 230 server tests and both builds, but client tests passed 188/189: the exact-copy test clicked submit before the 150 ms estimate debounce completed. A controlled-promise regression confirmed the race. The repair records the pricing request key, invalidates review submission immediately on quantity/logistics/configuration changes, hides stale prices and ignores old responses. It preserves guest login continuation and retries of an uncertain submitted snapshot. All190client tests passed locally with `node scripts/isolated.mjs client-test --maxWorkers=1 --report artifacts/current-estimate-client-serial.txt`; client lint/build and source checks passed. The first combined local run exhausted worker memory. The bounded rerun changed concurrency only, not assertions/timeouts/retries. Check [Actions](https://github.com/khwabstitch-max/newKhwab-stitch/actions) for the exact deployed commit's CI result rather than inferring it from the earlier baseline.
 
 After each replacement deployment, repeat:
 

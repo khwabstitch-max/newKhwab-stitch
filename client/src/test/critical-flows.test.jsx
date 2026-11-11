@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 const boundary = vi.hoisted(() => ({ api: vi.fn(), auth: {} }));
@@ -399,6 +399,11 @@ describe("customer journeys with mocked identity and API boundaries", () => {
     await user.click(
       screen.getByRole("checkbox", { name: /I provide the fabric/ }),
     );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Submit Stitching Request" }),
+      ).toBeEnabled(),
+    );
     await user.click(
       screen.getByRole("button", { name: "Submit Stitching Request" }),
     );
@@ -432,6 +437,84 @@ describe("customer journeys with mocked identity and API boundaries", () => {
     expect(await screen.findByTestId("destination")).toHaveTextContent(
       "/orders/" + orderId,
     );
+  });
+
+  it("enables review submission only after the matching estimate resolves, including quantity edits", async () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    const pending = [];
+    const estimate = (quantity) => ({
+      data: {
+        knownSubtotalPaise: 65025 * quantity,
+        lineItems: [],
+        pendingItems: [],
+        components: {},
+        configurationVersion: "a".repeat(64),
+      },
+    });
+    boundary.api.mockImplementation(async (path, options = {}) => {
+      const { url, method } = info(path, options);
+      if (method === "GET" && url.pathname === "/designs")
+        return paginated([design]);
+      if (method === "GET" && url.pathname === "/services")
+        return paginated([{ itemTypes: ["kurti"] }]);
+      if (method === "GET") return paginated([]);
+      if (url.pathname === "/pricing/estimate") {
+        // The original-component lookup has no logistics. Only defer the
+        // estimate for the customer's full current pricing request.
+        if (!options.body.logistics) return estimate(1);
+        return new Promise((resolve) => {
+          pending.push({ quantity: options.body.quantity, resolve });
+        });
+      }
+      throw new Error("Unexpected " + path);
+    });
+    renderRoute(
+      <RequestWizard />,
+      "/request?design=" + design._id + "&step=review",
+      "/request",
+    );
+    const submit = () =>
+      screen.getByRole("button", { name: "Submit Stitching Request" });
+    expect(submit()).toBeDisabled();
+    await waitFor(() => expect(pending).toHaveLength(1));
+    expect(pending[0].quantity).toBe(1);
+    expect(submit()).toBeDisabled();
+    await act(async () => pending[0].resolve(estimate(1)));
+    await waitFor(() => expect(submit()).toBeEnabled());
+
+    const editQuantity = (quantity) => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Edit Service / garment and design" }),
+      );
+      fireEvent.change(screen.getByRole("spinbutton", { name: /^Quantity/ }), {
+        target: { value: String(quantity) },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    };
+    editQuantity(2);
+    // No event-loop yield: submission must already be blocked before the
+    // debounced replacement request starts, even with the old price visible.
+    expect(pending).toHaveLength(1);
+    expect(submit()).toBeDisabled();
+    await waitFor(() => expect(pending).toHaveLength(2));
+    expect(pending[1].quantity).toBe(2);
+    expect(submit()).toBeDisabled();
+
+    editQuantity(3);
+    expect(submit()).toBeDisabled();
+    await waitFor(() => expect(pending).toHaveLength(3));
+    expect(pending[2].quantity).toBe(3);
+    await act(async () => pending[1].resolve(estimate(2)));
+    expect(submit()).toBeDisabled();
+    await act(async () => pending[2].resolve(estimate(3)));
+    await waitFor(() => expect(submit()).toBeEnabled());
+    expect(
+      within(screen.getByRole("complementary")).getByRole("heading", {
+        name: "₹1,950.75",
+      }),
+    ).toBeInTheDocument();
+    expect(mutations("/orders")).toHaveLength(0);
   });
 
   it("opens its own request and accepts only the current quote version and revision", async () => {
