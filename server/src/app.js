@@ -6,6 +6,9 @@ import { rateLimitFor } from "./rate-limits.js";
 import pino from "pino";
 import { errorHandler, AppError } from "./errors.js";
 import { registerRoutes } from "./routes.js";
+// src/app.js is a recognized Vercel Express auto-detection path. Retain the
+// injectable factory and provide a real default Express export for that path.
+export { default } from "./vercel.js";
 export function createApp(context) {
   const app = express();
   const log =

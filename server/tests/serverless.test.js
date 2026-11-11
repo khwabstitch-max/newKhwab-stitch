@@ -25,6 +25,14 @@ test("the deployment routes API and health before SPA, and missing assets never 
     assert.equal(config.services["khwab-stitch-api"].root, "server");
     assert.equal(config.services["khwab-stitch-web"].framework, "vite");
     assert.equal(config.services["khwab-stitch-api"].framework, "express");
+    assert.equal(config.services["khwab-stitch-api"].entrypoint,"src/vercel.js");
+    const frontend=config.services["khwab-stitch-web"];
+    assert.equal(frontend.routes[0].handle,"filesystem");
+    const route=path=>frontend.routes.find(rule=>rule.src&&new RegExp(`^(?:${rule.src})$`).test(path));
+    assert.equal(route("/login").dest,"/index.html");
+    assert.equal(route("/account/orders").dest,"/index.html");
+    assert.equal(route("/assets/missing.js").status,404);
+    assert.ok(config.rewrites.findIndex(r=>r.destination?.service==="khwab-stitch-api") < config.rewrites.findIndex(r=>r.source==="/(.*)"));
     assert.ok(config.rewrites.some(r => r.source === "/api/(.*)" && r.destination?.service === "khwab-stitch-api"));
     assert.ok(config.rewrites.some(r => r.source === "/health/(.*)" && r.destination?.service === "khwab-stitch-api"));
     assert.ok(config.rewrites.some(r => r.source === "/(.*)" && r.destination?.service === "khwab-stitch-web"));

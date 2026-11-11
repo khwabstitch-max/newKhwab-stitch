@@ -30,20 +30,25 @@ const schema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
 });
+export class ConfigurationError extends Error {
+  constructor(message, fields) { super(message);this.name="ConfigurationError";this.fields=fields; }
+}
 export function loadConfig(env = process.env) {
   const result = schema.safeParse(env);
   if (!result.success)
-    throw new Error(
+    throw new ConfigurationError(
       "Invalid server configuration: " +
         result.error.issues.map((i) => i.path.join(".")).join(", "),
+      [...new Set(result.error.issues.map(issue=>String(issue.path[0])))],
     );
   const c = result.data;
   if (
     [c.RESEND_API_KEY, c.EMAIL_FROM, c.PUBLIC_WEB_URL].some(Boolean) &&
     ![c.RESEND_API_KEY, c.EMAIL_FROM, c.PUBLIC_WEB_URL].every(Boolean)
   )
-    throw new Error(
+    throw new ConfigurationError(
       "Configure RESEND_API_KEY, EMAIL_FROM and PUBLIC_WEB_URL together.",
+      ["RESEND_API_KEY","EMAIL_FROM","PUBLIC_WEB_URL"],
     );
   if (c.PUBLIC_WEB_URL) {
     const u = new URL(c.PUBLIC_WEB_URL);
@@ -53,8 +58,9 @@ export function loadConfig(env = process.env) {
         u.protocol,
       )
     )
-      throw new Error(
+      throw new ConfigurationError(
         "PUBLIC_WEB_URL must be an exact trusted application origin.",
+        ["PUBLIC_WEB_URL"],
       );
   }
   const origins = c.CORS_ORIGINS.split(",")
@@ -75,11 +81,11 @@ export function loadConfig(env = process.env) {
       }
     })
   )
-    throw new Error("CORS_ORIGINS must be exact origins, HTTPS in production.");
+    throw new ConfigurationError("CORS_ORIGINS must be exact origins, HTTPS in production.",["CORS_ORIGINS"]);
   if (
     c.IMAGEKIT_URL_ENDPOINT &&
     !/^https:\/\/[^?#]+$/.test(c.IMAGEKIT_URL_ENDPOINT)
   )
-    throw new Error("Invalid IMAGEKIT_URL_ENDPOINT.");
+    throw new ConfigurationError("Invalid IMAGEKIT_URL_ENDPOINT.",["IMAGEKIT_URL_ENDPOINT"]);
   return { ...c, origins };
 }

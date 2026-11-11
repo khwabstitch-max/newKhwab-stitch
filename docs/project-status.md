@@ -1,5 +1,7 @@
 # Current project status — 10 November 2026
 
+> Update11November2026: a real Vercel deployment failed with `Invalid export` because Express auto-detected the named-only app factory, and direct `/login` returned404. The repair adds a valid default/lazy Express entry and Services SPA routing. Local server checks passed227tests; see [incident evidence](login-deployment-incident-2026-11-11.md). The earlier local test results below never proved this deployment was working. Live replacement-deployment verification is recorded separately.
+
 The latest owner request targets GitHub and Vercel, preserves the existing JavaScript/local-JWT/MongoDB/ImageKit project and forbids environment-file/outside-workspace access. Earlier Render/provider reports are historical. This review used no configured customer database or provider credentials in its tests.
 
 ## Verified changes

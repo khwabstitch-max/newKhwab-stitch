@@ -1,5 +1,13 @@
 # GitHub → Vercel deployment
 
+## Current Services configuration — 11 November 2026
+
+The repository now uses the owner's Vercel Services configuration. Keep project root `.` and Services framework detection. Frontend service `khwab-stitch-web` owns root `client`, Vite and its filesystem/SPA routes. Backend service `khwab-stitch-api` owns root `server`, Express and explicit entry point `src/vercel.js`. Top-level rewrites route `/api/**` and `/health/**` to the backend, then other paths to the frontend. Do not select only the client directory as the project root.
+
+The dedicated Express entry initializes configuration/database inside a safe request boundary. `src/app.js` also exposes the gateway as its default export because Vercel previously auto-detected that factory module and crashed with `Invalid export`. Liveness is independent of database startup; readiness retains all required auth/index checks. See the [deployment incident and diagnostic codes](login-deployment-incident-2026-11-11.md).
+
+After every replacement deployment run `node scripts/probe-live.mjs https://newkhwab-stitch.vercel.app`. This performs public GETs only, not a password login. Actual account/password/reset checks require an authorized test account. The earlier single-function settings below describe the previous configuration and must not override current per-service settings.
+
 Current target: one Vercel project containing the existing Vite frontend and Express API. This supersedes Render as the requested target. `render.yaml` and the standalone entry remain compatibility material; they are not deleted. Nothing has been published or purchased. This review never read `.env` files or used configured customer/provider credentials.
 
 ## What is implemented

@@ -3,11 +3,17 @@
   "services": {
     "khwab-stitch-web": {
       "root": "client",
-      "framework": "vite"
+      "framework": "vite",
+      "routes": [
+        { "handle": "filesystem" },
+        { "src": "/(?:assets|brand|design-library|design-guides|images)/.*", "status": 404 },
+        { "src": "/.*", "dest": "/index.html" }
+      ]
     },
     "khwab-stitch-api": {
       "root": "server",
-      "framework": "express"
+      "framework": "express",
+      "entrypoint": "src/vercel.js"
     }
   },
   "rewrites": [
