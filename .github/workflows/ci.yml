@@ -20,7 +20,25 @@ jobs:
             server/package-lock.json
             client/package-lock.json
       - run: npm run setup
-      - run: npm run check:isolated
+      # Separate steps keep the failing check visible in GitHub job metadata.
+      # Continue independent checks after a failure; the job still fails overall.
+      - name: Server lint
+        run: node scripts/isolated.mjs server-lint --report artifacts/verify-server-lint.txt
+      - name: Client lint
+        if: ${{ !cancelled() }}
+        run: node scripts/isolated.mjs client-lint --report artifacts/verify-client-lint.txt
+      - name: Server tests
+        if: ${{ !cancelled() }}
+        run: node scripts/isolated.mjs server-test --report artifacts/verify-server-test.txt
+      - name: Client tests
+        if: ${{ !cancelled() }}
+        run: node scripts/isolated.mjs client-test --report artifacts/verify-client-test.txt
+      - name: Server build
+        if: ${{ !cancelled() }}
+        run: node scripts/isolated.mjs server-build --report artifacts/verify-server-build.txt
+      - name: Client build
+        if: ${{ !cancelled() }}
+        run: node scripts/isolated.mjs client-build --report artifacts/verify-client-build.txt
       - run: npm run source:check
       - run: npm --prefix server audit --omit=dev
       - run: npm --prefix client audit --omit=dev

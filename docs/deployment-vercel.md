@@ -1,97 +1,108 @@
-# GitHub → Vercel deployment
+# GitHub and Vercel deployment
 
-## Current Services configuration — 11 November 2026
+## Current deployment and incident status
 
-The repository now uses the owner's Vercel Services configuration. Keep project root `.` and Services framework detection. Frontend service `khwab-stitch-web` owns root `client`, Vite and its filesystem/SPA routes. Backend service `khwab-stitch-api` owns root `server`, Express and explicit entry point `src/vercel.js`. Top-level rewrites route `/api/**` and `/health/**` to the backend, then other paths to the frontend. Do not select only the client directory as the project root.
+The owner pushed `main` at commit `0f9d467` and Vercel successfully deployed it on 11 November 2026. Public checks of `https://newkhwab-stitch.vercel.app` verify HTML 200 for `/login` and JSON 200 for `/health/live`. Readiness and auth capabilities still return JSON 503 `CONFIGURATION_INVALID`. The owner's safe runtime log identifies `IMAGEKIT_PRIVATE_POLICY_VERIFIED`; configuration validation stops before MongoDB connection or credential verification.
 
-The dedicated Express entry initializes configuration/database inside a safe request boundary. `src/app.js` also exposes the gateway as its default export because Vercel previously auto-detected that factory module and crashed with `Invalid export`. Liveness is independent of database startup; readiness retains all required auth/index checks. See the [deployment incident and diagnostic codes](login-deployment-incident-2026-11-11.md).
+The latest local repair disables private uploads when this optional flag is missing or malformed, without blocking authentication startup. Only the exact string `true` enables the private-upload gate. A malformed value produces a names-only operational warning; it never enables private storage. This repair is implemented and locally tested but not yet verified on the deployed site. Actual account login, production Atlas, ImageKit delivery privacy and email remain unverified. See the [incident record](login-deployment-incident-2026-11-11.md).
 
-After every replacement deployment run `node scripts/probe-live.mjs https://newkhwab-stitch.vercel.app`. This performs public GETs only, not a password login. Actual account/password/reset checks require an authorized test account. The earlier single-function settings below describe the previous configuration and must not override current per-service settings.
+Earlier deployment failures were distinct: Vercel selected an Express factory module without a default application export, and direct `/login` navigation lacked an SPA fallback. The current explicit entry and frontend service routes fix those failures; successful public liveness does not prove application readiness.
 
-Current target: one Vercel project containing the existing Vite frontend and Express API. This supersedes Render as the requested target. `render.yaml` and the standalone entry remain compatibility material; they are not deleted. Nothing has been published or purchased. This review never read `.env` files or used configured customer/provider credentials.
+## Exact current settings
 
-## What is implemented
+Use one Vercel project with the Services configuration committed in `vercel.json`. Keep the project root at the repository root. Do not select only `client` or `server`.
 
-`vercel.json` selects root-level builds and `client/dist` output. `/api/**` and `/health/live|ready` route to `api/index.js` before SPA fallback. Existing static files are served before fallback, and missing assets receive404 rather than HTML. `api/index.js` exports `server/src/serverless.js`; it does not import the standalone `listen()` entry, start a daemon or load dotenv.
-
-The loader shares one pending initialization/connection within each warm function instance, resets failed initialization for a later attempt, caps each Mongo pool at5, disables production autoIndex and checks required credential/extension/commerce/rate indexes. MongoDB holds account revocation, orders, drafts, messages, credits and shared rate buckets. Cold starts do not require a new session. Initialization failures return a generic no-store503 and a safe request ID; logs contain only safe event/name/ID fields.
-
-Vercel supports Express/Node functions and documents Fluid compute. Function bodies are limited to4.5MB; this app prepares at most3 MiB image payloads before multipart upload, retaining the5 MiB source-file allowance and server-side decode/privacy checks. Runtime ImageKit, not function-local disk or Mongo image binaries, stores media. Read [official Express support](https://vercel.com/docs/frameworks/backend/express) and [function limits](https://vercel.com/docs/functions/limitations).
-
-The function maximum is explicitly60 seconds, not a claimed platform maximum. Current Fluid documentation lists300 seconds by default and up to800 seconds generally on Pro/Enterprise, with longer beta options; these are platform limits, not performance targets. This request-oriented app requires no long-running daemon. Messaging uses visibility/offline-aware polling. Beta WebSocket support exists, but is not required or enabled here; see the [official WebSocket announcement](https://vercel.com/changelog/websocket-support-is-now-in-public-beta). Operator cleanup/backup jobs remain explicit tasks; do not rely on an in-process timer surviving function suspension.
-
-## Exact project settings
-
-The local repository is initialized on `main`; no commit, remote or push was created. Before the first push, review the source and example-file contents yourself (environment examples were deliberately not inspected), then use your own GitHub repository:
-
-```powershell
-git add .
-git commit -m "Complete Khwab Stitch application and Vercel preparation"
-git remote add origin https://github.com/OWNER/REPOSITORY.git
-git push -u origin main
-```
-
-These are operator steps, not commands executed by this review. Real environment files, dependencies, private uploads, test runtime binaries and artifacts remain ignored. GitHub CI uses current Node24-based official actions, isolated checks and production dependency audits, with short-lived test reports; remote CI execution is still unverified.
-
-| Setting | Value |
+| Project setting | Current value |
 |---|---|
-| Source | Owner's GitHub repository and reviewed branch; no remote URL is invented |
-| Root Directory | Repository root (`.`); do **not** select only `client` or `server` |
-| Framework Preset | Other (`framework:null` in config) |
-| Install Command | `npm run setup` — installs both committed lockfiles with `npm ci` |
-| Build Command | `npm run build` |
-| Output Directory | `client/dist` |
-| Node.js runtime/build |24.x from root/server/client engines; current security patch |
-| Function | `api/index.js`, Node runtime,60second configured duration |
-| API URL | Same-origin `/api`; no second backend hostname is needed |
-| Health | `/health/live`, `/health/ready` |
-| Routing | API/health first, filesystem, missing-asset404, then SPA |
+| Git branch | `main` |
+| Root Directory | Repository root (`.`) |
+| Framework | Services; use the committed `services` configuration |
+| Root Install / Build overrides | Unset; each service owns its dependencies and build |
+| Root Output Directory override | Unset; do not set `client/dist` at project level |
+| Node.js version | 24.x, matching repository package engines |
+| Public API base | Same-origin `/api`; no separate backend hostname |
 
-Use an appropriate commercial Vercel plan before taking business orders. Hobby is restricted to personal/non-commercial projects; it is not the commercial launch plan. Confirm Pro/Enterprise terms, account limits, region and spending controls with the owner; no plan was purchased. See [Hobby terms](https://vercel.com/docs/plans/hobby), [plans](https://vercel.com/docs/plans) and [current limits](https://vercel.com/docs/functions/limitations).
+| Service setting | Frontend | Backend |
+|---|---|---|
+| Service name | `khwab-stitch-web` | `khwab-stitch-api` |
+| Root | `client` | `server` |
+| Framework | Vite | Express |
+| Build | `npm run build` | Express framework default; `npm run build` validates server source locally |
+| Output | `dist` | Framework-managed Node function; no static output directory |
+| Entrypoint | Vite default | `src/vercel.js` |
+| Dependencies | Service package and committed lockfile | Service package and committed lockfile |
 
-## Hosting environment variables — names and scope
+The root `npm run setup` and `npm run build` scripts remain local/CI workspace commands. Do not copy the earlier single-project build/output overrides into Services. The preserved `api/index.js` adapter is not the current deployed service entry. `server/src/index.js` remains the standalone local entry.
 
-Enter values privately in Vercel Project Settings → Environment Variables, separately for Preview and Production. Never put server secrets in `VITE_` variables or commit real environment files.
+Top-level rewrites route `/api/**` and `/health/**` to the backend before the frontend catch-all. The frontend service serves existing files, returns404 for missing known assets, then sends application paths to `/index.html`. Services preserve the original request path, so Express routes remain mounted at `/api/**`.
 
-| Name | Scope/purpose |
+Read the current official [Services guide](https://vercel.com/kb/guide/vercel-services), [Express support](https://vercel.com/docs/frameworks/backend/express) and [Vite deployment guidance](https://vercel.com/docs/frameworks/frontend/vite). Older documentation examples using `experimentalServices` describe a previous configuration; do not replace the working `services` block with them.
+
+## Runtime behavior and hosting limits
+
+The dedicated Express entry exports an application before loading configuration, MongoDB or provider integrations. `src/app.js` also exposes that gateway as its default export to remain valid if framework detection selects the previously failing path. Liveness does not depend on database startup; readiness and business APIs retain required configuration/index checks.
+
+A warm function instance shares one pending initialization and MongoDB connection; a failed initialization is cleared for a later retry. The Mongo pool is capped at 5 connections per instance, production auto-indexing is disabled, and durable sessions, orders, drafts, messages, credits and rate buckets remain in MongoDB. Initialization errors return a no-store JSON 503 with a safe code and request ID. Operational logs contain approved field names and stage codes, not secret values or raw provider errors.
+
+ImageKit provides durable media storage; function-local files are not permanent storage. The app prepares uploads within its 3 MiB serverless image budget because Vercel documents a 4.5 MB function request/response limit. Verify the current plan and runtime limits before rollout; no custom function-duration setting is present in the current Services configuration. Messaging uses request-based polling and does not depend on a continuously running WebSocket server. Run migrations, backup and cleanup as explicit operator tasks rather than assuming an in-process timer will survive function suspension. See [function limits](https://vercel.com/docs/functions/limitations).
+
+Business use requires an appropriate commercial plan. Vercel Hobby is for personal, non-commercial use; confirm current plan terms, limits, region and spending controls privately before taking orders. No plan was purchased. See [Hobby terms](https://vercel.com/docs/plans/hobby) and [plans](https://vercel.com/docs/plans).
+
+## Hosting environment variables
+
+Set variables privately in this Vercel project's Environment Variables settings, with Production selected for the production deployment and separate Preview settings where needed. Project variables are available during builds and function execution. Changes apply only to a new deployment: save, then redeploy. Do not export/download secret values into reports or put server secrets in `VITE_` variables. See [Vercel environment management](https://vercel.com/docs/environment-variables/managing-environment-variables).
+
+| Name | Scope and requirement |
 |---|---|
-| `NODE_ENV` | Server production runtime |
-| `MONGODB_URI` | Backend-only explicit restricted database, TLS, replica-set transactions |
-| `JWT_SECRET` | Backend-only independent canonical base64url secret with at least 48 random bytes; preserve across normal restarts |
-| `CORS_ORIGINS` | Exact trusted HTTPS frontend origins; no wildcards, paths or trailing slash |
-| `TRUST_PROXY_HOPS` | Backend proxy setting;1 for the documented single Vercel proxy, review additional proxies |
+| `NODE_ENV` | Backend production runtime |
+| `MONGODB_URI` | Required backend-only intended database connection; restricted database user and transaction-capable replica set |
+| `JWT_SECRET` | Required backend-only canonical base64url encoding of at least 48 random bytes; preserve across normal redeploys |
+| `CORS_ORIGINS` | Required exact trusted HTTPS origins; no wildcard, path or trailing slash |
+| `TRUST_PROXY_HOPS` | Backend proxy setting; review the actual hosting proxy chain |
 | `IMAGEKIT_PRIVATE_KEY` | Backend-only existing ImageKit key |
 | `IMAGEKIT_URL_ENDPOINT` | Backend ImageKit HTTPS delivery endpoint |
-| `IMAGEKIT_PRIVATE_POLICY_VERIFIED` | Keep `false` until actual unsigned-original/named-transform/access/expiry checks pass |
-| `LOG_LEVEL` | Backend safe operational logging, normally `info` |
-| `VITE_API_BASE_URL` | Public build-time `/api`; may be omitted because this is the default |
-| `GOOGLE_CLIENT_ID` | Optional GIS audience; same local JWT/account system, not Firebase |
-| `RESEND_API_KEY` | Optional backend email provider key |
-| `EMAIL_FROM` | Configure with verified sending domain |
-| `PUBLIC_WEB_URL` | Exact frontend HTTPS origin for email actions; configure all three email variables together |
+| `IMAGEKIT_PRIVATE_POLICY_VERIFIED` | Only exact `true` enables new private uploads; use `false` until live privacy checks pass |
+| `LOG_LEVEL` | Backend operational log level, normally `info` |
+| `VITE_API_BASE_URL` | Public frontend build-time API base; omit to use `/api`, or set `/api` |
+| `GOOGLE_CLIENT_ID` | Optional backend GIS audience for the same account system |
+| `RESEND_API_KEY` | Optional backend email provider key; configure with both email variables below |
+| `EMAIL_FROM` | Optional verified sender, required when email is enabled |
+| `PUBLIC_WEB_URL` | Optional exact frontend HTTPS origin for email actions; configure with both email variables above |
 
-No Firebase packages, credentials or authorized-domain setup are required. For optional Google, register exact production/staging origins in Google's console. For email, verify sender ownership and real inbox delivery. See [authentication](authentication.md).
+The email trio must be complete or entirely absent. Optional Google and ImageKit settings do not prove their providers have been verified. Firebase remains removed.
 
-For Preview, use a stable branch/custom preview alias and include that exact origin in Preview `CORS_ORIGINS`/email settings. A new generated deployment hostname is not automatically a trusted origin. Avoid broad `*.vercel.app` access. For production/custom domains, keep one canonical frontend URL and update origins and email settings consistently before rebuilding.
+The policy flag is an operator gate, not a privacy test result. While disabled, customer reference/measurement uploads return `PRIVATE_MEDIA_UNVERIFIED` without uploading bytes to ImageKit. Do not enable it merely to clear an error. Verify unsigned originals and unsafe named transformations are denied, authorized/unauthorized viewing works, and signed links expire before enabling it. Existing media ownership and authorized signed viewing remain enforced.
+
+Preview URLs need exact trusted origins. Prefer a stable preview alias rather than allowing every `*.vercel.app` host. Production/custom-domain changes require coordinated origins and email settings followed by a redeploy.
 
 ## Database and migration order
 
-1. Create a restricted staging/production database and separate credentials. Review Atlas network access for Vercel egress. The actual account's network/tier is unverified because credentials were intentionally not accessed. Prefer reviewed stable egress/private networking where available; an all-address allowlist is not a permanent security strategy.
-2. Back up and rehearse restore on a separate restricted database. Mongo metadata does not back up ImageKit bytes. Confirm the actual tier's retention/RPO/RTO and ImageKit export/recovery process.
-3. From a trusted operator terminal with the intended environment, run `npm --prefix server run db:indexes`. It creates all additive schema indexes and preserves documents. New production startup deliberately fails closed when critical unique/TTL indexes are absent. Do not run development seed in production.
-4. Register/verify control of the owner's account; run `npm --prefix server run admin:provision -- owner@example.com`. No default password/public promotion exists. Sign in again after role promotion.
-5. Existing imported options/guides remain drafts. Review applicability, compatibility, real stitching prices/material wording and measurement accuracy before publication. No repair tool auto-publishes them. See [catalogue repair](catalogue-repair.md), [admin guide](admin-guide.md) and [visual import](visual-import.md).
-6. Review optional free-length metadata/legacy-option migration plans and backups before explicit execution. New estimates already enforce zero sleeve-length charge; historical accepted quotes are not rewritten.
-7. Keep commerce programmes disabled until owner-approved terms/rates, finance reconciliation and production smoke tests are complete. See [commerce](commerce.md). Fixture prices are not business prices.
+1. Confirm the intended staging/production database, restricted user and Vercel network access privately. Production Atlas connectivity is unverified. Review stable egress or private networking where available; do not treat an unrestricted network allowlist as a permanent security strategy.
+2. Back up and rehearse restoration to a separate restricted database. Mongo metadata does not back up ImageKit image bytes. Confirm actual retention, recovery targets and media recovery procedures.
+3. From a trusted operator terminal with the intended environment, run `npm --prefix server run db:indexes`. Review backups and legacy credential constraints first. The tool creates required indexes; startup deliberately fails closed if critical indexes are absent. Do not seed production.
+4. Register and independently verify the owner's account, then run `npm --prefix server run admin:provision -- owner@example.com`. Sign in again after promotion. There is no default admin/password or public promotion endpoint.
+5. Review imported design/guide drafts, garment applicability, compatibility, real prices and material wording before publication. See [catalogue repair](catalogue-repair.md), [admin guide](admin-guide.md) and [visual import](visual-import.md).
+6. Review optional legacy-option migration plans separately. Sleeve length is free in new estimates; do not rewrite historical accepted prices.
+7. Keep commerce programmes disabled until owner-approved terms and deployed finance reconciliation checks pass. Fixture prices are not business prices.
 
-## Verification after the first authorized deploy
+## Current verification and next deployment
 
-Check API JSON health/404, direct nested SPA refresh, static assets, production origins and invalid-origin rejection. Run CustomerA/CustomerB/Admin ownership checks; signup/duplicate/wrong/correct login; refresh/reload; transient503 retry; logout revocation; real reset email→reset→single-use rejection→login. Record deployment/source IDs and safe request IDs without tokens or reset links.
+The latest local repair passed 230 server tests, including the privacy-gate/configuration regressions, plus server lint and source validation. Historical broader evidence includes 189 client tests and three isolated Chrome journeys. These use disposable MongoDB and mocked providers, not production credentials.
 
-Complete guest→customize→measurements→logistics→login→review→explicit submit; retry with the same key; reload order/history; admin quote→current acceptance→real progress. Repeat mixed references, master help, private-media owner/other-user/expiry policy, upload failure, replace/archive/reference protection, worker assignment/revocation, complaints/reviews and a disabled/enabled test commerce programme with reversible test credits. Redeploy/restart and confirm persistence.
+For commit `0f9d467`, GitHub Actions passed checkout, Node setup and dependency installation, then failed `npm run check:isolated`; later source/audit steps were skipped. Public logs/artifact downloads require owner authentication, so the failing subcheck is not established. Download the `isolated-check-reports` artifact from the [actual failed job](https://github.com/khwabstitch-max/newKhwab-stitch/actions/runs/42991978077/job/130426800687), inspect the failing report and rerun CI after the repair. A successful Vercel deployment did not validate every CI check.
 
-Local tests do not prove Vercel's packaging, actual domains, payload handling, network access, cold-start performance or provider policy. Those remain staging smoke requirements. Use [capacity plan](capacity-plan.md), [operations](operations.md) and [production readiness](production-readiness.md) to record evidence before commercial launch.
+After deploying the reviewed repair, run:
+
+```powershell
+node scripts/probe-live.mjs https://newkhwab-stitch.vercel.app
+```
+
+This makes public GET requests only. Expect homepage/login HTML 200, liveness JSON 200, and readiness/auth capabilities JSON 200 when remaining configuration, database connectivity and indexes are correct. A request ID identifies the matching safe runtime log. Correct only the named setting or diagnosed stage; do not weaken authentication or index requirements.
+
+Then use authorized isolated accounts to verify signup/duplicate/wrong/correct login, refresh/navigation, temporary failures, logout revocation, real recovery email and single-use reset. Verify guest customization through explicit submission, current quote acceptance, history/tracking, admin CRUD, private uploads/owner isolation, replacement/archive protection, worker access and support flows. Confirm persistence after another deployment. Public health success alone does not verify these workflows.
+
+Record actual results and request IDs without credentials, signed image URLs or reset links. Live customer launch remains blocked until deployed authentication, provider privacy/recovery, approved business content and operational recovery checks pass.
 
 ## Rollback
 
-Keep a compatible Git commit/deployment ID and protected database/media backup. Vercel source rollback does not undo orders, accepted quotes, ledger events, imports, index migration or provider deletions. Prefer additive changes; preserve owner IDs and accepted snapshots. Restore only after reconciling later writes and approved deletion records. Keep commerce disabled during an unresolved ledger incident; do not edit balances or delete ledger rows to “fix” history. No deployment, secret rotation or live migration is authorized by this document alone.
+Keep a compatible source commit/deployment ID and protected database/media backups. Vercel rollback does not undo orders, quotes, ledger events, migrations or media changes. Prefer additive changes; preserve account ownership and historical snapshots. Restore only after reconciling later writes and approved deletion records. Keep commerce disabled during ledger incidents. No live migration, media deletion or paid change is authorized by this runbook alone.

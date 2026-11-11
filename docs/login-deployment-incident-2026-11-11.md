@@ -18,6 +18,16 @@ The owner provided the runtime error: `Invalid export found in module "/var/task
 
 Authentication/index requirements are not bypassed, and no startup migration or customer-data mutation was performed.
 
+## Authorized deployment and second blocker
+
+The owner authorized commit/push/redeployment. Commit `0f9d467` was pushed to GitHub `main`; GitHub's Vercel status reports successful deployment. The live probe at `2026-11-11T09:06:27.999Z` found `/` and `/login` HTML200 and `/health/live` JSON200. The invalid-export crash and SPA deep-link failure were therefore repaired on the actual deployment.
+
+Readiness and auth capabilities then returned JSON503 `CONFIGURATION_INVALID`, with request ID `d4035de0-c339-4936-ad5a-ae8fdb694218`. The owner supplied the matching names-only log: `configurationFields:["IMAGEKIT_PRIVATE_POLICY_VERIFIED"]`. This validation failure happened before database connection or password verification; no conclusion about production MongoDB connectivity could be drawn.
+
+The follow-up repair treats a malformed optional privacy flag as disabled, rather than preventing the whole authentication service from starting. Only the exact string `true` enables private uploads. Every other value resolves to `false`; malformed values produce a `private_media_disabled` warning containing only the field name. The existing adapter continues to reject private uploads with `PRIVATE_MEDIA_UNVERIFIED` before any ImageKit upload call. Required MongoDB/JWT/origin settings remain strict. The operator should set `IMAGEKIT_PRIVATE_POLICY_VERIFIED=false` until real provider privacy checks pass, then explicitly opt in; this review did not read or change its value.
+
+Regression evidence: actual auth-capabilities routing with a malformed flag, private-upload rejection without an SDK call, exact opt-in behavior, and unchanged mandatory configuration validation. Full isolated server tests, lint and backend build passed. Production account login, actual ImageKit privacy, recovery email and live database/index readiness still require their own successful checks.
+
 ## Verify the replacement deployment
 
 ```powershell

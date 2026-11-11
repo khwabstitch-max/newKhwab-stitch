@@ -25,7 +25,9 @@ const schema = z.object({
   PUBLIC_WEB_URL: z.string().default(""),
   IMAGEKIT_PRIVATE_KEY: z.string().optional().default(""),
   IMAGEKIT_URL_ENDPOINT: z.string().optional().default(""),
-  IMAGEKIT_PRIVATE_POLICY_VERIFIED: z.enum(["true", "false"]).default("false"),
+  // This optional capability must fail closed without disabling authentication.
+  // Only the exact operator opt-in "true" can enable private uploads.
+  IMAGEKIT_PRIVATE_POLICY_VERIFIED: z.enum(["true", "false"]).default("false").catch("false"),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
@@ -87,5 +89,8 @@ export function loadConfig(env = process.env) {
     !/^https:\/\/[^?#]+$/.test(c.IMAGEKIT_URL_ENDPOINT)
   )
     throw new ConfigurationError("Invalid IMAGEKIT_URL_ENDPOINT.",["IMAGEKIT_URL_ENDPOINT"]);
-  return { ...c, origins };
+  const policyFlag = env.IMAGEKIT_PRIVATE_POLICY_VERIFIED;
+  const configurationWarnings = policyFlag !== undefined && policyFlag !== "true" && policyFlag !== "false"
+    ? ["IMAGEKIT_PRIVATE_POLICY_VERIFIED"] : [];
+  return { ...c, origins, configurationWarnings };
 }

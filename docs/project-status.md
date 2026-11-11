@@ -2,6 +2,8 @@
 
 > Update11November2026: a real Vercel deployment failed with `Invalid export` because Express auto-detected the named-only app factory, and direct `/login` returned404. The repair adds a valid default/lazy Express entry and Services SPA routing. Local server checks passed227tests; see [incident evidence](login-deployment-incident-2026-11-11.md). The earlier local test results below never proved this deployment was working. Live replacement-deployment verification is recorded separately.
 
+> Authorized deployment update: `0f9d467` is pushed to GitHub `main` and Vercel reports deployment success. Live `/login` and `/health/live` now return200. Readiness/auth capabilities then exposed an invalid `IMAGEKIT_PRIVATE_POLICY_VERIFIED` setting; the names-only owner log confirmed it. The follow-up code disables private uploads for malformed optional flag values without blocking authentication initialization. Production database/login/provider checks remain pending until readiness succeeds. The original GitHub Actions `check:isolated` step failed remotely; anonymous logs do not identify the failed submode, and local test passes do not override that evidence.
+
 The latest owner request targets GitHub and Vercel, preserves the existing JavaScript/local-JWT/MongoDB/ImageKit project and forbids environment-file/outside-workspace access. Earlier Render/provider reports are historical. This review used no configured customer database or provider credentials in its tests.
 
 ## Verified changes

@@ -156,3 +156,15 @@ test("configuration rejects wildcard CORS and insecure production origins", () =
     }),
   );
 });
+
+test("optional privacy opt-in remains exact while mandatory startup settings remain strict", () => {
+  const config = { MONGODB_URI: "mongodb://localhost/isolated", CORS_ORIGINS: "https://example.test", JWT_SECRET: Buffer.alloc(48, 7).toString("base64url") };
+  for (const flag of [undefined, "false", "true"]) {
+    const parsed = loadConfig({ ...config, IMAGEKIT_PRIVATE_POLICY_VERIFIED: flag });
+    assert.equal(parsed.IMAGEKIT_PRIVATE_POLICY_VERIFIED, flag === "true" ? "true" : "false");
+    assert.deepEqual(parsed.configurationWarnings, []);
+  }
+  for (const field of ["MONGODB_URI", "CORS_ORIGINS", "JWT_SECRET"]) {
+    assert.throws(() => loadConfig({ ...config, [field]: "invalid", IMAGEKIT_PRIVATE_POLICY_VERIFIED: "" }));
+  }
+});

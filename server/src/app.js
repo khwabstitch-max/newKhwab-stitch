@@ -13,6 +13,11 @@ export function createApp(context) {
   const app = express();
   const log =
     context.logger || pino({ level: context.config.LOG_LEVEL || "info" });
+  if (context.config.configurationWarnings?.includes("IMAGEKIT_PRIVATE_POLICY_VERIFIED"))
+    log.warn(
+      { event: "private_media_disabled", field: "IMAGEKIT_PRIVATE_POLICY_VERIFIED" },
+      "Invalid privacy verification flag; private customer uploads remain disabled.",
+    );
   app.disable("x-powered-by");
   app.set("trust proxy", context.config.TRUST_PROXY_HOPS || 0);
   app.use((req, res, next) => {

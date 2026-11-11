@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { imageProvider } from "../src/imagekit.js";
+import { loadConfig } from "../src/config.js";
 const config = {
   IMAGEKIT_PRIVATE_KEY: "private_test_only",
   IMAGEKIT_URL_ENDPOINT: "https://ik.imagekit.io/test",
@@ -82,6 +83,24 @@ test("private upload requires an explicitly verified provider privacy policy", a
     { code: "PRIVATE_MEDIA_UNVERIFIED" },
   );
   assert.equal(sdk.uploadBody, undefined);
+});
+
+test("malformed optional privacy settings disable private uploads before contacting ImageKit", async () => {
+  for (const flag of ["", "TRUE", " true ", "1", "yes", true, null]) {
+    const parsed = loadConfig({
+      ...config,
+      MONGODB_URI: "mongodb://localhost/isolated",
+      CORS_ORIGINS: "https://example.test",
+      JWT_SECRET: Buffer.alloc(48, 7).toString("base64url"),
+      IMAGEKIT_PRIVATE_POLICY_VERIFIED: flag,
+    });
+    const sdk = fakeClient();
+    assert.equal(parsed.IMAGEKIT_PRIVATE_POLICY_VERIFIED, "false");
+    await assert.rejects(imageProvider(parsed, sdk).upload(Buffer.from("image"), {
+      private: true, purpose: "reference", owner: "owner",
+    }), { code: "PRIVATE_MEDIA_UNVERIFIED" });
+    assert.equal(sdk.uploadBody, undefined);
+  }
 });
 test("private upload forces privacy folder and verifies metadata from provider", async () => {
   const sdk = fakeClient();
