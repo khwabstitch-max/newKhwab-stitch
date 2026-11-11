@@ -34,27 +34,32 @@ const app = createApp({
   images: imageProvider(config),
   dbReady: () => mongoose.connection.readyState === 1,
 });
-const server = app.listen(config.PORT, "0.0.0.0", () =>
-  logger.info({ port: config.PORT }, "API listening"),
-);
-server.requestTimeout = 30000;
-server.headersTimeout = 15000;
-let stopping = false;
-function shutdown(signal) {
-  if (stopping) return;
-  stopping = true;
-  logger.info({ signal }, "Graceful shutdown");
-  const timer = setTimeout(() => {
-    logger.error("Shutdown timeout");
-    process.exit(1);
-  }, 20000);
-  timer.unref();
-  server.close(async () => {
-    await mongoose.disconnect();
-    clearTimeout(timer);
-    process.exit(0);
-  });
-  server.closeIdleConnections();
+let server;
+if (!process.env.VERCEL) {
+  server = app.listen(config.PORT, "0.0.0.0", () =>
+    logger.info({ port: config.PORT }, "API listening"),
+  );
+  server.requestTimeout = 30000;
+  server.headersTimeout = 15000;
+  let stopping = false;
+  function shutdown(signal) {
+    if (stopping) return;
+    stopping = true;
+    logger.info({ signal }, "Graceful shutdown");
+    const timer = setTimeout(() => {
+      logger.error("Shutdown timeout");
+      process.exit(1);
+    }, 20000);
+    timer.unref();
+    server.close(async () => {
+      await mongoose.disconnect();
+      clearTimeout(timer);
+      process.exit(0);
+    });
+    server.closeIdleConnections();
+  }
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+
+export default app;

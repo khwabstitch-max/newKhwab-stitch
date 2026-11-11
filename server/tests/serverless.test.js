@@ -20,10 +20,20 @@ test("a failed initialization can recover on a later request without leaking sec
 });
 test("the deployment routes API and health before SPA, and missing assets never return HTML",()=>{
   const config=JSON.parse(readFileSync(new URL("../../vercel.json",import.meta.url),"utf8"));
-  const route=url=>config.routes.find(rule=>rule.src&&new RegExp(`^(?:${rule.src})$`).test(url));
-  assert.equal(route("/api/orders/123").dest,"/api/index.js");assert.equal(route("/health/ready").dest,"/api/index.js");
-  assert.equal(route("/account/drafts").dest,"/index.html");assert.equal(route("/assets/missing.js").status,404);
-  assert.equal(config.outputDirectory,"client/dist");assert.equal(config.functions["api/index.js"].maxDuration,60);
+  if (config.services) {
+    assert.equal(config.services["khwab-stitch-web"].root, "client");
+    assert.equal(config.services["khwab-stitch-api"].root, "server");
+    assert.equal(config.services["khwab-stitch-web"].framework, "vite");
+    assert.equal(config.services["khwab-stitch-api"].framework, "express");
+    assert.ok(config.rewrites.some(r => r.source === "/api/(.*)" && r.destination?.service === "khwab-stitch-api"));
+    assert.ok(config.rewrites.some(r => r.source === "/health/(.*)" && r.destination?.service === "khwab-stitch-api"));
+    assert.ok(config.rewrites.some(r => r.source === "/(.*)" && r.destination?.service === "khwab-stitch-web"));
+  } else {
+    const route=url=>config.routes.find(rule=>rule.src&&new RegExp(`^(?:${rule.src})$`).test(url));
+    assert.equal(route("/api/orders/123").dest,"/api/index.js");assert.equal(route("/health/ready").dest,"/api/index.js");
+    assert.equal(route("/account/drafts").dest,"/index.html");assert.equal(route("/assets/missing.js").status,404);
+    assert.equal(config.outputDirectory,"client/dist");assert.equal(config.functions["api/index.js"].maxDuration,60);
+  }
 });
 test("rate buckets share atomic counts across store instances, hash IPs, and reset by time",async()=>{
   const records=new Map();
