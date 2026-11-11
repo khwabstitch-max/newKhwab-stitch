@@ -1,0 +1,20 @@
+:root {
+  --color-ivory: #fbf7ef;
+  --color-surface: #fffdf8;
+  --color-charcoal: #283b36;
+  --color-muted: #52635d;
+  --color-teal: #205b56;
+  --color-teal-hover: #174743;
+  --color-champagne: #b39869;
+  --color-border: #d8dcd2;
+  --color-danger: #963c3c;
+  --font-body: system-ui, "Segoe UI", "Nirmala UI", "Mangal", sans-serif;
+  --font-heading: Georgia, "Times New Roman", serif;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px; --space-12: 48px;
+  --radius-control: 8px; --radius-card: 14px;
+  --shadow-card: 0 8px 28px #203b3510;
+  --focus-ring: 3px solid #205b56;
+  --touch-target: 44px;
+  --breakpoint-mobile: 640px;
+  --breakpoint-tablet: 900px;
+}

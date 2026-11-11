@@ -1,0 +1,55 @@
+{
+  "name": "khwab-stitch-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "build": "node scripts/check-source.js",
+    "lint": "eslint .",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "test:configured": "node scripts/run-configured-tests.js",
+    "visual:prepare": "node scripts/prepare-visual-import.js",
+    "visual:import": "node scripts/import-visual-assets.js",
+    "visual:verify": "node scripts/verify-visual-import.js",
+    "browser:configured": "node scripts/run-configured-browser.js",
+    "db:free-lengths": "node scripts/migrate-free-sleeve-lengths.js",
+    "test:unit": "node ../scripts/isolated.mjs server-unit",
+    "db:indexes": "node scripts/indexes.js",
+    "seed": "node scripts/seed.js",
+    "admin:provision": "node scripts/provision-admin.js",
+    "media:cleanup": "node scripts/cleanup-media.js",
+    "account:delete": "node scripts/delete-account.js",
+    "password:reset": "node scripts/reset-password.js",
+    "format": "prettier --write \"src/**/*.js\" \"scripts/**/*.js\" \"tests/**/*.js\" eslint.config.js package.json",
+    "format:check": "prettier --check \"src/**/*.js\" \"scripts/**/*.js\" \"tests/**/*.js\" eslint.config.js package.json",
+    "design:import": "node scripts/import-design.js"
+  },
+  "dependencies": {
+    "@imagekit/nodejs": "^7.14.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.3",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.11.4",
+    "multer": "^2.5.0",
+    "pino": "^10.4.0",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "mongodb-memory-server": "^11.3.0",
+    "prettier": "^3.9.10",
+    "supertest": "^7.3.1"
+  }
+}

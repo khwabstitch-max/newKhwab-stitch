@@ -1,0 +1,245 @@
+.guide-dialog {
+  padding: 0;
+  border: 1px solid var(--color-champagne, #b39869);
+  border-radius: 16px;
+  max-width: min(960px, 94vw);
+  width: 100%;
+  max-height: 90vh;
+  box-shadow: 0 24px 60px rgba(27, 77, 71, 0.28);
+  background: var(--color-surface, #fffdf8);
+  color: var(--color-charcoal, #283b36);
+  overflow: hidden;
+  margin: auto;
+}
+
+.guide-dialog::backdrop {
+  background: rgba(18, 36, 32, 0.72);
+  backdrop-filter: blur(5px);
+}
+
+.guide-dialog-content {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.guide-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem 1.4rem;
+  border-bottom: 1px solid #e8e2d5;
+  background: #fbf7ef;
+  gap: 1rem;
+}
+
+.guide-dialog-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #174743;
+  background: #e2ede8;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+
+.guide-dialog-title {
+  margin: 0;
+  font-family: var(--serif, Georgia, serif);
+  font-size: 1.35rem;
+  color: #1b4d47;
+  line-height: 1.25;
+}
+
+.guide-dialog-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.88rem;
+  color: #5b625b;
+}
+
+.guide-dialog-close {
+  background: #fffdfa;
+  border: 1px solid #d8d3c8;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a271b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.guide-dialog-close:hover {
+  background: #f0e6dd;
+  border-color: #c96b70;
+  color: #963c3c;
+}
+
+.guide-dialog-body {
+  overflow-y: auto;
+  padding: 1.25rem;
+  background: #f8f5ee;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.guide-image-container {
+  max-width: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.guide-dialog-img {
+  width: 100%;
+  height: auto;
+  max-height: 68vh;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #e3ddd0;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  background: #fffdfa;
+}
+
+.guide-dialog-footer {
+  padding: 0.85rem 1.4rem;
+  border-top: 1px solid #e8e2d5;
+  background: #fbf7ef;
+  font-size: 0.86rem;
+  color: #5b625b;
+  text-align: center;
+}
+
+/* Master Guide Banners in Flow */
+.measurement-master-banner,
+.guide-banner-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.2rem;
+  background: linear-gradient(135deg, #fcf9f2 0%, #f4eee2 100%);
+  border: 1px solid #dfd7c5;
+  border-left: 4px solid var(--color-champagne, #b39869);
+  border-radius: var(--radius-card, 14px);
+  padding: 1.15rem 1.35rem;
+  margin: 1rem 0 1.25rem;
+  box-shadow: 0 4px 16px rgba(179, 152, 105, 0.1);
+  flex-wrap: wrap;
+}
+
+.measurement-master-info,
+.guide-banner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 220px;
+}
+
+.measurement-master-badge,
+.guide-banner-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #174743;
+  background: #e2ede8;
+  padding: 2px 8px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.measurement-master-info strong,
+.guide-banner-info strong {
+  font-family: var(--serif, Georgia, serif);
+  font-size: 1.1rem;
+  color: #1b4d47;
+}
+
+.measurement-master-info p,
+.guide-banner-info p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #5b625b;
+  line-height: 1.5;
+}
+
+.measurement-guide-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 0.4rem;
+}
+
+.guide-point-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  background: #fffdfa;
+  border: 1px solid #dcd4c3;
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: #283b36;
+}
+
+.point-number {
+  background: #205b56;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.measurement-master-open-btn,
+.guide-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.65rem 1.15rem;
+  background: #205b56;
+  color: #fffdf8;
+  border: 1px solid #174743;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.measurement-master-open-btn:hover,
+.guide-banner-btn:hover {
+  background: #174743;
+  box-shadow: 0 4px 12px rgba(32, 91, 86, 0.25);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .measurement-master-banner,
+  .guide-banner-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .measurement-master-open-btn,
+  .guide-banner-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

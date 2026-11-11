@@ -1,0 +1,29 @@
+{
+  "name": "khwab-stitch",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "setup": "node scripts/workspace.mjs setup",
+    "dev": "node scripts/workspace.mjs dev",
+    "test": "node scripts/workspace.mjs test",
+    "lint": "node scripts/workspace.mjs lint",
+    "build": "node scripts/workspace.mjs build",
+    "check": "node scripts/workspace.mjs check",
+    "check:isolated": "node scripts/verify-project.mjs",
+    "source:check": "node scripts/source-check.mjs",
+    "load:local": "node scripts/load-local.mjs",
+    "test:runtime": "node scripts/prepare-test-runtime.mjs",
+    "start": "npm --prefix server start",
+    "db:indexes": "npm --prefix server run db:indexes",
+    "seed": "npm --prefix server run seed",
+    "admin:provision": "npm --prefix server run admin:provision --",
+    "media:cleanup": "npm --prefix server run media:cleanup --",
+    "browser:smoke": "node scripts/browser-smoke.mjs",
+    "browser:paging": "node scripts/browser-smoke.mjs --paging",
+    "browser:customization": "node scripts/browser-smoke.mjs --customization"
+  }
+}

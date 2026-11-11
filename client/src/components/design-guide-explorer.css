@@ -1,0 +1,257 @@
+.design-guide-explorer {
+  margin: 2rem 0;
+  width: 100%;
+}
+
+.guide-explorer-tabs {
+  display: flex;
+  gap: 0.65rem;
+  border-bottom: 2px solid #e8e2d5;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.guide-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.65rem 1.25rem;
+  border: 1px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--color-muted, #52635d);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.guide-tab-btn:hover {
+  color: var(--color-teal, #205b56);
+  background: #fbf7ef;
+}
+
+.guide-tab-btn.is-active {
+  color: var(--color-teal, #205b56);
+  font-weight: 700;
+  border-color: #e8e2d5 #e8e2d5 transparent;
+  border-bottom: 3px solid var(--color-teal, #205b56);
+  background: var(--color-surface, #fffdf8);
+}
+
+.guide-tab-count {
+  background: #e2ede8;
+  color: #174743;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.guide-tab-btn.is-active .guide-tab-count {
+  background: var(--color-teal, #205b56);
+  color: #fff;
+}
+
+.guide-explorer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.guide-explorer-desc {
+  font-size: 0.9rem;
+  color: #52635d;
+  margin: 0;
+  max-width: 650px;
+  line-height: 1.5;
+}
+
+.guide-explorer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.4rem;
+}
+
+.tailoring-card {
+  background: var(--color-surface, #fffdf8);
+  border: 1px solid #dcd4c3;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 16px rgba(40, 59, 54, 0.05);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.tailoring-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(32, 91, 86, 0.12);
+  border-color: #b39869;
+}
+
+.tailoring-card-img-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: #f7f3ea;
+  overflow: hidden;
+  border-bottom: 1px solid #eee8dc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tailoring-card-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 15%;
+  transition: transform 0.3s ease;
+}
+
+.tailoring-card:hover .tailoring-card-img-wrap img {
+  transform: scale(1.03);
+}
+
+.tailoring-card-price-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(32, 91, 86, 0.92);
+  color: #fffdf8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.tailoring-card-price-badge.is-free {
+  background: #2a6857;
+}
+
+.tailoring-card-body {
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.tailoring-card-heading {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tailoring-card-title {
+  font-family: var(--serif, Georgia, serif);
+  font-size: 1.15rem;
+  color: #1b4d47;
+  font-weight: 600;
+}
+
+.tailoring-card-subname {
+  font-size: 0.8rem;
+  color: #b39869;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.tailoring-card-desc {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: #4a5450;
+  margin: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed #e4dcce;
+}
+
+.tailoring-card-meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  margin-top: auto;
+}
+
+.tailoring-card-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tailoring-card-meta-label {
+  font-weight: 700;
+  color: #174743;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tailoring-card-meta-value {
+  color: #3b4541;
+  line-height: 1.45;
+}
+
+.tailoring-card-footer {
+  padding: 0.75rem 1.15rem;
+  background: #fbf8f2;
+  border-top: 1px solid #ebe4d6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.tailoring-card-rate {
+  font-weight: 700;
+  color: #1b4d47;
+  font-size: 0.88rem;
+}
+
+.tailoring-card-view-btn {
+  background: transparent;
+  border: 1px solid #c9c1b0;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #205b56;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tailoring-card-view-btn:hover {
+  background: #205b56;
+  color: #fff;
+  border-color: #205b56;
+}
+
+@media (max-width: 960px) {
+  .guide-explorer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .guide-explorer-grid {
+    grid-template-columns: 1fr;
+  }
+  .guide-tab-btn {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.88rem;
+  }
+}

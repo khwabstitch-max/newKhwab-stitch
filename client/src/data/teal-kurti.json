@@ -1,0 +1,134 @@
+{
+  "boardAsset": "/design-library/teal-kurti-board.png",
+  "design": {
+    "title": "Teal Floral Embroidered Kurti",
+    "titleHi": "फूलों की कढ़ाई वाली टील कुर्ती",
+    "code": "KS-TEAL-01",
+    "slug": "teal-floral-embroidered-kurti",
+    "garment": "kurti",
+    "description": "A straight teal kurti with side slits, a notched V neckline with embroidery, three-quarter bishop sleeves and a keyhole back with tie and tassel. The reference board shows floral embroidery along the neckline, sleeves and hem. This listing is for custom stitching using fabric supplied by the customer; the shown outfit, trousers and accessories are styling references.",
+    "descriptionHi": "फ्लोरल कढ़ाई वाले नॉच्ड वी गले, तीन-चौथाई बिशप आस्तीन, साइड स्लिट और डोरी व लटकन वाले कीहोल बैक की सीधी टील कुर्ती। तस्वीर में गले, आस्तीन और घेरे पर फूलों की कढ़ाई दिखाई गई है। यह ग्राहक के दिए कपड़े से सिलाई की सेवा है; तस्वीर की पोशाक, पैंट और एक्सेसरीज़ केवल स्टाइल के संदर्भ हैं।",
+    "designDetails": {
+      "neck": "Notched V neck with embroidery",
+      "neckHi": "कढ़ाई वाला नॉच्ड वी गला",
+      "sleeve": "Bishop sleeves (3/4 length)",
+      "sleeveHi": "तीन-चौथाई लंबाई की बिशप आस्तीन",
+      "back": "Keyhole with tie & tassel",
+      "backHi": "डोरी और लटकन वाला कीहोल बैक",
+      "style": "Straight kurti with side slits",
+      "styleHi": "साइड स्लिट वाली सीधी कुर्ती",
+      "fabric": "Cotton / linen / cambric — customer’s fabric",
+      "fabricHi": "कॉटन / लिनन / कैम्ब्रिक — कपड़ा ग्राहक देंगे",
+      "fabricRequirement": "Confirm fabric length, width and lining requirements with the atelier before cutting.",
+      "fabricRequirementHi": "कपड़ा काटने से पहले स्टूडियो से कपड़े की लंबाई, चौड़ाई और अस्तर की ज़रूरत पूछ लें।",
+      "turnaround": "Delivery date is agreed after design, measurements and fabric review.",
+      "turnaroundHi": "डिज़ाइन, नाप और कपड़े की समीक्षा के बाद डिलीवरी की तारीख तय होगी।"
+    },
+    "serviceNotes": "This is a stitching service only. Fabric is to be provided by the customer. Final price may vary with design complexity and additional work. The ₹300 basic rate does not include the complete embroidery shown. Confirm embroidery method, thread colours, lining, trims, fabric quantity and fitting requirements before accepting your final quote.",
+    "serviceNotesHi": "यह केवल सिलाई की सेवा है। कपड़ा ग्राहक देंगे। डिज़ाइन की बारीकी और अतिरिक्त काम के अनुसार अंतिम कीमत बदल सकती है। ₹300 की सादी सिलाई में तस्वीर की पूरी कढ़ाई शामिल नहीं है। अंतिम कोटेशन स्वीकार करने से पहले कढ़ाई का तरीका, धागों के रंग, अस्तर, सजावट, कपड़े की मात्रा और फिटिंग तय कर लें।",
+    "startingPricePaise": 30000,
+    "priceOptions": [
+      {
+        "label": "Simple kurti stitching",
+        "labelHi": "सादी कुर्ती की सिलाई",
+        "amountPaise": 30000,
+        "isStartingPrice": false
+      },
+      {
+        "label": "With neck & sleeve design",
+        "labelHi": "गले और आस्तीन के डिज़ाइन के साथ",
+        "amountPaise": 40000,
+        "isStartingPrice": false
+      },
+      {
+        "label": "With back design (tie / tassel / button)",
+        "labelHi": "बैक डिज़ाइन के साथ (डोरी / लटकन / बटन)",
+        "amountPaise": 45000,
+        "isStartingPrice": false
+      },
+      {
+        "label": "With embroidery / handwork",
+        "labelHi": "कढ़ाई / हैंडवर्क के साथ",
+        "amountPaise": 55000,
+        "isStartingPrice": true
+      }
+    ],
+    "mediaIds": ["board"],
+    "coverMediaId": "board",
+    "imageViews": [
+      {
+        "mediaId": "board",
+        "label": "Front view",
+        "labelHi": "सामने से",
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "width": 22.4609375,
+          "height": 92.3828125
+        }
+      },
+      {
+        "mediaId": "board",
+        "label": "Side view",
+        "labelHi": "बगल से",
+        "crop": {
+          "x": 23.177083333333336,
+          "y": 0,
+          "width": 15.690104166666666,
+          "height": 92.3828125
+        }
+      },
+      {
+        "mediaId": "board",
+        "label": "Back view",
+        "labelHi": "पीछे से",
+        "crop": {
+          "x": 39.58333333333333,
+          "y": 0,
+          "width": 17.643229166666664,
+          "height": 92.3828125
+        }
+      },
+      {
+        "mediaId": "board",
+        "label": "Neck design",
+        "labelHi": "गले की कढ़ाई",
+        "crop": {
+          "x": 58.0078125,
+          "y": 1.171875,
+          "width": 21.09375,
+          "height": 27.5390625
+        }
+      },
+      {
+        "mediaId": "board",
+        "label": "Sleeve design",
+        "labelHi": "आस्तीन की कढ़ाई",
+        "crop": {
+          "x": 58.0078125,
+          "y": 32.71484375,
+          "width": 21.09375,
+          "height": 29.296875
+        }
+      },
+      {
+        "mediaId": "board",
+        "label": "Back design",
+        "labelHi": "बैक डिज़ाइन",
+        "crop": {
+          "x": 58.0078125,
+          "y": 66.11328125,
+          "width": 21.09375,
+          "height": 25.78125
+        }
+      },
+      {
+        "mediaId": "board",
+        "label": "Full design board",
+        "labelHi": "पूरा डिज़ाइन बोर्ड",
+        "crop": null
+      }
+    ],
+    "status": "draft"
+  }
+}

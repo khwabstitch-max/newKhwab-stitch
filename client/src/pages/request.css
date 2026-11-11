@@ -1,0 +1,162 @@
+.request-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.wizard-page.review-step .wizard-aside .request-price {display:none;}
+.draft-toolbar {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  font-size: 13px;
+  margin-bottom: 25px;
+}
+.draft-toolbar button {
+  min-height: 44px;
+}
+.request-designs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+  margin: 20px 0;
+}
+.request-design {
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  position: relative;
+}
+.request-design > input {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+}
+.request-design img,
+.photo-fallback {
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+  background: #f1ebdf;
+  border-radius: 5px;
+}
+.photo-fallback {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 20px;
+  font-size: 13px;
+}
+.request-design.selected {
+  border: 2px solid var(--teal);
+  padding: 14px;
+  background: #edf1e9;
+}
+.request-price h2 {
+  font-size: 34px;
+}
+.request-price .review-list small {
+  display: block;
+}
+.request-price .review-list dd {
+  white-space: nowrap;
+}
+.request-price summary {
+  min-height: 44px;
+  cursor: pointer;
+}
+.pending-price {
+  border-left: 3px solid #946a32;
+  padding-left: 12px;
+  font-size: 13px;
+}
+.wizard-aside .panel {
+  color: var(--ink);
+  background: var(--paper);
+  padding: 25px;
+}
+.compact-design-summary {
+  background: #f0eadc;
+  padding: 18px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+.compact-design-summary small {
+  display: block;
+  line-height: 1.8;
+}
+.review-section {
+  padding: 15px 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+.review-section .section-heading {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.review-section h3 {
+  font-size: 25px;
+}
+.reference-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin: 20px 0;
+}
+.reference-preview {
+  max-width: 220px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+.reference-preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+}
+.request-actions {
+  position: relative;
+  background: var(--paper);
+  padding-top: 25px;
+}
+.quote-line-editor {
+  padding: 15px 0;
+  border-bottom: 1px solid var(--line);
+}
+.google-signin {
+  padding: 20px 0;
+}
+@media (max-width: 760px) {
+  .request-designs {
+    gap: 10px;
+  }
+  .request-design {
+    padding: 10px;
+    font-size: 13px;
+  }
+  .request-design.selected {
+    padding: 9px;
+  }
+  .request-design img,
+  .photo-fallback {
+    height: 145px;
+  }
+  .request-actions {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .request-actions .button {
+    flex: 1;
+    justify-content: center;
+    white-space: normal;
+  }
+  .draft-toolbar > span {
+    width: 100%;
+  }
+}

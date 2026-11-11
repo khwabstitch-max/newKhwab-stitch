@@ -1,0 +1,33 @@
+name: Verify application
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+      - run: npm run setup
+      - run: npm run check:isolated
+      - run: npm run source:check
+      - run: npm --prefix server audit --omit=dev
+      - run: npm --prefix client audit --omit=dev
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: isolated-check-reports
+          path: artifacts/verify-*.txt
+          if-no-files-found: ignore
+          retention-days: 7

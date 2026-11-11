@@ -1,0 +1,265 @@
+.account-shell {
+  display: grid;
+  grid-template-columns: 235px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.account-navigation {
+  position: sticky;
+  top: 24px;
+  padding: 25px 0;
+  min-width: 0;
+}
+.account-navigation h2 {
+  font-size: 27px;
+}
+.account-navigation nav {
+  display: grid;
+  gap: 3px;
+  margin: 25px 0;
+}
+.account-navigation nav a {
+  padding: 12px 15px;
+  border-radius: 5px;
+  font-size: 14px;
+  min-height: 44px;
+  color: var(--muted);
+}
+.account-navigation nav a:hover {
+  background: #eee6d9;
+}
+.account-navigation nav a.active {
+  background: var(--teal);
+  color: #fff;
+  font-weight: 600;
+}
+.account-main {
+  min-width: 0;
+}
+.account-main > .container {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+.account-main .page-heading h1 {
+  font-size: clamp(30px, 3.5vw, 44px);
+}
+.account-main .stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.account-main .stat {
+  border-top: 3px solid var(--teal);
+}
+.account-main .stat strong {
+  color: var(--teal);
+}
+.account-main .stat:hover {
+  background: #f4eadc;
+}
+.account-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.account-cards .panel {
+  margin: 0 0 10px;
+  min-width: 0;
+}
+.account-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.account-row > span:first-child {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.account-row strong,
+.account-row small,
+.account-row p {
+  overflow-wrap: anywhere;
+}
+.account-row.panel {
+  padding: 22px;
+}
+.account-row .badge {
+  flex-shrink: 0;
+}
+.account-main .text-button {
+  min-height: 44px;
+  padding: 10px 7px;
+}
+.conversation {
+  margin-top: 30px;
+  border-top: 1px solid var(--line);
+  padding-top: 25px;
+}
+.conversation h3 {
+  font-size: 25px;
+}
+.conversation .button {
+  margin: 10px 12px 5px 0;
+}
+.message-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 15px;
+}
+.message-list li {
+  padding: 20px;
+  background: #f1ebdf;
+  border-left: 3px solid var(--teal);
+  border-radius: 3px;
+}
+.message-list li > div:first-child {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+.message-list time {
+  font-size: 12px;
+  color: var(--muted);
+}
+.message-list p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 12px 0 0;
+}
+.message-list .private-image {
+  max-width: 240px;
+  margin-top: 15px;
+}
+.worker-permissions {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.worker-permissions > strong {
+  overflow-wrap: anywhere;
+}
+.account-main .panel,
+.admin-content .panel {
+  overflow-wrap: anywhere;
+}
+.account-main details,
+.admin-content details {
+  padding: 12px 0;
+}
+.account-main summary,
+.admin-content summary {
+  cursor: pointer;
+  min-height: 44px;
+  line-height: 1.6;
+}
+.account-main .form-actions,
+.admin-content .stack-actions {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.account-main .stack-actions .button {
+  white-space: normal;
+  text-align: center;
+}
+.account-main form,
+.admin-content form {
+  min-width: 0;
+}
+.hero-actions .text-link {
+  max-width: 270px;
+  line-height: 1.6;
+}
+.selected-reviews .account-cards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.selected-reviews blockquote {
+  margin: 15px 0;
+  line-height: 1.8;
+}
+@media (max-width: 1100px) {
+  .account-shell {
+    grid-template-columns: 205px minmax(0, 1fr);
+    gap: 25px;
+  }
+  .header-inner {
+    flex-wrap: wrap;
+  }
+  .nav {
+    gap: 16px;
+  }
+  .account-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .account-shell {
+    display: block;
+    padding-top: 25px;
+  }
+  .account-navigation {
+    position: static;
+    padding: 0 0 20px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 28px;
+  }
+  .account-navigation h2 {
+    font-size: 25px;
+  }
+  .account-navigation nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 15px 0;
+    gap: 5px;
+  }
+  .account-navigation nav a {
+    padding: 10px;
+    font-size: 13px;
+  }
+  .account-main .stat-grid {
+    gap: 10px;
+  }
+  .account-main .stat {
+    padding: 18px;
+  }
+  .account-main .stat strong {
+    font-size: 32px;
+  }
+  .account-main .panel {
+    padding: 20px;
+  }
+  .account-row {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .account-main .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .message-list li {
+    padding: 15px;
+  }
+  .message-list li > div:first-child {
+    align-items: start;
+    gap: 8px;
+    flex-direction: column;
+  }
+  .selected-reviews .account-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .account-main .page-heading .button {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
