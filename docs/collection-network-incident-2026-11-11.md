@@ -32,4 +32,10 @@ Local verification passed 234 server tests and 219 client tests. The full client
 
 The full reports are in ignored `artifacts/collection-client-full.txt`, `artifacts/collection-server-full.txt` and `artifacts/collection-client-build.txt`; focused reports are `artifacts/public-read-focused.txt` and the database-health reports. The exact committed version's hosted checks are published in [GitHub Actions](https://github.com/khwabstitch-max/newKhwab-stitch/actions). Replacement live probe results are written to `artifacts/live-auth-probe.json`, `artifacts/live-browser-probe.json` and `artifacts/live-browser-transient-probe.json`. Compare the transient result with the preserved `artifacts/live-browser-transient-before.json` rather than treating an ordinary successful request as recovery evidence.
 
-The original signed-in browser still needs owner confirmation after the replacement deployment; a fresh anonymous browser cannot establish that device's original transport cause. No environment files, original account password or private customer data are needed for these checks.
+## Deployed result
+
+Commit `5852a34b228f0eec08c43d56e185e65518871110` was pushed to `main` and Vercel reported successful deployment. [Its GitHub Actions run](https://github.com/khwabstitch-max/newKhwab-stitch/actions/runs/43066383146) passed. The replacement public probes returned200 for homepage, login, liveness, native-ping readiness and authentication capabilities.
+
+Both ordinary desktop/mobile Chrome checks displayed three published cards without alerts. With the first collection request deliberately reset, the desktop browser made the bounded recovery request, received200 and displayed three cards without the old error; mobile also passed. The repaired transient probe exited0, whereas the preserved baseline exited1 with the exact reported message and zero cards. No server fault or customer-data mutation was injected.
+
+The owner then confirmed that the collection loads in the original normal signed-in window after hard refresh. This closes the application recovery incident with controlled-failure and original-browser confirmation. The original transport interruption's external trigger was not captured; a persistent outage still produces an error rather than fake catalogue data. No environment files, account password or private customer data were accessed.
