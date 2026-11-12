@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowDown, CornerDownRight } from "lucide-react";
 import { api, money, readable } from "../lib/api";
 import { uploadMedia } from "../lib/media";
 import { estimateLineLabel } from "../lib/order-labels";
@@ -985,23 +986,44 @@ export function RequestWizard() {
           "Choose a design, share your preferences and add your measurements. Our master tailor can help at any step.",
         )}
       </PageHeading>
-      <Steps current={index} labels={steps.map(label)} />
-      <div className="draft-toolbar">
-        <span role="status">
-          {t(saved || "Your choices stay with this draft.")}
-        </span>
-        <button className="text-button" disabled={busy} onClick={saveCloud}>
-          {t("Save draft")}
-        </button>
-        <Link
-          className="text-link"
-          onClick={(e) => {
-            if (!persist()) e.preventDefault();
-          }}
-          to={`/account/support?draft=${cloud.current?.id || draft.id}&step=${step}`}
-        >
-          {t("Need Help from a Master Tailor?")}
-        </Link>
+      <div className="wizard-progress-shell">
+        <Steps current={index} labels={steps.map(label)} />
+        <div className="draft-toolbar">
+          <div className="wizard-toolbar-meta">
+            <span className="wizard-active-link">
+              <ArrowDown size={14} aria-hidden="true" />
+              <span>
+                {t("Step {0} of {1}", { 0: index + 1, 1: steps.length })}
+              </span>
+              <span className="wizard-active-sep" aria-hidden="true">
+                ·
+              </span>
+              <strong>{label(step)}</strong>
+            </span>
+            <span className="wizard-draft-status" role="status">
+              {t(saved || "Your choices stay with this draft.")}
+            </span>
+          </div>
+          <div className="wizard-draft-actions">
+            <button
+              type="button"
+              className="button secondary small wizard-draft-save"
+              disabled={busy}
+              onClick={saveCloud}
+            >
+              {t("Save draft")}
+            </button>
+            <Link
+              className="text-link wizard-tailor-help"
+              onClick={(e) => {
+                if (!persist()) e.preventDefault();
+              }}
+              to={`/account/support?draft=${cloud.current?.id || draft.id}&step=${step}`}
+            >
+              {t("Need Help from a Master Tailor?")}
+            </Link>
+          </div>
+        </div>
       </div>
       {draft.sensitiveDataUnavailable && (
         <Notice>
@@ -1048,6 +1070,13 @@ export function RequestWizard() {
           className="panel wizard-form"
           onSubmit={step === "review" ? submit : next}
         >
+          <div className="wizard-section-link">
+            <CornerDownRight size={14} aria-hidden="true" />
+            <span>
+              {t("Step {0} of {1}", { 0: index + 1, 1: steps.length })}
+            </span>
+            <strong>{label(step)}</strong>
+          </div>
           <h2>{label(step)}</h2>
           <ErrorMessage message={error} />
           <fieldset className="request-fields" disabled={busy || uncertain}>

@@ -451,6 +451,7 @@ export const messages = Object.freeze({
   "Start your stitching request": "अपना सिलाई अनुरोध शुरू करें",
   State: "राज्य",
   Status: "स्थिति",
+  "Step {0} of {1}": "चरण {0} / {1}",
   "Stitching description": "सिलाई की जानकारी",
   "Stitching from": "सिलाई की शुरुआती कीमत",
   "Stitching requests": "सिलाई अनुरोध",

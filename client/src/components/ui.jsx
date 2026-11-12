@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Check,
   ChevronLeft,
+  ChevronRight,
   LoaderCircle,
   Scissors,
   ShieldCheck,
@@ -139,13 +140,18 @@ export function Steps({ current, labels }) {
       {labels.map((label, i) => (
         <li
           key={label}
-          className={`${i === current ? "active" : ""} ${i < current ? "done" : ""}`}
+          className={`${i === current ? "active" : ""} ${i < current ? "done" : ""}`.trim()}
           aria-current={i === current ? "step" : undefined}
         >
-          <span>
-            {i < current ? <Check size={14} /> : String(i + 1).padStart(2, "0")}
-          </span>
-          <small>{t(label)}</small>
+          <div className="step-pill">
+            <span className="step-badge">
+              {i < current ? <Check size={13} /> : String(i + 1).padStart(2, "0")}
+            </span>
+            <small>{t(label)}</small>
+          </div>
+          {i < labels.length - 1 && (
+            <ChevronRight className="step-arrow" size={15} aria-hidden="true" />
+          )}
         </li>
       ))}
     </ol>

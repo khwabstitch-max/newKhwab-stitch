@@ -426,3 +426,26 @@ it("recovers an original component outside the loaded gallery independently of t
     screen.queryByRole("radio", { name: /Original hidden sleeve/ }),
   ).not.toBeInTheDocument();
 });
+
+it("links the active wizard step visually to the current form section", async () => {
+  const { container } = mount(`/request?design=${designId}`);
+  await screen.findByRole("heading", { name: "Your garment" });
+  const shell = container.querySelector(".wizard-progress-shell");
+  expect(shell).toBeInTheDocument();
+  const activeStep = shell.querySelector('li[aria-current="step"]');
+  expect(activeStep).toHaveClass("active");
+  expect(shell.querySelectorAll(".step-arrow").length).toBeGreaterThanOrEqual(
+    1,
+  );
+  const toolbarIndicator = shell.querySelector(".wizard-active-link");
+  expect(toolbarIndicator).toHaveTextContent(/Step 1 of \d+/);
+  expect(toolbarIndicator).toHaveTextContent(/Your garment/);
+  const formIndicator = container.querySelector(
+    ".wizard-form .wizard-section-link",
+  );
+  expect(formIndicator).toHaveTextContent(/Step 1 of \d+/);
+  expect(formIndicator).toHaveTextContent(/Your garment/);
+  expect(
+    screen.getByRole("button", { name: "Save draft" }),
+  ).toHaveAttribute("type", "button");
+});
