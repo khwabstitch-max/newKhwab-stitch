@@ -3,8 +3,8 @@ export const TEAL_BOARD = Object.freeze({
   path: "/design-library/teal-kurti-board.png",
   width: 1536,
   height: 1024,
-  bytes: 2398342,
-  sha256: "1b1a965ac71bff346aa707dbd3d3d340fc64ae76bbedcf95401b9c4de7b98548",
+  bytes: 2618135,
+  sha256: "5afbd28ed691d74c0e887fa45f0ae4fd1f38a3f0828fcdb3b46a53784080b22f",
 });
 function checkBundled(asset) {
   if (
