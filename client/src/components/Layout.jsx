@@ -23,7 +23,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
-import { useSite } from "../lib/hooks";
+import { useSite, prefetchPublicResource } from "../lib/hooks";
 import { ErrorMessage, Spinner } from "./ui";
 export function Logo({ variant = "horizontal" }) {
   useLanguage();
@@ -116,7 +116,7 @@ export function Layout() {
           <details className="nav-designs" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.removeAttribute("open"); }}
             onKeyDown={(event) => { if (event.key === "Escape" && event.currentTarget.open) { event.preventDefault(); event.stopPropagation(); event.currentTarget.removeAttribute("open"); event.currentTarget.querySelector("summary")?.focus(); } }}>
             <summary>{t("public.nav.designs")}<ChevronDown size={14} aria-hidden="true" /></summary>
-            <div className="nav-design-links">
+            <div className="nav-design-links" onMouseEnter={() => prefetchPublicResource("/designs?limit=12&page=1")}>
               <NavLink to="/catalogue">{t("public.nav.all")}</NavLink>
               {garments.map((garment) => <Link key={garment} to={"/catalogue?garment=" + garment}>{t("public.garment." + garment)}</Link>)}
             </div>

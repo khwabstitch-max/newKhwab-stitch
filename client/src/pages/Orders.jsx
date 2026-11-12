@@ -683,6 +683,34 @@ export function OrderDetails({ admin = false }) {
                     onChange={(lineItems) => setQuote({ ...quote, lineItems })}
                     quantity={order.quantity}
                   />
+                  {order.estimate?.lineItems?.length > 0 && (
+                    <button
+                      type="button"
+                      className="button secondary small"
+                      onClick={() =>
+                        setQuote({
+                          ...quote,
+                          lineItems: order.estimate.lineItems.map((line) => ({
+                            label: estimateLineLabel(
+                              line,
+                              order.estimate,
+                              order.designSnapshot,
+                            ),
+                            amountPaise: Number(
+                              line.totalPaise ?? line.amountPaise ?? 0,
+                            ),
+                            scope: line.scope || "garment",
+                            quantity:
+                              (line.scope || "garment") === "garment"
+                                ? order.quantity
+                                : 1,
+                          })),
+                        })
+                      }
+                    >
+                      {t("Copy estimate breakdown into quote")}
+                    </button>
+                  )}
                   <Field
                     label={t("Hindi quote notes (optional)")}
                     name="quoteNotesHi"

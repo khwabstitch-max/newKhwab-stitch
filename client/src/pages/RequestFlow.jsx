@@ -323,7 +323,7 @@ export function RequestWizard() {
     additions = usePagedCollection(
       `/options?limit=12&garment=${draft.garment}&kind=extra`,
     ),
-    services = useResource("/services?limit=50"),
+    services = useResource("/services?limit=50", { publicRead: true }),
     profiles = useResource(
       user ? `/measurements?garment=${draft.garment}&limit=50` : null,
     ),
@@ -332,6 +332,7 @@ export function RequestWizard() {
     draft.designId && !designs.data?.some((d) => d._id === draft.designId)
       ? `/designs/id/${draft.designId}`
       : null,
+    { publicRead: true },
   );
   const config = draft.configuration,
     design =

@@ -19,7 +19,7 @@ export function createApp(context) {
       "Invalid privacy verification flag; private customer uploads remain disabled.",
     );
   app.disable("x-powered-by");
-  app.set("trust proxy", context.config.TRUST_PROXY_HOPS || 0);
+  app.set("trust proxy", context.config.TRUST_PROXY_HOPS || (context.config.SERVERLESS ? 1 : 0));
   app.use((req, res, next) => {
     req.id = randomUUID();
     req.log = log;

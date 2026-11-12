@@ -1,5 +1,4 @@
 import { DesignImage, DesignPresentation } from "../components/DesignGallery";
-import { GuideModal } from "../components/GuideModal";
 import { DesignGuideExplorer } from "../components/DesignGuideExplorer";
 import { t, localize, labelToken } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
@@ -21,7 +20,6 @@ import {
   Check,
   Ruler,
   Scissors,
-  Sparkles,
   Leaf,
   Search,
   MessageCircle,
@@ -31,7 +29,7 @@ import {
   EyeOff,
   Truck,
 } from "lucide-react";
-import { useResource, useSite } from "../lib/hooks";
+import { useResource, useSite, prefetchPublicResource } from "../lib/hooks";
 import { useAuth } from "../lib/auth";
 import { safeReturnTo } from "../lib/continuation";
 import { GoogleSignIn } from "../components/GoogleSignIn";
@@ -104,6 +102,22 @@ export function DesignCard({ design, index = 0 }) {
     </Link>
   );
 }
+function DesignGridSkeleton({ count = 3 }) {
+  return (
+    <div className="design-grid design-grid-skeleton" aria-busy="true" aria-label={t("Loading\u2026")}>
+      {Array.from({ length: count }, (_, index) => (
+        <div className="design-card public-design-card design-skeleton-card" key={index} aria-hidden="true">
+          <div className="design-image design-skeleton-media" />
+          <div className="design-info">
+            <span className="skeleton-line short" />
+            <span className="skeleton-line title" />
+            <span className="skeleton-line medium" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 export function Home() {
   const { language } = useLanguage();
   const site = useSite();
@@ -130,7 +144,7 @@ export function Home() {
             <h1>{hero.headline}</h1>
             <p className="home-hero-description">{hero.description}</p>
             <div className="home-hero-actions">
-              <Link className="button" to="/catalogue">{heroCtas.primaryCtaLabel || t("public.action.explore")}<ArrowRight size={17} aria-hidden="true" /></Link>
+              <Link className="button" to="/catalogue" onMouseEnter={() => prefetchPublicResource("/designs?limit=12&page=1")}>{heroCtas.primaryCtaLabel || t("public.action.explore")}<ArrowRight size={17} aria-hidden="true" /></Link>
               <Link className="button secondary" to="/request?source=reference">{heroCtas.secondaryCtaLabel || t("public.action.reference")}</Link>
             </div>
             <Link className="home-hero-guidance" to="/contact">{t("public.action.guidance")}<ArrowRight size={16} aria-hidden="true" /></Link>
@@ -201,9 +215,9 @@ export function Home() {
       <section className="container public-section" aria-labelledby="home-collection-title">
         <div className="public-collection-header">
           <div className="public-section-heading"><h2 id="home-collection-title">{t("public.collection.title")}</h2><p>{t("public.collection.description")}</p></div>
-          <ArrowLink to="/catalogue">{t("public.nav.all")}</ArrowLink>
+          <ArrowLink to="/catalogue" onMouseEnter={() => prefetchPublicResource("/designs?limit=12&page=1")}>{t("public.nav.all")}</ArrowLink>
         </div>
-        {collection.loading && !designs.length ? <Spinner label={t("Opening the collection…")} />
+        {collection.loading && !designs.length ? <DesignGridSkeleton count={3} />
           : collection.error && !designs.length ? <ErrorMessage message={collection.error} retry={collection.reload} />
           : designs.length ? <div className="design-grid">{designs.map((design, index) => <DesignCard key={design._id} design={design} index={index} />)}</div>
           : <Empty title={t("public.collection.empty")}><p>{t("public.collection.emptyHelp")}</p><Link className="button secondary" to="/request?source=reference">{t("public.action.reference")}</Link></Empty>}
@@ -211,9 +225,8 @@ export function Home() {
       <section className="home-process public-section">
         <div className="container">
           <div className="public-section-heading"><h2>{t("public.process.title")}</h2></div>
-          <ol className="home-process-grid">{process.map((item, index) => <li key={index}>
+          <ol className="home-process-grid home-process-compact">{process.map((item, index) => <li key={index}>
             <h3>{homepageText(item, "title", language)}</h3>
-            {homepageText(item, "description", language) && <p>{homepageText(item, "description", language)}</p>}
           </li>)}</ol>
           <ul className="home-commitments" aria-label={t("public.commitments.title")}>
             {[1, 2, 3, 4].map((step) => (
@@ -244,48 +257,6 @@ export function Home() {
   );
 }
 function HomeGuidesShowcase() {
-  const [activeGuideId, setActiveGuide] = useState(null);
-
-  const guides = [
-    {
-      id: "neck",
-      title: t("Signature Necklines"),
-      desc: t(
-        "8 signature necklines: Round, V-Neck, Boat, Collar, Square, Sweetheart, High Neck & Mandarin.",
-      ),
-      img: "/guides/neck-designs-guide.jpg",
-      badge: t("Neck Options"),
-    },
-    {
-      id: "sleeve",
-      title: t("Bespoke Sleeve Styles"),
-      desc: t(
-        "11 bespoke sleeve designs: Straight, Puff, Bell, Ruffle, Bishop, Butterfly, Cold Shoulder & more.",
-      ),
-      img: "/guides/sleeve-designs-guide.jpg",
-      badge: t("Sleeve Options"),
-    },
-    {
-      id: "length",
-      title: t("Sleeve Lengths"),
-      desc: t(
-        'Front & side view references from Sleeveless (0cm) to Full Sleeve (55cm / 21.7").',
-      ),
-      img: "/guides/sleeve-length-guide.jpg",
-      badge: t("Length Guide"),
-    },
-    {
-      id: "measurement",
-      title: t("Full Measurement Guide"),
-      desc: t(
-        "Numbered measurement guide for Kurti, Blouse & Suit — exact points for the perfect custom fit.",
-      ),
-      img: "/guides/measurement-guide.jpg",
-      badge: t("Fit Guide"),
-    },
-  ];
-
-  const activeGuide = guides.find((guide) => guide.id === activeGuideId);
   return (
     <section className="section container guides-showcase-section">
       <div className="section-heading">
@@ -301,45 +272,7 @@ function HomeGuidesShowcase() {
         <ArrowLink to="/request">{t("Start custom request")}</ArrowLink>
       </div>
 
-      <div className="home-guides-grid">
-        {guides.map((g) => (
-          <div
-            key={g.id}
-            className="home-guide-card"
-            onClick={() => setActiveGuide(g.id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (["Enter", " "].includes(e.key)) { e.preventDefault(); setActiveGuide(g.id); } }}
-          >
-            <div className="home-guide-thumb-wrap">
-              <img src={g.img} alt={g.title} loading="lazy" />
-              <span className="home-guide-badge">{g.badge}</span>
-            </div>
-            <div className="home-guide-info">
-              <h3>{g.title}</h3>
-              <p>{g.desc}</p>
-              <span className="home-guide-action">
-                <Sparkles size={14} aria-hidden="true" />
-                {t("View full chart")}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
       <DesignGuideExplorer />
-
-      {activeGuide && (
-        <GuideModal
-          title={activeGuide.title}
-          subtitle={activeGuide.desc}
-          imageUrl={activeGuide.img}
-          onClose={() => setActiveGuide(null)}
-          footerNote={t(
-            "Khwab Stitch • Handcrafted bespoke tailoring made to your exact measurements.",
-          )}
-        />
-      )}
     </section>
   );
 }
@@ -383,6 +316,7 @@ export function Catalogue() {
   useEffect(() => setSearch(q), [q]);
   const { data, loading, error, pagination, reload } = useResource(
     `/designs?limit=12&page=${page}${garment ? `&garment=${garment}` : ""}${q ? `&search=${encodeURIComponent(q)}` : ""}`,
+    { publicRead: true },
   );
   const update = (key, value) => {
     const next = new URLSearchParams(params);
@@ -438,13 +372,13 @@ export function Catalogue() {
           </button>
         </form>
       </div>
-      {loading ? (
-        <Spinner label={t("Finding your inspiration\u2026")} />
-      ) : error ? (
+      {loading && !data?.length ? (
+        <DesignGridSkeleton count={6} />
+      ) : error && !data?.length ? (
         <ErrorMessage message={error} retry={reload} />
       ) : data?.length ? (
         <>
-          <div className="design-grid">
+          <div className={`design-grid ${loading ? "is-reloading" : ""}`} aria-busy={loading}>
             {data.map((d, i) => (
               <DesignCard key={d._id} design={d} index={i} />
             ))}
@@ -504,7 +438,7 @@ export function DesignDetails() {
     loading,
     error,
     reload,
-  } = useResource(`/designs/${encodeURIComponent(slug)}`);
+  } = useResource(`/designs/${encodeURIComponent(slug)}`, { publicRead: true });
   if (loading) return <Spinner />;
   if (error)
     return (
@@ -740,8 +674,12 @@ export function Login() {
   async function submit(event) {
     event.preventDefault();
     setError("");
-    if (Array.from(password).length < 12) {
+    if (registering && Array.from(password).length < 12) {
       setError("Choose a password with at least 12 characters.");
+      return;
+    }
+    if (!registering && password.length === 0) {
+      setError("Enter your password.");
       return;
     }
     if (new TextEncoder().encode(password).length > 72) {
@@ -858,7 +796,7 @@ export function Login() {
               name="auth-password"
               type={showPassword ? "text" : "password"}
               required
-              minLength="12"
+              minLength={registering ? "12" : "1"}
               autoComplete={registering ? "new-password" : "current-password"}
               disabled={busy}
               hint={

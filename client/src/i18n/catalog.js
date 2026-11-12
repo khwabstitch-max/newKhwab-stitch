@@ -989,4 +989,14 @@ export const messages = Object.freeze({
     "घर से कपड़ा पिकअप और तैयार पोशाक की डिलीवरी",
   "Skip the trip when you need convenience: your unstitched fabric is picked up right from your doorstep and returned stitched to your address. Pickup and delivery charges are clearly agreed in your quote based on service details.":
     "सहूलियत के लिए डोरस्टेप सेवा चुनें: आपका बिना सिला कपड़ा घर से लिया जाएगा और सिलकर वापस आपके पते पर पहुँचाया जाएगा। क्षेत्र व सेवा के अनुसार इसका शुल्क आपके कोटेशन में स्पष्ट रूप से पहले बताया जाता है।",
+  "Copy estimate breakdown into quote":
+    "अनुमान विवरण से कोटेशन लाइन भरें",
+  "Signing in with Google…":
+    "Google से साइन इन हो रहा है…",
+  "Signing in…":
+    "साइन इन हो रहा है…",
+  "Creating account…":
+    "खाता बनाया जा रहा है…",
+  "Or sign in with Google":
+    "या Google से साइन इन करें",
 });

@@ -97,15 +97,8 @@ export async function changeCategory(ctx, oldId, newId, session) {
       { session },
     );
 }
-export async function publicDesign(ctx, document) {
-  const d = plain(document);
-  const assets = await ctx.models.MediaAsset.find({
-    _id: { $in: d.mediaIds },
-    private: false,
-    deletingAt: null,
-  }).lean();
-  const byId = new Map(assets.map((a) => [String(a._id), a]));
-  const images = d.mediaIds
+function formatPublicDesign(ctx, d, byId) {
+  const images = (d.mediaIds || [])
     .map((id) => byId.get(String(id)))
     .filter(Boolean)
     .map((a) => ({
@@ -157,6 +150,24 @@ export async function publicDesign(ctx, document) {
       images[0]?.url ||
       null,
   };
+}
+export async function publicDesigns(ctx, documents) {
+  if (!documents?.length) return [];
+  const list = documents.map(plain);
+  const ids = [...new Set(list.flatMap((d) => (d.mediaIds || []).map(String)))];
+  const assets = ids.length
+    ? await ctx.models.MediaAsset.find({
+        _id: { $in: ids },
+        private: false,
+        deletingAt: null,
+      }).lean()
+    : [];
+  const byId = new Map(assets.map((a) => [String(a._id), a]));
+  return list.map((d) => formatPublicDesign(ctx, d, byId));
+}
+export async function publicDesign(ctx, document) {
+  const [design] = await publicDesigns(ctx, [document]);
+  return design;
 }
 export function safeOrder(document) {
   const o = plain(document);

@@ -15,10 +15,10 @@ import { fail, requireFound } from "./errors.js";
 
 export const googleAvailable = (config) => Boolean(config.GOOGLE_CLIENT_ID);
 export async function assertGoogleIndexes(models) {
-  for (const [Model, field] of [
+  await Promise.all([
     [models.User, "emailReservation"],
     [models.AccountIdentity, "googleSubject"],
-  ]) {
+  ].map(async ([Model, field]) => {
     let indexes;
     try {
       indexes = await Model.collection.indexes();
@@ -39,7 +39,7 @@ export async function assertGoogleIndexes(models) {
       throw new Error(
         "Google identity uniqueness is not configured. Run npm run db:indexes before enabling GOOGLE_CLIENT_ID.",
       );
-  }
+  }));
 }
 const credentialInput = z.string().min(100).max(12000);
 const invalid = () =>

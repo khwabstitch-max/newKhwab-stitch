@@ -17,16 +17,16 @@ export async function assertEnhancementIndexes(models) {
     "PasswordAction",
     "AccountIdentity",
   ];
-  for (const name of names) {
+  await Promise.all(names.map(async (name) => {
     const model = models[name];
-    if (!model) continue;
+    if (!model) return;
     const required = model.schema
       .indexes()
       .filter(
         ([, options]) =>
           options.unique || options.expireAfterSeconds !== undefined,
       );
-    if (!required.length) continue;
+    if (!required.length) return;
     let actual;
     try {
       actual = await model.collection.indexes();
@@ -51,5 +51,5 @@ export async function assertEnhancementIndexes(models) {
           `Required ${name} indexes are missing or incompatible. Review backups and run npm run db:indexes before starting this version.`,
         );
     }
-  }
+  }));
 }

@@ -10,10 +10,10 @@ const required = {
   CommerceCompletion:[[{orderId:1},true]],
 };
 export async function assertDeploymentIndexes(models) {
-  for(const[name,definitions]of Object.entries(required)) {
+  await Promise.all(Object.entries(required).map(async([name,definitions]) => {
     const indexes=await models[name].collection.listIndexes().toArray();
     for(const[key,unique,ttl]of definitions) {
       if(!indexes.some(index=>JSON.stringify(index.key)===JSON.stringify(key) && (!unique||index.unique===true) && (ttl===undefined||index.expireAfterSeconds===ttl))) throw Error(`Required ${name} index is missing. Back up and run the explicit database index migration.`);
     }
-  }
+  }));
 }

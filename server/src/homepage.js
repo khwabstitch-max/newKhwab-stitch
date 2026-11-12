@@ -1,5 +1,5 @@
 import { fail } from "./errors.js";
-import { pinMedia, releaseMedia, publicDesign } from "./route-utils.js";
+import { pinMedia, releaseMedia, publicDesigns } from "./route-utils.js";
 import { mediaUrl } from "./media-storage.js";
 import { homepageInput, homepageSlideInput, safeHomepageHref } from "./homepage-input.js";
 
@@ -91,7 +91,7 @@ export async function publicHomepage(ctx, homepage, now = new Date()) {
       ...(offer ? { offer: { available: true, code: offer.code, type: offer.type, value: offer.value, minimumStitchingPaise: offer.minimumStitchingPaise, maxDiscountPaise: offer.maxDiscountPaise, garments: offer.garments, perCustomerLimit: offer.perCustomerLimit, programmeTerms: settings.terms, programmeTermsHi: settings.termsHi } } : {}),
     });
   }
-  const featuredDesigns = await Promise.all(requestedIds.filter(id => designsById.has(id)).map(id => publicDesign(ctx, designsById.get(id))));
+  const featuredDesigns = await publicDesigns(ctx, requestedIds.filter(id => designsById.has(id)).map(id => designsById.get(id)));
   const copy = {};
   for (const field of ["hero", "help", "footer", "process"]) {
     const parsed = homepageInput.shape[field].safeParse(homepage[field]);

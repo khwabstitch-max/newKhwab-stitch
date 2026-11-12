@@ -10,11 +10,13 @@ import {
   pageQuery,
   pageResult,
   publicDesign,
+  publicDesigns,
   escaped,
   searchField,
   audit,
   idOf,
 } from "./route-utils.js";
+const publicEdgeCache = "public, max-age=0, s-maxage=30, stale-while-revalidate=120";
 export function publicRoutes(app, ctx, auth) {
   const { models } = ctx;
   app.get("/api/designs", async (req, res) => {
@@ -56,9 +58,9 @@ export function publicRoutes(app, ctx, auth) {
         .lean(),
       models.Design.countDocuments(filter),
     ]);
-    res.json(
+    res.set("Cache-Control", publicEdgeCache).json(
       pageResult(
-        await Promise.all(items.map((d) => publicDesign(ctx, d))),
+        await publicDesigns(ctx, items),
         total,
         q,
       ),
@@ -74,7 +76,7 @@ export function publicRoutes(app, ctx, auth) {
       await models.Design.findOne({ slug, status: "published" }).lean(),
       "Design not found.",
     );
-    res.json({ data: await publicDesign(ctx, d) });
+    res.set("Cache-Control", publicEdgeCache).json({ data: await publicDesign(ctx, d) });
   });
   app.get("/api/designs/id/:id", async (req, res) => {
     const design = requireFound(
@@ -84,7 +86,7 @@ export function publicRoutes(app, ctx, auth) {
       }).lean(),
       "Design not found.",
     );
-    res.json({ data: await publicDesign(ctx, design) });
+    res.set("Cache-Control", publicEdgeCache).json({ data: await publicDesign(ctx, design) });
   });
   app.get("/api/categories", async (req, res) => {
     const q = pageQuery(req.query);
@@ -98,7 +100,7 @@ export function publicRoutes(app, ctx, auth) {
         .lean(),
       models.Category.countDocuments(filter),
     ]);
-    res.json(pageResult(items, total, q));
+    res.set("Cache-Control", publicEdgeCache).json(pageResult(items, total, q));
   });
   app.get("/api/options", async (req, res) => {
     const q = pageQuery(req.query, {
@@ -124,7 +126,7 @@ export function publicRoutes(app, ctx, auth) {
       purpose: "catalogue",
     }).lean();
     const assetMap = new Map(assets.map((asset) => [String(asset._id), asset]));
-    res.json(
+    res.set("Cache-Control", publicEdgeCache).json(
       pageResult(
         items.map((item) => {
           const images = imageIds(item).filter(id => assetMap.has(id)).map(id => {
@@ -156,17 +158,18 @@ export function publicRoutes(app, ctx, auth) {
       homepage: _rawHomepage,
       ...safe
     } = s;
-    const homepage = await publicHomepage(ctx, s.homepage);
-    let bannerImageUrl = null;
-    if (s.bannerMediaId) {
-      const asset = await models.MediaAsset.findOne({
-        _id: s.bannerMediaId,
-        private: false,
-        deletingAt: null,
-      });
-      if (asset) bannerImageUrl = ctx.images.url(asset.filePath, 3600);
-    }
-    res.json({ data: { ...safe, ...(homepage ? { homepage } : {}), bannerImageUrl } });
+    const [homepage, bannerAsset] = await Promise.all([
+      publicHomepage(ctx, s.homepage),
+      s.bannerMediaId
+        ? models.MediaAsset.findOne({
+            _id: s.bannerMediaId,
+            private: false,
+            deletingAt: null,
+          }).lean()
+        : null,
+    ]);
+    const bannerImageUrl = bannerAsset ? ctx.images.url(bannerAsset.filePath, 3600) : null;
+    res.set("Cache-Control", publicEdgeCache).json({ data: { ...safe, ...(homepage ? { homepage } : {}), bannerImageUrl } });
   });
   app.get("/api/me", auth, async (req, res) => {
     const identity = models.AccountIdentity

@@ -4234,3 +4234,323 @@ html[lang="hi"] select,
 html[lang="hi"] textarea {
   line-height: 1.6;
 }
+
+/* Unified boutique Atelier Teal & Ivory polish across public, login, and catalogue views */
+html,
+body {
+  overflow-x: clip;
+  background: var(--color-ivory);
+  color: var(--color-charcoal);
+}
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+em {
+  color: var(--color-teal);
+}
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--color-teal);
+}
+.button {
+  background: var(--color-teal);
+  color: #fffdf9;
+  border-color: var(--color-teal);
+  border-radius: var(--radius-control);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 22px;
+  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.button:hover:not(:disabled) {
+  background: var(--color-teal-hover);
+  border-color: var(--color-teal-hover);
+  box-shadow: 0 8px 20px rgba(23, 76, 70, 0.18);
+}
+.button.secondary {
+  background: var(--color-surface);
+  color: var(--color-teal);
+  border-color: var(--color-border);
+}
+.button.secondary:hover:not(:disabled) {
+  background: var(--color-teal-soft);
+  border-color: var(--color-teal);
+  box-shadow: none;
+}
+.button.small {
+  font-size: 13px;
+  padding: 10px 16px;
+}
+.text-link,
+.arrow-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-teal);
+}
+.text-link:hover,
+.arrow-link:hover {
+  color: var(--color-teal-hover);
+}
+.arrow-link {
+  border-bottom-color: rgba(23, 76, 70, 0.35);
+}
+.back-link {
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+.back-link:hover {
+  color: var(--color-teal);
+}
+.header.public-header {
+  background: rgba(255, 253, 249, 0.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.public-header .brand-wordmark {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-charcoal);
+}
+.public-header .brand-wordmark > span {
+  color: var(--color-teal);
+}
+.public-header .logo .brand-tagline {
+  font-family: var(--font-body);
+  color: var(--color-accent-text);
+  letter-spacing: 0.08em;
+}
+.public-header .public-nav-link.active,
+.public-header .nav > a.active:not(.button) {
+  color: var(--color-teal);
+  box-shadow: inset 0 -2px 0 var(--color-teal);
+}
+.catalogue-toolbar {
+  flex-wrap: wrap;
+  gap: 14px 18px;
+}
+.filter-tabs button {
+  color: var(--color-muted);
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+.filter-tabs button:hover {
+  border-color: var(--color-teal);
+  color: var(--color-teal);
+}
+.filter-tabs button.selected {
+  background: var(--color-teal);
+  border-color: var(--color-teal);
+  color: #fffdf9;
+  font-weight: 600;
+}
+.search-box {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  padding: 2px 10px;
+  min-width: 250px;
+}
+.search-box > input {
+  font-size: 14px;
+}
+.pagination {
+  margin-top: 32px;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+.pagination button {
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: var(--radius-control);
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-teal);
+}
+.pagination button:hover:not(:disabled) {
+  background: var(--color-teal-soft);
+  border-color: var(--color-teal);
+}
+.login-page {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(200, 170, 119, 0.14), transparent 45%),
+    radial-gradient(circle at 88% 82%, rgba(23, 76, 70, 0.08), transparent 48%),
+    var(--color-ivory);
+  padding: clamp(32px, 6vw, 72px) 16px;
+  min-height: calc(100vh - 180px);
+}
+.login-card {
+  width: 100%;
+  max-width: 490px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  padding: clamp(26px, 5vw, 44px);
+  box-shadow: 0 22px 52px rgba(23, 76, 70, 0.08);
+}
+.login-mark {
+  background: var(--color-teal-soft);
+  border-color: rgba(23, 76, 70, 0.18);
+  color: var(--color-teal);
+  margin-bottom: 18px;
+}
+.login-card .eyebrow {
+  font-size: 11px;
+  margin-bottom: 10px;
+}
+.login-card h1 {
+  font-size: clamp(32px, 4.4vw, 44px);
+  line-height: 1.12;
+  margin-bottom: 12px;
+}
+.login-card > p:not(.eyebrow) {
+  font-size: 14.5px;
+  color: var(--color-muted);
+  line-height: 1.65;
+}
+.login-card > small {
+  font-size: 12px;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+.google-signin {
+  margin: 18px 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.google-signin-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 12.5px;
+}
+.google-signin-divider::before,
+.google-signin-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+.google-signin-button {
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+.footer.public-footer {
+  background: #123833;
+  color: #edf3f0;
+  padding-top: 56px;
+}
+.public-footer .logo,
+.public-footer .logo em {
+  color: #faf7f2;
+}
+.public-footer h3 {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-champagne);
+  margin: 4px 0 14px;
+}
+.public-footer a:not(.logo),
+.public-footer p {
+  font-size: 13.5px;
+  color: #d6e2dd;
+}
+.public-footer a:not(.logo):hover {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.public-footer .public-footer-hours,
+.public-footer .public-footer-announcement {
+  color: #c2d4cd;
+  border-top-color: rgba(255, 255, 255, 0.16);
+}
+.public-footer .text-button {
+  color: #f4ebe0;
+  font-size: 13.5px;
+  padding-inline: 0;
+}
+.public-footer .footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  color: #bfd0ca;
+  font-size: 12px;
+  flex-wrap: wrap;
+  padding-block: 16px;
+}
+html[lang="hi"] {
+  font-family: "Noto Sans Devanagari", "Plus Jakarta Sans", "Nirmala UI", sans-serif;
+  --font-heading: "Noto Sans Devanagari", "Cormorant Garamond", "Nirmala UI", serif;
+  --serif: "Noto Sans Devanagari", "Cormorant Garamond", "Nirmala UI", serif;
+}
+html[lang="hi"] .public-header .brand-wordmark {
+  font-family: "Cormorant Garamond", Georgia, serif;
+}
+@media (max-width: 960px) {
+  .design-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+@media (max-width: 640px) {
+  .container {
+    padding-inline: 18px;
+  }
+  .page {
+    padding-top: 28px;
+    padding-bottom: 56px;
+  }
+  .catalogue-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-box {
+    width: 100%;
+    min-width: 0;
+  }
+  .design-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .design-card .design-info .eyebrow {
+    font-size: 11px;
+  }
+  .design-card .design-info p {
+    font-size: 14px;
+  }
+  .design-card .design-info small {
+    font-size: 12.5px;
+  }
+  .design-card .design-code {
+    font-size: 11px;
+  }
+  .login-card h1 {
+    font-size: 32px;
+  }
+}

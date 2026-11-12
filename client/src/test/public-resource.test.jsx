@@ -2,11 +2,11 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 const boundary = vi.hoisted(() => ({ api: vi.fn() }));
 vi.mock("../lib/api", () => ({ api: boundary.api }));
-import { useResource } from "../lib/hooks";
+import { __setPublicCacheEnabledForTest, clearPublicResourceCache, useResource } from "../lib/hooks";
 import { ErrorMessage } from "../components/ui";
 
-beforeEach(() => { boundary.api.mockReset(); });
-afterEach(() => vi.restoreAllMocks());
+beforeEach(() => { clearPublicResourceCache(); __setPublicCacheEnabledForTest(null); boundary.api.mockReset(); });
+afterEach(() => { clearPublicResourceCache(); __setPublicCacheEnabledForTest(null); vi.restoreAllMocks(); });
 
 it("opts public reads into anonymous recovery without refetching for a new options object", async () => {
   boundary.api.mockResolvedValue({ data: [{ _id: "published-design" }] });
@@ -88,4 +88,18 @@ it("retries the resource without implicitly submitting its surrounding form", ()
   fireEvent.click(button);
   expect(retry).toHaveBeenCalledTimes(1);
   expect(submit).not.toHaveBeenCalled();
+});
+
+it("serves instant cached public reads when navigating back while bypassing private reads", async () => {
+  __setPublicCacheEnabledForTest(true);
+  boundary.api.mockResolvedValue({ data: [{ _id: "cached-design" }] });
+  const first = renderHook(() => useResource("/designs?limit=12&page=1", { publicRead: true }));
+  await waitFor(() => expect(first.result.current.loading).toBe(false));
+  expect(boundary.api).toHaveBeenCalledTimes(1);
+  first.unmount();
+
+  const second = renderHook(() => useResource("/designs?limit=12&page=1", { publicRead: true }));
+  expect(second.result.current.loading).toBe(false);
+  expect(second.result.current.data).toEqual([{ _id: "cached-design" }]);
+  expect(boundary.api).toHaveBeenCalledTimes(1);
 });

@@ -22,10 +22,12 @@ export const getApplication = createApplicationLoader(async()=>{
     serverSelectionTimeoutMS:8000,connectTimeoutMS:8000,socketTimeoutMS:20000,
   }));
   const models=createModels();
-  await startupStep("credential_indexes",()=>assertCredentialIndexes(models));
-  await startupStep("feature_indexes",()=>assertEnhancementIndexes(models));
-  if(config.GOOGLE_CLIENT_ID)await startupStep("google_indexes",()=>assertGoogleIndexes(models));
-  await startupStep("deployment_indexes",()=>assertDeploymentIndexes(models));
+  await Promise.all([
+    startupStep("credential_indexes",()=>assertCredentialIndexes(models)),
+    startupStep("feature_indexes",()=>assertEnhancementIndexes(models)),
+    ...(config.GOOGLE_CLIENT_ID ? [startupStep("google_indexes",()=>assertGoogleIndexes(models))] : []),
+    startupStep("deployment_indexes",()=>assertDeploymentIndexes(models)),
+  ]);
   return startupStep("application",()=>createApp({config:{...config,SERVERLESS:true},models,transaction,images:imageProvider(config),logger:pino({level:config.LOG_LEVEL}),dbReady:()=>databaseReady(mongoose.connection)}));
 });
 export default createServerlessHandler(getApplication);

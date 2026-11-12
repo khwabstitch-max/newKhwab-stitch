@@ -1,7 +1,15 @@
 import { t, getLocale } from "../i18n/core";
 let tokenProvider = () => null;
 let unauthorizedHandler = () => {};
-const retryablePublicPaths = new Set(["/settings", "/designs", "/reviews", "/services"]);
+const retryablePublicPaths = new Set([
+  "/settings",
+  "/designs",
+  "/reviews",
+  "/services",
+  "/categories",
+  "/options",
+  "/measurement-guides",
+]);
 export const setUnauthorizedHandler = (handler) => {
   unauthorizedHandler = handler;
 };
@@ -35,9 +43,10 @@ export async function api(
   if (signal?.aborted) controller.abort();
   const timer = setTimeout(abort, timeout);
   // Anonymous public reads may make one extra attempt within the same deadline.
+  const basePath = path.split("?")[0];
   const retryAllowed =
     publicRead && auth === false && method === "GET" &&
-    retryablePublicPaths.has(path.split("?")[0]);
+    (retryablePublicPaths.has(basePath) || basePath.startsWith("/designs/"));
   const canRetry = () =>
     retryAllowed && !controller.signal.aborted &&
     globalThis.navigator?.onLine !== false;

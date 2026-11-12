@@ -35,11 +35,12 @@ function loadGoogle() {
     });
   return library;
 }
-export function GoogleSignIn({ onCredential, label = "Sign in with Google" }) {
-  const resource = useResource("/auth/capabilities"),
+export function GoogleSignIn({ onCredential, label = "Or sign in with Google" }) {
+  const resource = useResource("/auth/capabilities", { publicRead: true }),
     container = useRef(null),
     callback = useRef(onCredential),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
   callback.current = onCredential;
   const clientId = resource.data?.googleClientId,
     enabled = Boolean(resource.data?.google && clientId);
@@ -48,10 +49,14 @@ export function GoogleSignIn({ onCredential, label = "Sign in with Google" }) {
     let active = true;
     const receive = async (response) => {
       if (!active) return;
+      setError("");
+      setBusy(true);
       try {
         await callback.current(response.credential);
       } catch (e) {
         if (active) setError(e);
+      } finally {
+        if (active) setBusy(false);
       }
     };
     loadGoogle()
@@ -87,8 +92,9 @@ export function GoogleSignIn({ onCredential, label = "Sign in with Google" }) {
   if (!enabled) return null;
   return (
     <div className="google-signin">
-      <p className="small-print">{t(label)}</p>
-      <div ref={container} aria-label={t(label)} />
+      <p className="google-signin-divider"><span>{t(label)}</span></p>
+      <div className="google-signin-button" ref={container} aria-label={t(label)} />
+      {busy && <p className="small-print" role="status">{t("Signing in with Google…")}</p>}
       <ErrorMessage message={error} />
     </div>
   );

@@ -8,7 +8,7 @@ vi.mock("../lib/auth", () => ({ useAuth: () => boundary.auth }));
 vi.mock("../lib/hooks", async (original) => ({ ...(await original()), useSite: () => boundary.site }));
 import { HomeCarousel } from "../components/HomeCarousel";
 import { Layout } from "../components/Layout";
-import { Catalogue, DesignDetails, Home, HowItWorks } from "../pages/Public";
+import { Catalogue, DesignDetails, Home, HowItWorks, Login } from "../pages/Public";
 import { DEFAULT_HOMEPAGE } from "../data/homepage";
 import { eligibleHomepageSlides, homepageBlock, publicHref } from "../lib/public-homepage";
 import { setLanguage, t } from "../i18n/core";
@@ -205,4 +205,30 @@ it("explains the real customization, fabric guidance, and doorstep pickup workfl
   expect(screen.getByRole("heading", { level: 1, name: "आपके घर से आसान और पारदर्शी कस्टम सिलाई।" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 3, name: "कपड़ा खरीदने से लेकर अंतिम फिटिंग तक पूरी मदद" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 3, name: "घर से कपड़ा पिकअप और तैयार पोशाक की डिलीवरी" })).toBeInTheDocument();
+});
+
+it("renders unified Fit & Design Guides without duplicate poster cards or Price after review overlays", async () => {
+  const { container } = mount(<Home />);
+  expect(container.querySelector(".home-guides-grid")).not.toBeInTheDocument();
+  expect(container.querySelector(".tailoring-card-price-badge")).not.toBeInTheDocument();
+  expect(screen.queryByText("Price after review")).not.toBeInTheDocument();
+  const measurementTab = screen.getByRole("tab", { name: "Measurement Guide" });
+  expect(measurementTab).toBeInTheDocument();
+  await userEvent.click(measurementTab);
+  expect(screen.getByRole("heading", { level: 3, name: "Full Measurement Guide" })).toBeInTheDocument();
+});
+
+it("keeps homepage process steps to concise headings only and allows short existing login passwords", async () => {
+  const { container } = mount(<Home />);
+  const processCards = container.querySelectorAll(".home-process-grid li");
+  expect(processCards).toHaveLength(4);
+  for (const card of processCards) expect(card.querySelector("p")).toBeNull();
+
+  const login = vi.fn().mockResolvedValue({});
+  boundary.auth = { ...boundary.auth, login, register: vi.fn(), google: vi.fn(), loading: false, hasSession: false };
+  mount(<Login />);
+  await userEvent.type(screen.getByLabelText("Email address"), "customer@example.test");
+  await userEvent.type(screen.getByLabelText("Password"), "shortpass");
+  await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+  expect(login).toHaveBeenCalledWith({ email: "customer@example.test", password: "shortpass" });
 });

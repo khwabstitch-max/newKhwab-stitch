@@ -69,6 +69,20 @@ export function DesignGuideExplorer() {
           ? "5 लंबाई के विकल्प (बिना बाजू से पूरी बाजू तक) — फ्रंट और साइड व्यू संदर्भ। बाजू की लंबाई बदलने पर कोई अतिरिक्त शुल्क नहीं लगता (₹0)!"
           : "5 sleeve length preferences (Sleeveless to Full Sleeve) with front & side views. Choosing your preferred sleeve length has no additional charge (₹0)!",
     },
+    {
+      id: "measurement",
+      label: language === "hi" ? "नाप लेने की गाइड" : "Measurement Guide",
+      icon: BookOpen,
+      masterImg: "/guides/measurement-guide.jpg",
+      masterTitle:
+        language === "hi"
+          ? "पूरी नाप लेने की गाइड"
+          : "Full Measurement Guide",
+      intro:
+        language === "hi"
+          ? "कुर्ती, ब्लाउज़ और सूट के लिए सटीक नाप बिंदुओं की नंबर वाली गाइड — सही फिटिंग के लिए ज़रूरी सभी नाप।"
+          : "Numbered measurement guide for Kurti, Blouse & Suit — exact points for the perfect custom fit.",
+    },
   ];
 
   const currentTab = tabs.find((t) => t.id === activeTab) || tabs[0];
@@ -96,8 +110,10 @@ export function DesignGuideExplorer() {
               onClick={() => setActiveTab(tab.id)}
             >
               <Icon size={16} aria-hidden="true" />
-              <span>{tab.label}</span>
-              <span className="guide-tab-count">{tab.count}</span>
+              <span className="guide-tab-label">{tab.label}</span>
+              {Number.isInteger(tab.count) && (
+                <span className="guide-tab-count">{tab.count}</span>
+              )}
             </button>
           );
         })}
@@ -115,78 +131,100 @@ export function DesignGuideExplorer() {
         </button>
       </div>
 
-      <div className="guide-explorer-grid">
-        {items.map((item) => {
-          const title = language === "hi" ? item.nameHi : item.name;
-          const desc = language === "hi" ? item.descriptionHi : item.description;
-          const paired =
-            language === "hi" ? item.bestPairedWithHi : item.bestPairedWith;
-          const fabric = language === "hi" ? item.bestFabricHi : item.bestFabric;
-          const price = t(activeTab === "length" ? "No additional charge" : "Price after review");
-          const isFree = activeTab === "length";
+      {activeTab === "measurement" ? (
+        <article className="guide-measurement-card">
+          <div className="guide-measurement-thumb">
+            <img
+              src={currentTab.masterImg}
+              alt={currentTab.masterTitle}
+              loading="lazy"
+            />
+          </div>
+          <div className="guide-measurement-copy">
+            <h3>{currentTab.masterTitle}</h3>
+            <p>{currentTab.intro}</p>
+            <button
+              type="button"
+              className="button secondary small"
+              onClick={() => setShowMasterChart(true)}
+            >
+              <Eye size={14} aria-hidden="true" />{" "}
+              {language === "hi" ? "बड़ा चार्ट देखें" : "View Full Chart"}
+            </button>
+          </div>
+        </article>
+      ) : (
+        <div className="guide-explorer-grid">
+          {items.map((item) => {
+            const title = language === "hi" ? item.nameHi : item.name;
+            const desc = language === "hi" ? item.descriptionHi : item.description;
+            const paired =
+              language === "hi" ? item.bestPairedWithHi : item.bestPairedWith;
+            const fabric = language === "hi" ? item.bestFabricHi : item.bestFabric;
+            const price =
+              language === "hi"
+                ? item.priceDisplayHi || item.priceDisplay
+                : item.priceDisplay;
 
-          return (
-            <article key={item.id} className="tailoring-card">
-              <div className="tailoring-card-img-wrap">
-                <img src={item.image} alt={title} loading="lazy" />
-                <span
-                  className={`tailoring-card-price-badge${isFree ? " is-free" : ""}`}
-                >
-                  {price}
-                </span>
-              </div>
+            return (
+              <article key={item.id} className="tailoring-card">
+                <div className="tailoring-card-img-wrap">
+                  <img src={item.image} alt={title} loading="lazy" />
+                </div>
 
-              <div className="tailoring-card-body">
-                <div className="tailoring-card-heading">
-                  <h3 className="tailoring-card-title">{title}</h3>
-                  <span className="tailoring-card-subname">
-                    {item.subname || (item.lengthCm ? `${item.lengthCm} (${item.lengthIn})` : "")}
+                <div className="tailoring-card-body">
+                  <div className="tailoring-card-heading">
+                    <h3 className="tailoring-card-title">{title}</h3>
+                    <span className="tailoring-card-subname">
+                      {item.subname ||
+                        (item.lengthCm ? `${item.lengthCm} (${item.lengthIn})` : "")}
+                    </span>
+                  </div>
+
+                  <p className="tailoring-card-desc">{desc}</p>
+
+                  <div className="tailoring-card-meta-list">
+                    <div className="tailoring-card-meta-item">
+                      <span className="tailoring-card-meta-label">
+                        <Sparkles size={13} aria-hidden="true" />
+                        {language === "hi"
+                          ? "किसके साथ अच्छी लगती है:"
+                          : "Best Paired With:"}
+                      </span>
+                      <span className="tailoring-card-meta-value">{paired}</span>
+                    </div>
+
+                    <div className="tailoring-card-meta-item">
+                      <span className="tailoring-card-meta-label">
+                        <Shirt size={13} aria-hidden="true" />
+                        {language === "hi"
+                          ? "बेस्ट फिनिशिंग कपड़ा:"
+                          : "Recommended Fabric:"}
+                      </span>
+                      <span className="tailoring-card-meta-value">{fabric}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="tailoring-card-footer">
+                  <span className="tailoring-card-rate">
+                    {language === "hi" ? "डिज़ाइन शुल्क: " : "Style charge: "}
+                    <strong>{price}</strong>
                   </span>
+                  <button
+                    type="button"
+                    className="tailoring-card-view-btn"
+                    onClick={() => setModalItem(item)}
+                  >
+                    <Eye size={13} aria-hidden="true" />{" "}
+                    {language === "hi" ? "बड़ा देखें" : "View Large"}
+                  </button>
                 </div>
-
-                <p className="tailoring-card-desc">{desc}</p>
-
-                <div className="tailoring-card-meta-list">
-                  <div className="tailoring-card-meta-item">
-                    <span className="tailoring-card-meta-label">
-                      <Sparkles size={13} aria-hidden="true" />
-                      {language === "hi"
-                        ? "किसके साथ अच्छी लगती है:"
-                        : "Best Paired With:"}
-                    </span>
-                    <span className="tailoring-card-meta-value">{paired}</span>
-                  </div>
-
-                  <div className="tailoring-card-meta-item">
-                    <span className="tailoring-card-meta-label">
-                      <Shirt size={13} aria-hidden="true" />
-                      {language === "hi"
-                        ? "बेस्ट फिनिशिंग कपड़ा:"
-                        : "Recommended Fabric:"}
-                    </span>
-                    <span className="tailoring-card-meta-value">{fabric}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="tailoring-card-footer">
-                <span className="tailoring-card-rate">
-                  {language === "hi" ? "सिलाई दर: " : "Rate: "}
-                  <strong>{price}</strong>
-                </span>
-                <button
-                  type="button"
-                  className="tailoring-card-view-btn"
-                  onClick={() => setModalItem(item)}
-                >
-                  <Eye size={13} aria-hidden="true" />{" "}
-                  {language === "hi" ? "बड़ा देखें" : "View Large"}
-                </button>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
 
       {modalItem && (
         <GuideModal
@@ -196,7 +234,12 @@ export function DesignGuideExplorer() {
           }
           imageUrl={modalItem.image}
           onClose={() => setModalItem(null)}
-          footerNote={t(activeTab === "length" ? "No additional charge" : "Style reference; price after tailor review")}
+          footerNote={
+            (language === "hi"
+              ? modalItem.priceDisplayHi || modalItem.priceDisplay
+              : modalItem.priceDisplay) ||
+            t("No additional charge")
+          }
         />
       )}
 

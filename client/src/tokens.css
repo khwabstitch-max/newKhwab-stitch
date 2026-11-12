@@ -1,17 +1,18 @@
 :root {
   --color-ivory: #faf7f2;
   --color-surface: #fffdf9;
-  --color-charcoal: #252a28;
-  --color-muted: #52635d;
+  --color-charcoal: #1e2825;
+  --color-muted: #4b5c57;
   --color-teal: #174c46;
-  --color-teal-hover: #103d38;
+  --color-teal-hover: #103a35;
+  --color-teal-soft: #eaf1ee;
   --color-champagne: #c8aa77;
-  --color-accent-text: #755b2d;
-  --color-border: #d8dcd2;
-  --color-control-border: #7c8b81;
+  --color-accent-text: #6e5427;
+  --color-border: #dde2d9;
+  --color-control-border: #768780;
   --color-danger: #963c3c;
-  --font-body: system-ui, "Segoe UI", "Nirmala UI", "Mangal", sans-serif;
-  --font-heading: Georgia, "Nirmala UI", "Mangal", "Times New Roman", serif;
+  --font-body: "Plus Jakarta Sans", "Noto Sans Devanagari", system-ui, "Segoe UI", "Nirmala UI", sans-serif;
+  --font-heading: "Cormorant Garamond", "Noto Sans Devanagari", Georgia, "Nirmala UI", serif;
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px; --space-12: 48px;
   --radius-control: 8px; --radius-card: 14px;
   --shadow-card: 0 8px 28px #203b3510;
