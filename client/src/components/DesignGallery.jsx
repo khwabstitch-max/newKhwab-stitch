@@ -1,4 +1,4 @@
-﻿import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -255,32 +255,6 @@ export function DesignSpecifications({ design }) {
           </dl>
         </section>
       )}
-      {design.priceOptions?.length > 0 && (
-        <section className="stitching-rates">
-          <h2>{t("Stitching price only")}</h2>
-          <p>
-            {t(
-              "Choose the finish you need. The complete embroidery shown is quoted separately from basic stitching.",
-            )}
-          </p>
-          <dl>
-            {design.priceOptions.map((option, index) => (
-              <div key={index}>
-                <dt>{localize(option, "label")}</dt>
-                <dd>
-                  {money(option.amountPaise)}
-                  {option.isStartingPrice ? "+" : ""}
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <small>
-            {t(
-              "Indicative rates per kurti. Final price depends on design complexity and additional work.",
-            )}
-          </small>
-        </section>
-      )}
       {localize(design, "serviceNotes") && (
         <div className="service-note">
           <strong>{t("Before you book")}</strong>
@@ -333,15 +307,10 @@ export function DesignPresentation({ design, preview = false }) {
             className="button"
             to={`/request?design=${design._id}&garment=${design.garment}`}
           >
-            {t("Make this your own ")}
+            {t("Customize & stitch this design")}
             <ArrowRight size={18} />
           </Link>
         )}
-        <p className="small-print">
-          {t(
-            "This is a stitching service, not a ready-made garment. Starting a request does not confirm an order.",
-          )}
-        </p>
       </div>
     </div>
   );

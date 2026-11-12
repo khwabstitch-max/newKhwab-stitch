@@ -1,4 +1,4 @@
-﻿import { beforeEach, afterEach, it, expect, vi } from "vitest";
+import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import {
   act,
   fireEvent,
@@ -79,7 +79,7 @@ afterEach(() => {
   act(() => setLanguage("en"));
   vi.restoreAllMocks();
 });
-it("shows all source-board details and four stitching-only rates without treating basic stitching as full embroidery", () => {
+it("shows all source-board details without the stitching rate table or bottom request disclaimer", () => {
   mount(<DesignPresentation design={fixture()} />);
   expect(
     screen.getByRole("heading", { level: 1, name: template.design.title }),
@@ -89,13 +89,15 @@ it("shows all source-board details and four stitching-only rates without treatin
     screen.getByText("Cotton / linen / cambric — customer’s fabric"),
   ).toBeInTheDocument();
   expect(screen.getByText("Fabric provided by customer.")).toBeInTheDocument();
-  const row = screen.getByText("With embroidery / handwork").closest("div");
-  expect(row).toHaveTextContent("₹550+");
+  expect(screen.queryByText("Stitching price only")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(/Starting a request does not confirm an order/),
+  ).not.toBeInTheDocument();
   expect(screen.getByText(template.design.serviceNotes)).toHaveTextContent(
     "₹300 basic rate does not include",
   );
   expect(
-    screen.getByRole("link", { name: /Make this your own/ }),
+    screen.getByRole("link", { name: /Customize & stitch this design/ }),
   ).toHaveAttribute(
     "href",
     "/request?design=bbbbbbbbbbbbbbbbbbbbbbbb&garment=kurti",

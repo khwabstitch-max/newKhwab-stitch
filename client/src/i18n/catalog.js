@@ -159,6 +159,7 @@ export const messages = Object.freeze({
   "Custom stitching & alterations.": "आपकी पसंद की सिलाई और अल्टरेशन।",
   "Customer directory.": "ग्राहकों की सूची।",
   Customers: "ग्राहक",
+  "Customize & stitch this design": "इस डिज़ाइन को अपना बनाएँ",
   "Decline this quote and return the request for review?":
     "क्या यह कोटेशन अस्वीकार करके अनुरोध को दोबारा समीक्षा में भेजना है?",
   Delete: "हटाएँ",

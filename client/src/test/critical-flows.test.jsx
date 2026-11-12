@@ -332,7 +332,7 @@ describe("customer journeys with mocked identity and API boundaries", () => {
       screen.getByText("Fabric provided by customer."),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /make this your own/i }),
+      screen.getByRole("link", { name: /customize & stitch this design/i }),
     ).toHaveAttribute(
       "href",
       "/request?design=" + design._id + "&garment=kurti",
