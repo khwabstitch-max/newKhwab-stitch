@@ -255,3 +255,50 @@ it("loads further original-component choices, maps included additions and preser
     designDetails: { style: "Preserve original style" },
   });
 });
+
+it("shows option thumbnails, loads up to 50 catalogue photos, previews selected photo and syncs imageMediaIds on select change", async () => {
+  const imgA = "1".repeat(24);
+  const imgB = "2".repeat(24);
+  boundary.api.mockImplementation(async (path, opts = {}) => {
+    if (opts.method && opts.method !== "GET") return { data: { _id: sleeveId } };
+    if (path.startsWith("/admin/options?")) {
+      return list([
+        option({
+          imageMediaId: imgA,
+          imageMediaIds: [imgA],
+          imageUrl: "https://example.test/puff-a.webp",
+          images: [{ id: imgA, url: "https://example.test/puff-a.webp" }],
+        }),
+      ]);
+    }
+    if (path.startsWith("/media?")) {
+      return list([
+        { _id: imgA, purpose: "catalogue", private: false },
+        { _id: imgB, purpose: "catalogue", private: false },
+      ]);
+    }
+    if (path === `/media/${imgA}/access`) return { data: { url: "https://example.test/puff-a.webp" } };
+    if (path === `/media/${imgB}/access`) return { data: { url: "https://example.test/puff-b.webp" } };
+    return list();
+  });
+  mount();
+  const row = await screen.findByRole("row", { name: /Puff sleeve/ });
+  expect(row.querySelector("img.admin-option-thumb")).toHaveAttribute(
+    "src",
+    "https://example.test/puff-a.webp",
+  );
+  const user = userEvent.setup();
+  await user.click(within(row).getByRole("button", { name: "Edit", exact: true }));
+  await screen.findByRole("option", { name: /Catalogue image 2/ });
+  expect(
+    boundary.api.mock.calls.some(([path]) => path.includes("/media?purpose=catalogue&limit=50")),
+  ).toBe(true);
+  await user.selectOptions(screen.getByLabelText(/^Option photograph/), imgB);
+  await user.click(screen.getByRole("button", { name: "Save option" }));
+  await waitFor(() =>
+    expect(savedBody()).toMatchObject({
+      imageMediaId: imgB,
+      imageMediaIds: [imgB],
+    }),
+  );
+});

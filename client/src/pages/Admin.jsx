@@ -6,7 +6,7 @@ import "../admin-experience.css";
 import tealTemplate from "../data/teal-kurti.json";
 import { t, localize } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import {
   Activity,
@@ -792,7 +792,7 @@ export function AdminTaxonomy({ options = false }) {
   const taxonomy = usePagedCollection(`/admin/${kind}?limit=30${selectedKind ? `&kind=${selectedKind}` : ""}${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ""}`);
   const { data, loading, error } = taxonomy;
   const reload = taxonomy.refresh;
-  const { data: optionImages } = useResource(
+  const { data: optionImages, reload: reloadOptionImages } = useResource(
     options ? "/media?limit=50&purpose=catalogue" : null,
   );
   const [editing, setEditing] = useState(null),
@@ -800,6 +800,11 @@ export function AdminTaxonomy({ options = false }) {
     [photoBusy, setPhotoBusy] = useState(false),
     [actionError, setActionError] = useState("");
   const [preview, setPreview] = useState(null);
+  const wasPhotoBusy = useRef(false);
+  useEffect(() => {
+    if (wasPhotoBusy.current && !photoBusy) reloadOptionImages();
+    wasPhotoBusy.current = photoBusy;
+  }, [photoBusy, reloadOptionImages]);
   useEffect(() => { setEditing(null); setActionError(""); }, [selectedKind]);
   const compatibleChoices = usePagedCollection(
     options && editing && ["neck", "back"].includes(editing.kind)
@@ -1063,12 +1068,17 @@ export function AdminTaxonomy({ options = false }) {
                 <select
                   id="option-image"
                   value={editing.imageMediaId || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const nextId = e.target.value || null;
+                    const rest = (editing.imageMediaIds || []).filter(
+                      (id) => id !== nextId && id !== editing.imageMediaId,
+                    );
                     setEditing({
                       ...editing,
-                      imageMediaId: e.target.value || null,
-                    })
-                  }
+                      imageMediaId: nextId,
+                      imageMediaIds: nextId ? [nextId, ...rest] : [],
+                    });
+                  }}
                 >
                   <option value="">{t("Photo not yet available")}</option>
                   {optionImages
@@ -1080,6 +1090,14 @@ export function AdminTaxonomy({ options = false }) {
                       </option>
                     ))}
                 </select>
+                {editing.imageMediaId && (
+                  <div className="admin-option-selected-preview">
+                    <PrivateImage
+                      mediaId={editing.imageMediaId}
+                      publicImage
+                    />
+                  </div>
+                )}
               </Field>
               <Field
                 label={t("Accessible image description")}
@@ -1546,9 +1564,20 @@ export function AdminTaxonomy({ options = false }) {
               </tr>
             </thead>
             <tbody>
-              {data.map((item) => (
+              {data.map((item) => {
+                const thumb = options && (item.images?.[0]?.url || item.imageUrl);
+                return (
                 <tr key={item._id}>
-                  <td>{localize(item, "name")}</td>
+                  <td>
+                    {thumb ? (
+                      <div className="admin-option-name">
+                        <img src={thumb} alt="" className="admin-option-thumb" />
+                        <span>{localize(item, "name")}</span>
+                      </div>
+                    ) : (
+                      localize(item, "name")
+                    )}
+                  </td>
                   <td>
                     {options
                       ? `${t(optionKindLabels[item.kind] || readable(item.kind))} · ${item.garments?.map(readable).join(", ")}`
@@ -1629,7 +1658,8 @@ export function AdminTaxonomy({ options = false }) {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

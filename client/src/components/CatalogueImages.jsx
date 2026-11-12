@@ -19,7 +19,7 @@ function CatalogueImageChoice({ image, index, selected, disabled, onChange }) {
   </div>;
 }
 export function CatalogueImages({ ids = [], onChange, max = 8, scope = "library", onBusyChange }) {
-  const resource = usePagedCollection("/media?purpose=catalogue&limit=20");
+  const resource = usePagedCollection("/media?purpose=catalogue&limit=50");
   const [busy,setBusy] = useState(false), [error,setError] = useState("");
   const current = useRef({ ids, onChange, scope });
   current.current = { ids, onChange, scope };

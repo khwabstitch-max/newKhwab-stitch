@@ -84,5 +84,9 @@
 .media-choice { padding: 10px; border: 1px solid var(--color-control-border); border-radius: var(--radius-control); }
 .media-choice.selected { outline: 2px solid var(--color-teal); outline-offset: 2px; }
 .media-choice > label { display: grid; gap: 8px; cursor: pointer; }
-.media-choice img, .media-choice-fallback { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; }
+.media-choice img, .media-choice-fallback { width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: var(--paper, #f7f5ee); border-radius: 4px; }
 .media-choice-fallback { display: grid; place-items: center; padding: 8px; background: var(--color-ivory); }
+.admin-option-name { display: flex; align-items: center; gap: 10px; }
+.admin-option-thumb { width: 44px; height: 44px; flex: 0 0 auto; object-fit: cover; object-position: top center; border-radius: 6px; border: 1px solid var(--line, #ddd8cd); background: var(--paper, #f7f5ee); }
+.admin-option-selected-preview { margin-top: 10px; max-width: 180px; border: 1px solid var(--line, #ddd8cd); border-radius: 8px; overflow: hidden; background: var(--paper, #f7f5ee); }
+.admin-option-selected-preview img { display: block; width: 100%; height: auto; max-height: 220px; object-fit: contain; }
