@@ -2,6 +2,7 @@ import { z } from "zod";
 import { imageIds } from "./visual-catalogue.js";
 import { publicOptionFilter } from "./option-maintenance.js";
 import { mediaUrl } from "./media-storage.js";
+import { publicHomepage } from "./homepage.js";
 import { GARMENTS, defaultSettings, profileInput } from "./domain.js";
 import { requireFound } from "./errors.js";
 import { userProfile as profile } from "./auth.js";
@@ -28,15 +29,16 @@ export function publicRoutes(app, ctx, auth) {
         .enum(["recent", "price_asc", "price_desc", "title"])
         .default("recent"),
     });
+    const matchingCategories = q.search ? await models.Category.find({ active: true, $or: ["name", "nameHi", "slug"].map(field => ({ [field]: { $regex: escaped(q.search), $options: "i" } })) }).select("_id").limit(50).lean() : [];
     const filter = {
       status: "published",
       ...(q.garment ? { garment: q.garment } : {}),
       ...(q.category ? { category: q.category } : {}),
       ...(q.search
         ? {
-            $or: ["title", "titleHi", "code"].map((field) => ({
+            $or: [...["title", "titleHi", "code", "searchLabels", "searchLabelsHi"].map((field) => ({
               [field]: { $regex: escaped(q.search), $options: "i" },
-            })),
+            })), ...(matchingCategories.length ? [{ category: { $in: matchingCategories.map(category => category._id) } }] : [])],
           }
         : {}),
     };
@@ -151,8 +153,10 @@ export function publicRoutes(app, ctx, auth) {
       _id: _id,
       createdAt: _created,
       updatedAt: _updated,
+      homepage: _rawHomepage,
       ...safe
     } = s;
+    const homepage = await publicHomepage(ctx, s.homepage);
     let bannerImageUrl = null;
     if (s.bannerMediaId) {
       const asset = await models.MediaAsset.findOne({
@@ -162,7 +166,7 @@ export function publicRoutes(app, ctx, auth) {
       });
       if (asset) bannerImageUrl = ctx.images.url(asset.filePath, 3600);
     }
-    res.json({ data: { ...safe, bannerImageUrl } });
+    res.json({ data: { ...safe, ...(homepage ? { homepage } : {}), bannerImageUrl } });
   });
   app.get("/api/me", auth, async (req, res) => {
     const identity = models.AccountIdentity

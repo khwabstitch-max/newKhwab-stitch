@@ -144,7 +144,7 @@ export function SleeveLengthOptions({
             <Sparkles size={13} aria-hidden="true" />
             {t("Official Sleeve Guide")}
           </span>
-          <strong>{t("Sleeve Length Options — बाजू की लंबाई के विकल्प")}</strong>
+          <strong>{t("Sleeve Length Options")}</strong>
           <p>
             {t("Choose sleeve length as per your style")} •{" "}
             {t(
@@ -299,12 +299,12 @@ export function SleeveLengthOptions({
 
       {showGuideModal && (
         <GuideModal
-          title={t("Sleeve Length Options — बाजू की लंबाई के विकल्प")}
+          title={t("Sleeve Length Options")}
           subtitle={t("Choose sleeve length as per your style")}
           imageUrl="/guides/sleeve-length-guide.jpg"
           onClose={() => setShowGuideModal(false)}
           footerNote={t(
-            "You can choose any sleeve length with your preferred sleeve design. आप अपनी पसंद के किसी भी बाजू डिज़ाइन के साथ ऊपर दी गई लंबाई चुन सकते हैं।",
+            "Choose a compatible sleeve design and length. Enter your exact sleeve measurement in the measurement step.",
           )}
         />
       )}

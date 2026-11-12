@@ -107,8 +107,11 @@ export const policiesInput = z
   .object({
     version: z.string().trim().min(1).max(50),
     assurance: z.string().trim().max(2500),
+    assuranceHi: z.string().trim().max(2500).optional(),
     alterationMargin: z.string().trim().max(1500),
+    alterationMarginHi: z.string().trim().max(1500).optional(),
     correctionTransport: z.string().trim().max(1500),
+    correctionTransportHi: z.string().trim().max(1500).optional(),
   })
   .strict();
 export const supportSettingsInput = z

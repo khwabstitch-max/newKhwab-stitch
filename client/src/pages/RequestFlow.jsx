@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, money, readable } from "../lib/api";
 import { uploadMedia } from "../lib/media";
+import { estimateLineLabel } from "../lib/order-labels";
 import { useAuth } from "../lib/auth";
 import { useResource, useSite } from "../lib/hooks";
 import { usePagedCollection } from "../lib/usePagedCollection";
@@ -33,7 +34,7 @@ import {
   Steps,
   UploadButton,
 } from "../components/ui";
-import { t, localize } from "../i18n/core";
+import { t, localize, contentTranslation } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
 import "./request.css";
 const kinds = {
@@ -104,7 +105,7 @@ const estimateBody = (d, sleeveless = false) => ({
   configuration: cleanConfig(d.configuration, sleeveless),
   logistics: d.logistics,
 });
-function Price({ data, error, loading, retry }) {
+function Price({ data, error, loading, retry, design }) {
   return (
     <section className="panel request-price">
       <p className="eyebrow">{t("YOUR STITCHING ESTIMATE")}</p>
@@ -122,7 +123,7 @@ function Price({ data, error, loading, retry }) {
             {data.lineItems.map((line) => (
               <div key={line.code}>
                 <dt>
-                  {line.label}
+                  {estimateLineLabel(line, data, design)}
                   <small>
                     {t(
                       line.scope === "shipment"
@@ -143,7 +144,7 @@ function Price({ data, error, loading, retry }) {
           </dl>
           {data.pendingItems.map((p) => (
             <p className="pending-price" key={p.code}>
-              <strong>{p.label}</strong>
+              <strong>{estimateLineLabel(p, data, design)}</strong>
               <br />
               {t(p.reason)}
             </p>
@@ -157,6 +158,11 @@ function Price({ data, error, loading, retry }) {
       </small>
     </section>
   );
+}
+function PolicyCopy({ policies, field, fallback }) {
+  const content = contentTranslation(policies, field);
+  if (!content.text) return fallback;
+  return <><span lang={content.sourceLanguage}>{content.text}</span>{content.missingTranslation && <small className="content-language-note">{t("Policy text is shown in its original English because a Hindi translation has not been added. Ask our team if you need help.")}</small>}</>;
 }
 function Address({ leg, value, onChange }) {
   return (
@@ -267,6 +273,9 @@ export function RequestWizard() {
           ? params.get("garment")
           : "kurti",
         designId: params.get("design") || "",
+        ...(params.get("source") === "reference" && !params.get("design")
+          ? { configuration: { source: "reference", mode: "custom" } }
+          : {}),
         customer: { name: user?.name || "", phone: user?.phone || "" },
       }),
   );
@@ -973,7 +982,7 @@ export function RequestWizard() {
     >
       <PageHeading title={t("Let's create something made for you.")}>
         {t(
-          "Design chuniye, apni preferences batayiye aur measurements share kijiye. Kisi bhi step par help chahiye? Hamare master tailor se guidance request kar sakte hain.",
+          "Choose a design, share your preferences and add your measurements. Our master tailor can help at any step.",
         )}
       </PageHeading>
       <Steps current={index} labels={steps.map(label)} />
@@ -1945,16 +1954,10 @@ export function RequestWizard() {
                   />
                 </Field>
                 <Notice>
-                  {t(
-                    site.policies?.assurance ||
-                      "We stitch your fabric with care according to the design and measurements you approve. If we make an error against those details, we take responsibility and work with you to correct it without an additional correction stitching charge.",
-                  )}
+                  <PolicyCopy policies={site.policies} field="assurance" fallback={t("We stitch your fabric with care according to the design and measurements you approve. If we make an error against those details, we take responsibility and work with you to correct it without an additional correction stitching charge.")} />
                 </Notice>
                 <p className="small-print">
-                  {t(
-                    site.policies?.alterationMargin ||
-                      "Where the fabric and design allow, we aim to leave approximately 1.5 inches of alteration margin on each side. We will confirm the available margin when reviewing your garment.",
-                  )}
+                  <PolicyCopy policies={site.policies} field="alterationMargin" fallback={t("Where the fabric and design allow, we aim to leave approximately 1.5 inches of alteration margin on each side. We will confirm the available margin when reviewing your garment.")} />
                 </p>
                 <Link
                   onClick={(e) => {
@@ -2298,18 +2301,12 @@ export function RequestWizard() {
                       </section>
                     );
                   })}
-                <Price {...priceProps} />
+                <Price {...priceProps} design={design} />
                 <Notice>
-                  {t(
-                    site.policies?.assurance ||
-                      "If we make an error against your confirmed design and measurements, we take responsibility and work with you to correct it without an additional correction stitching charge.",
-                  )}
+                  <PolicyCopy policies={site.policies} field="assurance" fallback={t("If we make an error against your confirmed design and measurements, we take responsibility and work with you to correct it without an additional correction stitching charge.")} />
                 </Notice>
                 <p className="small-print">
-                  {t(
-                    site.policies?.correctionTransport ||
-                      "Measurement changes, new design requests, fabric limitations and correction transport are reviewed separately. Any correction plan and charge are confirmed with you first.",
-                  )}
+                  <PolicyCopy policies={site.policies} field="correctionTransport" fallback={t("Measurement changes, new design requests, fabric limitations and correction transport are reviewed separately. Any correction plan and charge are confirmed with you first.")} />
                 </p>
                 <label className="checkbox">
                   <input
@@ -2394,7 +2391,7 @@ export function RequestWizard() {
           </div>
         </form>
         <aside className="wizard-aside">
-          <Price {...priceProps} />
+          <Price {...priceProps} design={design} />
           <p className="small-print">
             {t(
               "Guest design choices stay on this device for 30 days. Guest measurements, addresses, notes and private reference associations stay in this tab's session. Save a draft to your account for secure recovery on other devices.",

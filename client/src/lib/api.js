@@ -1,7 +1,7 @@
 import { t, getLocale } from "../i18n/core";
 let tokenProvider = () => null;
 let unauthorizedHandler = () => {};
-const retryablePublicPaths = new Set(["/settings", "/designs", "/reviews"]);
+const retryablePublicPaths = new Set(["/settings", "/designs", "/reviews", "/services"]);
 export const setUnauthorizedHandler = (handler) => {
   unauthorizedHandler = handler;
 };

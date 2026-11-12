@@ -18,12 +18,15 @@ import { PrivateImage } from "./Orders";
 import { SupportProposals } from "../components/SupportProposals";
 import { ListPager } from "../components/ListPager";
 
+const supportStatuses = ["open", "acknowledged", "under_review", "awaiting_customer", "correction_proposed", "in_progress", "resolved", "closed"];
+const reviewStatuses = ["pending", "published", "hidden", "rejected"];
+
 export function AdminSupport() {
   useLanguage();
   const [params, setParams] = useSearchParams(),
     id = params.get("ticket"),
     [page, setPage] = useState(1),
-    [status, setStatus] = useState(""),
+    status = supportStatuses.includes(params.get("status")) ? params.get("status") : params.get("attention") === "open" ? "open" : "",
     [kind, setKind] = useState(""),
     resource = useResource(
       id
@@ -57,7 +60,10 @@ export function AdminSupport() {
               id="support-status"
               value={status}
               onChange={(e) => {
-                setStatus(e.target.value);
+                const next = new URLSearchParams(params);
+                next.delete("attention");
+                e.target.value ? next.set("status", e.target.value) : next.delete("status");
+                setParams(next);
                 setPage(1);
               }}
             >
@@ -152,7 +158,8 @@ export function AdminSupport() {
                   setBusy(false);
                 }
               }}
-            >
+             data-admin-editor>
+<fieldset className="admin-form-fields" data-admin-lock disabled={busy}>
               <Field label={t("Update ticket status")} name="ticket-next">
                 <select
                   id="ticket-next"
@@ -191,7 +198,8 @@ export function AdminSupport() {
               <Button className="button" busy={busy}>
                 {t("Save status")}
               </Button>
-            </form>
+            </fieldset>
+</form>
             <Field
               label={t("Assigned authorized master tailor")}
               name="assistance-assignee"
@@ -294,8 +302,10 @@ export function AdminSupport() {
 }
 export function AdminReviews() {
   useLanguage();
+  const [params, setParams] = useSearchParams();
+  const status = reviewStatuses.includes(params.get("status")) ? params.get("status") : "";
   const [page, setPage] = useState(1),
-    resource = useResource(`/admin/reviews?limit=30&page=${page}`),
+    resource = useResource(`/admin/reviews?limit=30&page=${page}${status ? `&status=${status}` : ""}`),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [reasons, setReasons] = useState({});
@@ -317,6 +327,7 @@ export function AdminReviews() {
   return (
     <>
       <PageHeading title={t("Customer words, handled with care.")} />
+      <Field label={t("Filter status")} name="review-status"><select id="review-status" value={status} onChange={event => { const next = new URLSearchParams(params); event.target.value ? next.set("status", event.target.value) : next.delete("status"); setPage(1); setParams(next); }}><option value="">{t("All statuses")}</option>{reviewStatuses.map(value => <option key={value} value={value}>{readable(value)}</option>)}</select></Field>
       <Notice>
         {t(
           "Publish only with consent. Moderate spam, abuse, personal information and irrelevant content consistently. Critical feedback alone is not a reason to hide a review. Customer wording and ratings cannot be edited here.",
@@ -384,11 +395,13 @@ export function AdminReviews() {
 }
 export function AdminWork() {
   useLanguage();
+  const [params] = useSearchParams();
+  const pendingOnly = params.get("attention") === "pending";
   const [applicationPage, setApplicationPage] = useState(1),
     [workerPage, setWorkerPage] = useState(1),
     [assignmentPage, setAssignmentPage] = useState(1),
     applications = useResource(
-      `/admin/applications?limit=30&page=${applicationPage}`,
+      `/admin/applications?limit=30&page=${applicationPage}${pendingOnly ? "&attention=pending" : ""}`,
     ),
     workers = useResource(`/admin/workers?limit=30&page=${workerPage}`),
     assignments = useResource(
@@ -407,6 +420,8 @@ export function AdminWork() {
     });
   const retry = useRef(crypto.randomUUID());
   async function review(a, status) {
+    if (status === "approved" && !window.confirm(t("admin.team.approveConfirm"))) return;
+    if (["rejected", "information_requested"].includes(status) && !notes[a._id]?.reason?.trim()) { setError(t("admin.team.reasonRequired")); return; }
     setBusy(true);
     try {
       await api(`/admin/applications/${a._id}`, {
@@ -628,7 +643,8 @@ export function AdminWork() {
             setBusy(false);
           }
         }}
-      >
+       data-admin-editor>
+<fieldset className="admin-form-fields" data-admin-lock disabled={busy}>
         <h2>{t("Assign or reassign a job")}</h2>
         <Notice>
           {t(
@@ -731,7 +747,8 @@ export function AdminWork() {
         <Button className="button" busy={busy}>
           {t("Save assignment")}
         </Button>
-      </form>
+      </fieldset>
+</form>
       <ResourceState resource={assignments} empty="No assignments yet">
         {assignments.data?.map((a) => (
           <article className="panel" key={a._id}>
@@ -757,6 +774,7 @@ export function AdminWork() {
                 className="text-button danger"
                 busy={busy}
                 onClick={async () => {
+                  if (!window.confirm(t("admin.team.endConfirm"))) return;
                   setBusy(true);
                   try {
                     await api(`/admin/assignments/${a._id}`, {

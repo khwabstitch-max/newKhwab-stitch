@@ -311,10 +311,10 @@ export function workerRoutes(app, ctx, auth) {
   });
   app.get("/api/admin/applications", auth, async (req, res) => {
     assertAdmin(req);
-    const q = pageQuery(req.query, { status: z.string().max(40).optional() });
+    const q = pageQuery(req.query, { status: z.string().max(40).optional(), attention: z.enum(["pending"]).optional() });
     const filter = q.status
       ? { status: q.status }
-      : { status: { $ne: "draft" } };
+      : q.attention === "pending" ? { status: "submitted" } : { status: { $ne: "draft" } };
     const [items, total] = await Promise.all([
       models.WorkerApplication.find(filter)
         .select("+internalNotes")

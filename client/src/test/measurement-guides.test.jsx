@@ -98,6 +98,7 @@ function adminApi(initial = []) {
       { _id: publicId, purpose: "catalogue", private: false, url: "/public.jpg" },
       { _id: privateId, purpose: "reference", private: true, url: "/private-photo.jpg" },
     ]);
+    if (path === `/media/${publicId}/access`) return { data: { url: "/public.jpg" } };
     if (options.method === "POST") { const saved = { ...options.body, _id: guideId, revision: 1 }; rows = [...rows, saved]; return { data: saved }; }
     if (options.method === "PATCH") { rows = rows.map(row => row._id === guideId ? { ...row, ...options.body, revision: row.revision + 1 } : row); return { data: rows[0] }; }
     if (options.method === "DELETE") return { data: {} };
@@ -110,16 +111,16 @@ it("creates a published guide using public media and persists its instructions a
   adminApi(); render(<AdminMeasurementGuides />);
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "New measurement guide" }));
-  await user.type(screen.getByLabelText(/Stable guide code/), "KURTI-SELF");
+  const code = screen.getByLabelText(/Stable guide code/);
+  await user.clear(code);
+  await user.type(code, "KURTI-SELF");
   await user.type(screen.getByLabelText(/^Guide name/), "Safe self-measurement guide");
   await user.type(screen.getByLabelText("Guide instructions"), "Measure around the fullest point without tightening the tape.");
-  await user.selectOptions(screen.getByLabelText("Guide method"), "body");
+  await user.selectOptions(screen.getByLabelText("What is being measured?"), "body");
   await user.selectOptions(screen.getByLabelText("Guide status"), "published");
-  const images = await screen.findAllByRole("img", { name: "Catalogue image" });
-  expect(images).toHaveLength(1);
-  expect(images[0]).toHaveAttribute("src", "/public.jpg");
+  await waitFor(() => expect(document.querySelectorAll('img[src="/public.jpg"]')).toHaveLength(1));
   expect(document.querySelector('img[src="/private-photo.jpg"]')).toBeNull();
-  await user.click(screen.getByRole("checkbox"));
+  await user.click(screen.getByRole("checkbox", { name: "Catalogue image 1" }));
   await user.click(screen.getByRole("button", { name: "Save guide" }));
   await waitFor(() => expect(writes("POST")).toHaveLength(1));
   const body = writes("POST")[0][1].body;

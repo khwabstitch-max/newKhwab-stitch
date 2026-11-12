@@ -24,6 +24,7 @@ import { executeAccountDeletion } from "../src/account-deletion.js";
 import express from "express";
 import { rateLimitFor } from "../src/rate-limits.js";
 import { assertDeploymentIndexes } from "../src/deployment-indexes.js";
+import { defaultSettings, settingsInput, STATUSES } from "../src/domain.js";
 let repl, connection, models, app, customer, other, mainOrder, png;
 let providerFails = false;
 let blockedUpload = null;
@@ -2605,4 +2606,158 @@ test("a valid session survives a fresh application and database connection with 
     await nextModels.User.updateOne({_id:user._id},{$inc:{authVersion:1}});
     assert.equal((await request(nextApp).get("/api/me").set("Authorization","Bearer "+token)).status,401);
   } finally { await fresh.close(); }
+});
+
+async function homepageActors() {
+  const users = await models.User.create([
+    { name: "Homepage fixture admin", email: "homepage-admin-" + randomUUID() + "@example.test", role: "admin", passwordHash: fixtureHash },
+    { name: "Homepage fixture customer", email: "homepage-customer-" + randomUUID() + "@example.test", role: "customer", passwordHash: fixtureHash },
+  ]);
+  const tokens = tokenService(config);
+  return { admin: tokens.issue(users[0]).token, customer: tokens.issue(users[1]).token };
+}
+async function homepageSettingsBody(admin, changes) {
+  const current = (await auth("get", "/api/admin/settings", admin).expect(200)).body.data;
+  const values = { ...structuredClone(defaultSettings), ...current };
+  const fields = Object.fromEntries(Object.keys(settingsInput.shape).filter(key => values[key] !== undefined).map(key => [key, values[key]]));
+  return { ...fields, revision: current.revision || 0, ...changes };
+}
+const homepageSlide = (imageMediaId, changes = {}) => ({
+  id: "homepage-" + randomUUID(), kind: "featured", active: true, title: "An isolated stitching reference", titleHi: "सिलाई का परीक्षण डिज़ाइन",
+  description: "Use your own fabric; quote review is required.", descriptionHi: "कपड़ा आपका होगा; कोटेशन की समीक्षा ज़रूरी है।",
+  actionLabel: "Explore designs", actionLabelHi: "डिज़ाइन देखें", href: "/catalogue", imageMediaId, ...changes,
+});
+
+test("homepage settings persist bilingual copy, enforce revisions/admin access and pin public banner images exactly once", async () => {
+  const actors = await homepageActors();
+  const asset = (await auth("post", "/api/media", actors.admin).field("purpose", "banner").attach("file", png, "homepage.png").expect(201)).body.data;
+  const designs = [];
+  for (let index = 0; index < 2; index++) designs.push((await auth("post", "/api/admin/designs", actors.admin).send(adminDesign({ status: "published" })).expect(201)).body.data);
+  await auth("get", "/api/admin/settings", actors.customer).expect(403);
+  const homepage = {
+    hero: { eyebrow: "Customer fabric", eyebrowHi: "ग्राहक का कपड़ा", headline: "Your own stitching design", headlineHi: "आपकी पसंद की सिलाई", description: "Confirm your quote before stitching.", descriptionHi: "सिलाई से पहले कोटेशन की पुष्टि करें।" },
+    slides: [homepageSlide(asset._id), homepageSlide(asset._id, { displayOrder: 2 })], featuredDesignIds: [designs[1]._id, designs[0]._id],
+  };
+  const input = await homepageSettingsBody(actors.admin, { homepage });
+  await auth("patch", "/api/admin/settings", actors.customer).send(input).expect(403);
+  const saved = await auth("patch", "/api/admin/settings", actors.admin).send(input).expect(200);
+  assert.equal(saved.body.data.revision, input.revision + 1);
+  assert.equal((await models.MediaAsset.findById(asset._id)).references, 1);
+  await auth("patch", "/api/admin/settings", actors.admin).send(input).expect(409);
+  assert.equal((await models.MediaAsset.findById(asset._id)).references, 1);
+  const stored = (await auth("get", "/api/admin/settings", actors.admin).expect(200)).body.data;
+  assert.equal(stored.homepage.hero.headlineHi, homepage.hero.headlineHi);
+  const publicSettings = (await request(app).get("/api/settings").expect(200)).body.data;
+  assert.deepEqual(publicSettings.homepage.featuredDesignIds, homepage.featuredDesignIds);
+  assert.equal(publicSettings.homepage.slides.length, 2);
+  assert.ok(publicSettings.homepage.slides.every(slide => slide.imageUrl && !slide.imageMediaId));
+  await auth("delete", "/api/media/" + asset._id, actors.admin).send({}).expect(409);
+  await auth("patch", "/api/admin/settings", actors.admin).send(await homepageSettingsBody(actors.admin, { homepage: { slides: [], featuredDesignIds: [] } })).expect(200);
+  assert.equal((await models.MediaAsset.findById(asset._id)).references, 0);
+  await auth("delete", "/api/media/" + asset._id, actors.admin).send({}).expect(200);
+});
+
+test("homepage rejects private customer images and rolls back media pins when an offer cannot publish", async () => {
+  const actors = await homepageActors();
+  const privateAsset = (await auth("post", "/api/media", actors.admin).field("purpose", "reference").attach("file", png, "private-homepage.png").expect(201)).body.data;
+  const publicAsset = (await auth("post", "/api/media", actors.admin).field("purpose", "banner").attach("file", png, "public-homepage.png").expect(201)).body.data;
+  const input = await homepageSettingsBody(actors.admin, { homepage: { slides: [homepageSlide(privateAsset._id)] } });
+  const denied = await auth("patch", "/api/admin/settings", actors.admin).send(input).expect(400);
+  assert.equal(denied.body.error.code, "INVALID_MEDIA");
+  assert.equal((await models.MediaAsset.findById(privateAsset._id)).references, 0);
+  await models.CommerceSettings.findOneAndUpdate({ key: "main" }, { $set: { enabled: false, offersEnabled: false, terms: "Fixture programme terms", termsHi: "कार्यक्रम की परीक्षण शर्तें" } }, { upsert: true });
+  const offer = await models.CommerceOffer.create({ code: "HOME-" + randomUUID().slice(0, 8).toUpperCase(), name: "Fixture offer", status: "published", type: "percentage", value: 1500 });
+  const offerSlide = homepageSlide(publicAsset._id, { kind: "offer", offerId: String(offer._id), terms: "Fixture banner terms", termsHi: "बैनर की परीक्षण शर्तें" });
+  const failed = await auth("patch", "/api/admin/settings", actors.admin).send(await homepageSettingsBody(actors.admin, { homepage: { slides: [offerSlide] } })).expect(409);
+  assert.equal(failed.body.error.code, "OFFER_PROMOTION_UNAVAILABLE");
+  assert.equal((await models.MediaAsset.findById(publicAsset._id)).references, 0);
+  await models.CommerceSettings.updateOne({ key: "main" }, { $set: { enabled: true, offersEnabled: true, termsHi: "" } });
+  await auth("patch", "/api/admin/settings", actors.admin).send(await homepageSettingsBody(actors.admin, { homepage: { slides: [offerSlide] } })).expect(409);
+  assert.equal((await models.MediaAsset.findById(publicAsset._id)).references, 0);
+});
+
+test("homepage offer publication validates overlapping schedules and public availability tracks programme, date and quota changes", async () => {
+  const actors = await homepageActors(), timestamp = Date.now();
+  const asset = (await auth("post", "/api/media", actors.admin).field("purpose", "banner").attach("file", png, "scheduled-homepage.png").expect(201)).body.data;
+  await models.CommerceSettings.findOneAndUpdate({ key: "main" }, { $set: { enabled: true, offersEnabled: true, terms: "Fixture programme terms", termsHi: "कार्यक्रम की परीक्षण शर्तें" } }, { upsert: true });
+  const offer = await models.CommerceOffer.create({ code: "SCHEDULE-" + randomUUID().slice(0, 8).toUpperCase(), name: "Scheduled fixture", status: "published", type: "fixed", value: 5000, totalUseLimit: 1, usedCount: 0, startsAt: new Date(timestamp + 2 * 3600000), endsAt: new Date(timestamp + 3 * 3600000) });
+  const slide = homepageSlide(asset._id, { kind: "offer", offerId: String(offer._id), terms: "Fixture conditions", termsHi: "परीक्षण की शर्तें", startsAt: new Date(timestamp - 60000).toISOString(), endsAt: new Date(timestamp + 3600000).toISOString() });
+  const mismatch = await auth("patch", "/api/admin/settings", actors.admin).send(await homepageSettingsBody(actors.admin, { homepage: { slides: [slide] } })).expect(400);
+  assert.equal(mismatch.body.error.code, "OFFER_SCHEDULE_MISMATCH");
+  assert.equal((await models.MediaAsset.findById(asset._id)).references, 0);
+  await models.CommerceOffer.updateOne({ _id: offer._id }, { $set: { startsAt: new Date(timestamp - 3600000), endsAt: new Date(timestamp + 3600000) } });
+  await auth("patch", "/api/admin/settings", actors.admin).send(await homepageSettingsBody(actors.admin, { homepage: { slides: [slide] } })).expect(200);
+  const visible = (await request(app).get("/api/settings").expect(200)).body.data.homepage.slides;
+  assert.equal(visible.length, 1); assert.equal(visible[0].offer.available, true); assert.equal(visible[0].offer.value, 5000);
+  assert.equal(visible[0].offerId, undefined); assert.equal(visible[0].offer.programmeTermsHi, "कार्यक्रम की परीक्षण शर्तें");
+  await models.CommerceSettings.updateOne({ key: "main" }, { $set: { offersEnabled: false } });
+  assert.deepEqual((await request(app).get("/api/settings").expect(200)).body.data.homepage.slides, []);
+  await models.CommerceSettings.updateOne({ key: "main" }, { $set: { offersEnabled: true } });
+  for (const changes of [{ usedCount: 1 }, { usedCount: 0, status: "draft" }, { status: "published", endsAt: new Date(timestamp - 1) }, { endsAt: new Date(timestamp + 3 * 3600000), startsAt: new Date(timestamp + 2 * 3600000) }]) {
+    await models.CommerceOffer.updateOne({ _id: offer._id }, { $set: changes });
+    assert.deepEqual((await request(app).get("/api/settings").expect(200)).body.data.homepage.slides, []);
+  }
+  await models.CommerceSettings.updateOne({ key: "main" }, { $set: { enabled: false, offersEnabled: false } });
+});
+
+test("featured homepage designs disappear on unpublish and cannot be deleted while still selected", async () => {
+  const actors = await homepageActors(), payload = adminDesign({ status: "published" });
+  const design = (await auth("post", "/api/admin/designs", actors.admin).send(payload).expect(201)).body.data;
+  await auth("patch", "/api/admin/settings", actors.admin).send(await homepageSettingsBody(actors.admin, { homepage: { featuredDesignIds: [design._id], slides: [] } })).expect(200);
+  const unpublished = (await auth("patch", "/api/admin/designs/" + design._id, actors.admin).send({ ...payload, status: "draft", revision: design.revision }).expect(200)).body.data;
+  const homepage = (await request(app).get("/api/settings").expect(200)).body.data.homepage;
+  assert.deepEqual(homepage.featuredDesignIds, []); assert.deepEqual(homepage.featuredDesigns, []);
+  await auth("delete", "/api/admin/designs/" + design._id, actors.admin).send({ revision: unpublished.revision }).expect(409);
+  await auth("patch", "/api/admin/settings", actors.admin).send(await homepageSettingsBody(actors.admin, { homepage: { featuredDesignIds: [], slides: [] } })).expect(200);
+  await auth("delete", "/api/admin/designs/" + design._id, actors.admin).send({ revision: unpublished.revision }).expect(200);
+});
+
+test("public category/keyword search and admin option-kind search reflect actual records in both languages", async () => {
+  const actors = await homepageActors(), unique = randomUUID().slice(0, 8);
+  const category = (await auth("post", "/api/admin/categories", actors.admin).send({ name: "Occasion " + unique, nameHi: "त्योहार " + unique, slug: "occasion-" + unique, active: true }).expect(201)).body.data;
+  const design = (await auth("post", "/api/admin/designs", actors.admin).send(adminDesign({ status: "published", category: category._id, searchLabels: ["amber-" + unique], searchLabelsHi: ["गुलाबी-" + unique] })).expect(201)).body.data;
+  const categories = (await request(app).get("/api/categories?limit=50").expect(200)).body.data;
+  assert.ok(categories.some(record => record._id === category._id));
+  for (const search of ["Occasion " + unique, "त्योहार " + unique, "amber-" + unique, "गुलाबी-" + unique]) {
+    const results = (await request(app).get("/api/designs?search=" + encodeURIComponent(search)).expect(200)).body.data;
+    assert.ok(results.some(record => record._id === design._id));
+  }
+  assert.ok((await request(app).get("/api/designs?category=" + category._id).expect(200)).body.data.every(record => record.category === category._id));
+  assert.deepEqual((await request(app).get("/api/designs?search=" + encodeURIComponent(".*" + unique)).expect(200)).body.data, []);
+  const records = [];
+  for (const [kind, status, active] of [["sleeve", "published", true], ["neck", "published", true], ["sleeve", "draft", false]]) {
+    records.push((await auth("post", "/api/admin/options", actors.admin).send({ name: "Shared " + unique, nameHi: "साझा " + unique, code: "OPT_" + randomUUID().slice(0, 8).toUpperCase(), kind, status, active, garments: ["kurti"] }).expect(201)).body.data);
+  }
+  const options = (await auth("get", "/api/admin/options?kind=sleeve&status=published&active=true&search=" + unique, actors.admin).expect(200)).body.data;
+  assert.deepEqual(options.map(record => record._id), [records[0]._id]);
+  await auth("get", "/api/admin/options?kind=unknown", actors.admin).expect(400);
+});
+
+test("dashboard counts and status totals match stored records rather than fixture display numbers", async () => {
+  const actors = await homepageActors();
+  await seededOrder({ status: "stitching" }); await seededOrder({ status: "delivered" }); await seededOrder({ status: "under_review" });
+  await models.Design.create(adminDesign({ startingPricePaise: 0, status: "draft" }));
+  const dashboard = (await auth("get", "/api/admin/dashboard", actors.admin).expect(200)).body.data;
+  assert.equal(dashboard.counts.totalOrders, await models.Order.countDocuments());
+  for (const status of STATUSES) assert.equal(dashboard.counts.byStatus[status], await models.Order.countDocuments({ status }));
+  assert.equal(dashboard.counts.pendingReview, await models.Order.countDocuments({ status: { $in: ["request_received", "under_review"] } }));
+  assert.equal(dashboard.counts.missingDesignPhotos, await models.Design.countDocuments({ "mediaIds.0": { $exists: false } }));
+  assert.equal(dashboard.counts.missingDesignPrices, await models.Design.countDocuments({ startingPricePaise: { $lte: 0 } }));
+  assert.equal(dashboard.counts.pendingReviews, await models.Review.countDocuments({ status: "pending" }));
+  assert.equal(dashboard.counts.pendingApplications, await models.WorkerApplication.countDocuments({ status: "submitted" }));
+  assert.equal(dashboard.counts.openHelpRequests, await models.SupportTicket.countDocuments({ status: "open" }));
+});
+
+test("public settings safely omit corrupt legacy homepage metadata and invalid object IDs", async () => {
+  const previous = await models.SiteSettings.findOne({ key: "main" }).lean();
+  try {
+    await models.SiteSettings.updateOne({ key: "main" }, { $set: { homepage: { privateInternalNote: "unpublished-fixture-note", featuredDesignIds: ["not-an-object-id"], slides: [homepageSlide("not-an-object-id")] } } });
+    const settings = (await request(app).get("/api/settings").expect(200)).body.data;
+    assert.deepEqual(settings.homepage.slides, []); assert.deepEqual(settings.homepage.featuredDesignIds, []);
+    assert.equal(JSON.stringify(settings).includes("unpublished-fixture-note"), false);
+    await models.SiteSettings.updateOne({ key: "main" }, { $set: { homepage: "corrupt-homepage" } });
+    assert.equal((await request(app).get("/api/settings").expect(200)).body.data.homepage, undefined);
+  } finally {
+    await models.SiteSettings.updateOne({ key: "main" }, previous?.homepage === undefined ? { $unset: { homepage: 1 } } : { $set: { homepage: previous.homepage } });
+  }
 });

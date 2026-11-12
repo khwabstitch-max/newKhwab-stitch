@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { bundledBoardFields } from "../server/src/media-storage.js";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { createApp } from "../server/src/app.js";
 import { createModels, transaction } from "../server/src/models.js";
 import { defaultSettings } from "../server/src/domain.js";
@@ -13,7 +13,7 @@ const require = createRequire(
 
 // The default fixture is in memory. Explicitly authorized configured runs use a
 // fresh random database name, never the database named in the connection URI.
-export async function startAuthFixture() {
+export async function startAuthFixture({ mediaUploads = false } = {}) {
   const mongoose = require("mongoose");
   const { MongoMemoryReplSet } = require("mongodb-memory-server");
   const pino = require("pino");
@@ -57,12 +57,31 @@ export async function startAuthFixture() {
       TRUST_PROXY_HOPS: 0,
       LOG_LEVEL: "silent",
     };
+    const storedMedia = new Map(), mediaByPath = new Map(), mediaKey = randomBytes(32);
+    let mediaBase;
+    const signMedia = (id, expires) => createHmac("sha256", mediaKey).update(id + ":" + expires).digest("hex");
     const images = {
-      url: () => "https://images.example.test/fixture.webp",
-      upload: async () => {
-        throw new Error("Image uploads are outside this auth smoke.");
+      url: (filePath, seconds = 300) => {
+        if (!mediaUploads) return "https://images.example.test/fixture.webp";
+        const record = mediaByPath.get(filePath);
+        if (!record) return mediaBase + "/__fixture_media/missing";
+        const expires = Date.now() + Math.min(Math.max(Number(seconds) || 300, 1), 3600) * 1000;
+        return mediaBase + "/__fixture_media/" + record.fileId + "?expires=" + expires + "&signature=" + signMedia(record.fileId, expires);
       },
-      remove: async () => {},
+      upload: async (buffer, options) => {
+        if (!mediaUploads) throw new Error("Image uploads are outside this auth smoke.");
+        const metadata = await require("sharp")(buffer).metadata();
+        if (metadata.format !== "webp" || !metadata.width || !metadata.height || storedMedia.size >= 50)
+          throw new Error("The isolated media fixture requires decoded, bounded WebP images.");
+        const fileId = randomUUID(), filePath = "/khwab/" + (options.private ? "private" : "public") + "/fixture/" + fileId + ".webp";
+        const record = { fileId, filePath, buffer: Buffer.from(buffer), private: options.private, owner: String(options.owner), purpose: options.purpose };
+        storedMedia.set(fileId, record); mediaByPath.set(filePath, record);
+        return { fileId, filePath };
+      },
+      remove: async (fileId) => {
+        const record = storedMedia.get(fileId);
+        if (record) { mediaByPath.delete(record.filePath); storedMedia.delete(fileId); }
+      },
     };
     const app = createApp({
       config,
@@ -72,11 +91,25 @@ export async function startAuthFixture() {
       logger: pino({ level: "silent" }),
       dbReady: () => connection.readyState === 1,
     });
+    let listener = app;
+    if (mediaUploads) {
+      listener = require("express")();
+      listener.get("/__fixture_media/:id", (req, res) => {
+        const record = storedMedia.get(req.params.id), expires = String(req.query.expires || ""), signature = String(req.query.signature || "");
+        if (!record) return res.status(404).end();
+        if (!/^\d{13}$/.test(expires) || Number(expires) <= Date.now() || !/^[a-f0-9]{64}$/.test(signature) || !timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(signMedia(record.fileId, expires), "hex")))
+          return res.status(403).end();
+        res.set({ "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" });
+        return res.send(record.buffer);
+      });
+      listener.use(app);
+    }
     server = await new Promise((resolve, reject) => {
-      const listening = app.listen(0, "127.0.0.1", () => resolve(listening));
+      const listening = listener.listen(0, "127.0.0.1", () => resolve(listening));
       listening.once("error", reject);
     });
     const url = "http://127.0.0.1:" + server.address().port;
+    mediaBase = url;
     const password = "Browser-test-" + randomBytes(12).toString("base64url");
     const adminEmail = "admin-" + randomUUID() + "@example.test";
     const customerEmail = "customer-" + randomUUID() + "@example.test";
@@ -195,14 +228,38 @@ export async function startAuthFixture() {
       },
     });
 
+    let ownerTaskData;
     return {
       url,
       password,
       adminEmail,
       customerEmail,
       designId: String(design._id),
+      mediaUploadsEnabled: mediaUploads,
+      addFrontendOrigin(origin) {
+        const parsed = new URL(origin);
+        if (parsed.protocol !== "http:" || parsed.origin !== origin || !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname))
+          throw new Error("Browser fixture origins must be exact HTTP loopback origins.");
+        if (!config.origins.includes(origin)) config.origins.push(origin);
+      },
+      async seedOwnerTasks() {
+        if (ownerTaskData) return ownerTaskData;
+        let customer = await models.User.findOne({ email: customerEmail });
+        if (!customer) {
+          const response = await fetch(url + "/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Isolated customer fixture", email: customerEmail, password }) });
+          if (response.status !== 201) throw new Error("Isolated owner-task customer setup failed.");
+          customer = await models.User.findOne({ email: customerEmail });
+        }
+        const orderFields = { owner: customer._id, garment: "kurti", quantity: 1, designId: design._id, designSnapshot: { title: design.title, code: design.code }, measurements: { unit: "in", method: "assistance", values: {}, takenBy: "assistance", notes: "Disposable browser fixture" }, customer: { name: "Isolated customer fixture", phone: "9876543210" }, configuration: { source: "catalogue", mode: "exact", components: {} }, logistics: { inbound: { method: "dropoff" }, outbound: { method: "collect" } }, fabricAcknowledged: true };
+        const orders = await models.Order.create(["under_review", "delivered"].map(status => ({ ...orderFields, status, orderNumber: "ISOLATED-" + randomUUID(), idempotencyKey: randomUUID(), requestHash: "isolated-owner-task", timeline: [{ status, at: new Date(), note: "Disposable browser verification fixture" }] })));
+        const review = await models.Review.create({ owner: customer._id, orderId: orders[1]._id, rating: 4, consent: true, text: "Isolated browser fixture review; never production content.", status: "pending" });
+        const application = await models.WorkerApplication.create({ owner: customer._id, clientId: randomUUID(), requestHash: "isolated-owner-application", name: "Isolated applicant", phone: "9876543210", city: "Test city", skills: ["stitching"], garments: ["kurti"], experience: "Disposable browser fixture", availability: "Test only", termsVersion: "fixture-v1", status: "submitted", timeline: [] });
+        ownerTaskData = { customerId: String(customer._id), orderId: String(orders[0]._id), deliveredOrderId: String(orders[1]._id), reviewId: String(review._id), applicationId: String(application._id) };
+        return ownerTaskData;
+      },
       async close() {
         await new Promise((resolve) => server.close(resolve));
+        storedMedia.clear(); mediaByPath.clear();
         try { await guardedDrop(); }
         finally { await connection.close(); await replica?.stop(); }
       },
@@ -337,7 +394,7 @@ export async function verifyAuthInBrowser({
   await waitFor(
     () =>
       evaluate(
-        `document.body.innerText.includes('A good day to make beautiful things')`,
+        `Boolean(document.querySelector('.admin-nav') && document.querySelector('.admin-content h1'))`,
       ),
     "Trusted administrator did not access the dashboard",
   );

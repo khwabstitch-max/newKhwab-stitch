@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
+import { homepageInput } from "./homepage-input.js";
 import { fail } from "./errors.js";
 import {
   configurationInput,
@@ -283,6 +284,8 @@ export const designInput = z
     title: z.string().trim().min(2).max(120),
     titleHi: z.string().trim().max(120).optional(),
     descriptionHi: z.string().trim().max(4000).optional(),
+    searchLabels: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
+    searchLabelsHi: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
     code: z
       .string()
       .trim()
@@ -455,6 +458,7 @@ export const profileInput = z
 export const settingsInput = z
   .object({
     businessName: z.string().trim().min(2).max(100),
+    homepage: homepageInput.optional(),
     serviceAreas: z.array(serviceAreaInput).max(100).optional(),
     garmentBasePrices: z
       .object(

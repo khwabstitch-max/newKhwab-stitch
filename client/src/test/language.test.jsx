@@ -24,6 +24,10 @@ import {
   labelToken,
   translateError,
   LANGUAGE_KEY,
+  translationCatalogue,
+  semanticCatalogue,
+  contentTranslation,
+  missingContentTranslations,
 } from "../i18n/core";
 import { LanguageProvider, LanguageSwitcher } from "../i18n/Language";
 import { money, date, readable } from "../lib/api";
@@ -92,6 +96,32 @@ describe("English and Hindi language behaviour", () => {
     });
     expect(setLanguage("hi")).toBe(true);
     expect(t("Your fabric.")).toBe("आपका कपड़ा।");
+  });
+  it("resolves stable copy IDs, complete plural sentences and literal parameters without changing business keys", () => {
+    expect(t("account.attachments.ready", { count: 1 })).toBe("1 private image ready to send");
+    expect(t("account.attachments.ready", { count: 2 })).toBe("2 private images ready to send");
+    setLanguage("hi");
+    expect(t("account.attachments.ready", { count: 1 })).toBe("1 निजी तस्वीर भेजने के लिए तैयार है");
+    expect(t("account.attachments.ready", { count: 2 })).toBe("2 निजी तस्वीरें भेजने के लिए तैयार हैं");
+    expect(t("public.action.reference")).toBe(semanticCatalogue["public.action.reference"].hi);
+    expect(t("K-CUSTOM-001")).toBe("K-CUSTOM-001");
+    expect(t("Your own <design> note")).toBe("Your own <design> note");
+  });
+  it("reports missing owner translations explicitly and preserves authored originals", () => {
+    const records = [{ _id: "custom-001", title: "Round", description: "Our own words", titleHi: "गोल" }];
+    setLanguage("hi");
+    expect(contentTranslation(records[0], "description")).toEqual({ text: "Our own words", sourceLanguage: "en", missingTranslation: true });
+    expect(contentTranslation(records[0], "title")).toEqual({ text: "गोल", sourceLanguage: "hi", missingTranslation: false });
+    expect(missingContentTranslations(records)).toEqual([{ id: "custom-001", field: "description" }]);
+    expect(records[0].description).toBe("Our own words");
+    setLanguage("en");
+    expect(contentTranslation(records[0], "title").text).toBe("Round");
+  });
+  it("hides unknown technical string errors in Hindi and retains already translated known errors", () => {
+    setLanguage("hi");
+    expect(translateError("MongoServerSelectionError internal provider stack")).toBe(t("Request could not be completed. Please review the details and try again."));
+    const known = t("The passwords do not match.");
+    expect(translateError(known)).toBe(known);
   });
   it("translates sentence placeholders and converts already displayed messages back to English", () => {
     setLanguage("hi");
@@ -174,10 +204,10 @@ describe("English and Hindi language behaviour", () => {
     ).not.toContain("provider");
   });
   it("has valid nonempty Hindi text and matching parameters for every catalogue entry", () => {
-    for (const [en, hi] of Object.entries(messages)) {
+    for (const [en, hi] of Object.entries(translationCatalogue)) {
       expect(hi.trim(), en).not.toBe("");
-      expect([...en.matchAll(/\{\d+\}/g)].map((x) => x[0]).sort(), en).toEqual(
-        [...hi.matchAll(/\{\d+\}/g)].map((x) => x[0]).sort(),
+      expect([...en.matchAll(/\{[^{}]+\}/g)].map((x) => x[0]).sort(), en).toEqual(
+        [...hi.matchAll(/\{[^{}]+\}/g)].map((x) => x[0]).sort(),
       );
       expect(hi, en).not.toMatch(/�/);
     }
@@ -186,7 +216,7 @@ describe("English and Hindi language behaviour", () => {
     mount(<Home />);
     change("hi");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "आपकी सोच,",
+      t("public.hero.headline"),
     );
     expect(document.title).toContain("जहाँ");
     fireEvent(
@@ -194,7 +224,7 @@ describe("English and Hindi language behaviour", () => {
       new StorageEvent("storage", { key: LANGUAGE_KEY, newValue: "en" }),
     );
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "Aapki Soch,",
+      t("public.hero.headline"),
     );
   });
   it("preserves login input, password and mode while switching and sends unchanged credentials", async () => {
@@ -274,21 +304,23 @@ describe("English and Hindi language behaviour", () => {
       screen.getByLabelText("What is being measured?"),
     ).toHaveValue("body");
   });
-  it("translates the complete admin navigation", () => {
+  it("translates admin task navigation and searches using the selected language", () => {
     setLanguage("hi");
     mount(<AdminLayout />);
     for (const text of [
-      "Overview",
-      "Requests",
-      "Designs",
-      "Categories",
-      "Customers",
-      "Website content",
-      "Audit history",
-    ])
+      "admin.nav.dashboard",
+      "admin.nav.orders",
+      "admin.nav.designs",
+      "admin.nav.categories",
+      "admin.nav.customers",
+      "admin.nav.website",
+      "admin.nav.audit",
+    ]) {
+      fireEvent.change(screen.getByLabelText(t("admin.searchTasks")), { target: { value: t(text) } });
       expect(
         screen.getByRole("link", { name: t(text), exact: true }),
       ).toBeInTheDocument();
+    }
   });
   it("saves Hindi design fields alongside the original English content", async () => {
     mount(<AdminDesigns />);
@@ -339,7 +371,7 @@ describe("English and Hindi language behaviour", () => {
           }
         : paginated([]),
     );
-    mount(<AdminSettings />);
+    mount(<AdminSettings />, "/test?section=contact");
     expect(
       await screen.findByLabelText("Hindi about text (optional)"),
     ).toBeInTheDocument();

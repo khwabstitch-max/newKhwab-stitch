@@ -11,6 +11,7 @@ import {
   Upload,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { cloneElement, isValidElement, useId } from "react";
 export function Spinner({ label = t("Loading\u2026") }) {
   useLanguage();
   return (
@@ -78,23 +79,39 @@ export function Field({
   ...props
 }) {
   useLanguage();
-  const name = props.id || props.name;
+  const generatedId = useId();
+  const nativeChild = isValidElement(children) && ["input", "select", "textarea"].includes(children.type);
+  const name = props.id || (nativeChild ? children.props.id : undefined) || props.name || `field-${generatedId}`;
+  const describedBy = [...new Set([
+    ...(nativeChild ? (children.props["aria-describedby"] || "").split(/\s+/) : []),
+    hint ? `${name}-hint` : "",
+    error ? `${name}-error` : "",
+  ].filter(Boolean))].join(" ") || undefined;
+  const control = nativeChild ? cloneElement(children, {
+    id: name,
+    required: children.props.required ?? props.required,
+    lang: children.props.lang ?? props.lang,
+    "aria-invalid": Boolean(error) || children.props["aria-invalid"] || false,
+    "aria-describedby": describedBy,
+    "aria-labelledby": children.props["aria-labelledby"] || (children.props["aria-label"] ? undefined : `${name}-label`),
+  }) : children;
   return (
     <label className={`field ${className}`} htmlFor={name}>
       <span>
-        {t(label)}
-        {props.required && <span aria-hidden="true"> *</span>}
+        <span id={`${name}-label`}>{t(label)}</span>
+        {(props.required || (nativeChild && children.props.required)) && <span aria-hidden="true"> *</span>}
       </span>
-      {children || (
+      {control || (
         <input
           {...props}
           id={name}
           aria-invalid={Boolean(error)}
-          aria-describedby={hint ? `${name}-hint` : undefined}
+          aria-describedby={describedBy}
+          aria-labelledby={props["aria-labelledby"] || (props["aria-label"] ? undefined : `${name}-label`)}
         />
       )}
       {hint && <small id={`${name}-hint`}>{t(hint)}</small>}
-      {error && <small className="field-error">{translateError(error)}</small>}
+      {error && <small id={`${name}-error`} className="field-error" aria-live="polite">{translateError(error)}</small>}
     </label>
   );
 }

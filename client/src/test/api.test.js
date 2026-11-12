@@ -165,6 +165,15 @@ describe("API authentication and mutation safety", () => {
 
 describe("explicit anonymous public-read recovery", () => {
   const publicRead = { publicRead: true, auth: false };
+  it("recovers the public configured-service list without sending account credentials", async () => {
+    const tokens = vi.fn(() => "saved-token");
+    setTokenProvider(tokens);
+    fetch.mockRejectedValueOnce(new TypeError("connection reset"))
+      .mockResolvedValue(json({ data: [{ itemTypes: ["kurti"] }] }));
+    await expect(api("/services?limit=50", publicRead)).resolves.toMatchObject({ data: [{ itemTypes: ["kurti"] }] });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(tokens).not.toHaveBeenCalled();
+  });
   it("does not consult a private token provider for an opted-in public read", async () => {
     const tokens = vi.fn(() => { throw new Error("Private storage unavailable"); });
     setTokenProvider(tokens);

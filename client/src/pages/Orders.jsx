@@ -1,7 +1,7 @@
 import { t, localize, labelToken } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
 import { useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
   ExternalLink,
@@ -11,6 +11,7 @@ import {
 import { api, date, dateTime, idOf, money, readable } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useResource, useSite } from "../lib/hooks";
+import { estimateLineLabel } from "../lib/order-labels";
 import {
   OrderFulfilment,
   QuoteLineEditor,
@@ -27,10 +28,27 @@ import {
   PageHeading,
   Spinner,
 } from "../components/ui";
+const orderStatuses = [
+  "request_received", "under_review", "quote_sent", "customer_accepted",
+  "fabric_received", "stitching", "ready", "dispatched", "delivered",
+  "cancelled", "rejected",
+];
 export function OrderList({ admin = false }) {
   useLanguage();
-  const [page, setPage] = useState(1),
-    [status, setStatus] = useState("");
+  const [params, setParams] = useSearchParams();
+  const requestedPage = Number(params.get("page"));
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const status = orderStatuses.includes(params.get("status")) ? params.get("status") : "";
+  function changeFilters(nextStatus, nextPage) {
+    setParams(previous => {
+      const next = new URLSearchParams(previous);
+      if (nextStatus) next.set("status", nextStatus);
+      else next.delete("status");
+      if (nextPage > 1) next.set("page", String(nextPage));
+      else next.delete("page");
+      return next;
+    });
+  }
   const { data, loading, error, reload, pagination } = useResource(
     `${admin ? "/admin" : ""}/orders?page=${page}&limit=15${status ? `&status=${status}` : ""}`,
   );
@@ -64,24 +82,11 @@ export function OrderList({ admin = false }) {
             id="orderStatus"
             value={status}
             onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
+              changeFilters(e.target.value, 1);
             }}
           >
             <option value="">{t("All statuses")}</option>
-            {[
-              "request_received",
-              "under_review",
-              "quote_sent",
-              "customer_accepted",
-              "fabric_received",
-              "stitching",
-              "ready",
-              "dispatched",
-              "delivered",
-              "cancelled",
-              "rejected",
-            ].map((s) => (
+            {orderStatuses.map((s) => (
               <option key={s} value={s}>
                 {readable(s)}
               </option>
@@ -112,8 +117,7 @@ export function OrderList({ admin = false }) {
                     {localize(o.designSnapshot, "title") || readable(o.garment)}
                   </h3>
                   <p>
-                    {readable(o.garment)} · {o.quantity}{" "}
-                    {o.quantity === 1 ? t("piece") : t("pieces")} ·{" "}
+                    {readable(o.garment)} · {t("order.pieces", { count: o.quantity })} ·{" "}
                     {date(o.createdAt)}
                   </p>
                 </div>
@@ -123,7 +127,7 @@ export function OrderList({ admin = false }) {
             ))}
           </div>
           <div className="pagination">
-            <button disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <button disabled={page <= 1} onClick={() => changeFilters(status, page - 1)}>
               {t("Previous")}
             </button>
             <span>
@@ -134,7 +138,7 @@ export function OrderList({ admin = false }) {
             </span>
             <button
               disabled={page >= (pagination?.pages || 1)}
-              onClick={() => setPage(page + 1)}
+              onClick={() => changeFilters(status, page + 1)}
             >
               {t("Next")}
             </button>
@@ -517,7 +521,7 @@ export function OrderDetails({ admin = false }) {
               <p>{t("Known subtotal")}</p>
               {order.estimate.lineItems?.map((line, i) => (
                 <div className="account-row" key={i}>
-                  <span>{line.label}</span>
+                  <span>{estimateLineLabel(line, order.estimate, order.designSnapshot)}</span>
                   <strong>{money(line.totalPaise ?? line.amountPaise)}</strong>
                 </div>
               ))}
@@ -525,7 +529,7 @@ export function OrderDetails({ admin = false }) {
                 <Notice>
                   {t("Pending tailor review")} ·{" "}
                   {order.estimate.pendingItems
-                    .map((p) => p.label || p.reason || p)
+                    .map((p) => estimateLineLabel(p, order.estimate, order.designSnapshot) || t(p.reason) || p)
                     .join("; ")}
                 </Notice>
               )}
@@ -548,6 +552,9 @@ export function OrderDetails({ admin = false }) {
                   <strong>{money(line.amountPaise)}</strong>
                 </div>
               ))}
+              {latest.lineItems?.length > 0 && (
+                <p className="small-print">{t("Quote descriptions are shown in their original language. Ask our team if you need help understanding a charge.")}</p>
+              )}
               <p>
                 {t("Proposed delivery: ")}
                 <strong>{date(latest.deliveryDate)}</strong>

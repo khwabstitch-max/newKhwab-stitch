@@ -1,7 +1,7 @@
 @import "./tokens.css";
 :root {
-  --teal: #205b56;
-  --champagne: #b39869;
+  --teal: var(--color-teal);
+  --champagne: var(--color-champagne);
   --brand-chocolate: #4a271b;
   --brand-copper: #b77755;
   --brand-rose: #c96b70;
@@ -13,7 +13,7 @@
   color: var(--color-charcoal);
   background: var(--color-ivory);
   font-synthesis: none;
-  font-size: 15px;
+  font-size: 16px;
   --ink: var(--color-charcoal);
   --muted: var(--color-muted);
   --paper: var(--color-ivory);
@@ -149,7 +149,7 @@ legend {
   padding-bottom: 86px;
 }
 .muted {
-  color: #89705f;
+  color: var(--color-muted);
 }
 .eyebrow {
   font-family: "Segoe UI", Arial, sans-serif;
@@ -4173,4 +4173,57 @@ html[lang="hi"] .service-note p {
 .image-upload-help p {
   margin: 12px 0;
   line-height: 1.9;
+}
+
+/* Shared readable defaults for public, account, worker and owner screens. */
+body {
+  font-family: var(--font-body);
+  color: var(--color-charcoal);
+  line-height: 1.65;
+}
+.muted,
+.small-print,
+.field > small,
+.hero-description,
+.image-upload-help {
+  color: var(--color-muted);
+}
+small,
+.small-print,
+.field > small {
+  font-size: 0.84rem;
+  line-height: 1.7;
+}
+.eyebrow {
+  font-family: var(--font-body);
+  color: var(--color-teal);
+}
+input,
+select,
+textarea {
+  border-color: var(--color-control-border);
+  border-radius: var(--radius-control);
+}
+.button,
+.icon-button,
+.text-button {
+  min-height: var(--touch-target);
+}
+.icon-button {
+  min-width: var(--touch-target);
+}
+.text-button {
+  padding-block: 8px;
+}
+html[lang="hi"] h1,
+html[lang="hi"] h2,
+html[lang="hi"] h3 {
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+html[lang="hi"] button,
+html[lang="hi"] input,
+html[lang="hi"] select,
+html[lang="hi"] textarea {
+  line-height: 1.6;
 }

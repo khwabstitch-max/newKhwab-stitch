@@ -1,10 +1,13 @@
 import { DesignEditorExtras } from "../components/DesignEditorExtras";
-import { SettingsEnhancements } from "../components/SettingsEnhancements";
+import { AdminWebsiteSettings } from "../components/AdminWebsiteSettings";
+import { TokenListEditor } from "../components/AdminFields";
+import { amountInput, parseAmount } from "../lib/admin-values";
+import "../admin-experience.css";
 import tealTemplate from "../data/teal-kurti.json";
 import { t, localize } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
-import { useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import {
   Activity,
   ArrowDown,
@@ -56,46 +59,76 @@ const optionKindLabels = {
   fit: "Fit",
   extra: "Extra Add-ons",
 };
-const sections = [
-  ["", "Overview", LayoutDashboard],
-  ["orders", "Requests", ClipboardList],
-  ["designs", "Designs", Shirt],
-  ["categories", "Categories", FolderOpen],
-  ["options", "Design options", Pencil],
-  ["media", "Media library", Image],
-  ["customers", "Customers", Users],
-  ["settings", "Website content", Settings],
-  ["measurement-guides", "Measurement guides", Activity],
-  ["commerce", "Offers and credits", Activity],
-  ["audit", "Audit history", Activity],
-  ["support", "Assistance and complaints", ClipboardList],
-  ["reviews", "Moderated reviews", Pencil],
-  ["work", "Applications and assignments", Users],
-  ["services", "Services and audiences", Shirt],
+const ownerGroups = [
+  { id: "overview", tasks: [["", "admin.nav.dashboard", LayoutDashboard], ["?view=attention", "admin.nav.attention", Activity]] },
+  { id: "catalogue", tasks: [["designs", "admin.nav.designs", Shirt], ["categories", "admin.nav.categories", FolderOpen], ["options?kind=neck", "admin.nav.front", Pencil], ["options?kind=back", "admin.nav.back", Pencil], ["options?kind=sleeve", "admin.nav.sleeve", Pencil], ["options?kind=sleeveLength", "admin.nav.length", Pencil], ["options?kind=extra", "admin.nav.addons", Pencil]] },
+  { id: "orders", tasks: [["orders", "admin.nav.orders", ClipboardList], ["customers", "admin.nav.customers", Users]] },
+  { id: "marketing", tasks: [["settings?section=hero", "admin.nav.homepage", Settings], ["settings?section=slides", "admin.nav.slides", Image], ["settings?section=contact", "admin.nav.website", Settings], ["media", "admin.nav.media", Image]] },
+  { id: "team", tasks: [["support", "admin.nav.support", ClipboardList], ["reviews", "admin.nav.reviews", Pencil], ["work", "admin.nav.work", Users]] },
+  { id: "business", tasks: [["measurement-guides", "admin.nav.guides", Activity], ["settings?section=business", "admin.nav.pricing", Settings]] },
 ];
+function protectOwnerNavigation(event) {
+  const control = event.target.closest('a,button[data-admin-discard]');
+  if (!control || control.target === "_blank" || control.closest(".admin-settings-tabs")) return;
+  const editors = [...document.querySelectorAll("form[data-admin-editor]")];
+  if (!editors.length) return;
+  const saving = editors.some(editor => editor.querySelector('fieldset[data-admin-lock][disabled]'));
+  const dirty = editors.some(editor => editor.dataset.adminDirty === "true");
+  if (saving || (dirty && !window.confirm(t("admin.form.discard")))) {
+    event.preventDefault(); event.stopPropagation();
+  } else if (dirty) editors.forEach(editor => { editor.dataset.adminDirty = "false"; });
+}
+const adminPath = path => `/admin${path ? /^[?#]/.test(path) ? path : "/" + path : ""}`;
 export function AdminLayout() {
   useLanguage();
+  const location = useLocation();
+  const [search, setSearch] = useState("");
+  const [groups, setGroups] = useState({});
+  const [menuOpen, setMenuOpen] = useState(false);
+  const commerce = useResource("/admin/commerce/settings");
+  const active = path => {
+    const target = new URL(adminPath(path), "https://atelier.invalid");
+    if (target.pathname !== location.pathname && !(path === "orders" && location.pathname.startsWith("/admin/orders/"))) return false;
+    const query = new URLSearchParams(location.search);
+    if (target.searchParams.size) return [...target.searchParams].every(([key, value]) => query.get(key) === value);
+    return !["kind", "section", "status", "view"].some(key => query.has(key));
+  };
+  useEffect(() => {
+    const dirty = () => Boolean(document.querySelector('form[data-admin-editor][data-admin-dirty="true"]'));
+    const beforeUnload = event => { if (dirty()) { event.preventDefault(); event.returnValue = ""; } };
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", protectOwnerNavigation, true);
+    return () => { window.removeEventListener("beforeunload", beforeUnload); document.removeEventListener("click", protectOwnerNavigation, true); };
+  }, []);
+  const taskLink = ([path, label, Icon]) => <Link key={path} className={active(path) ? "active" : ""} aria-current={active(path) ? "page" : undefined} to={adminPath(path)} onClick={() => setMenuOpen(false)}><Icon size={18} aria-hidden="true" />{t(label)}</Link>;
+  const extraTasks = [["services", "admin.nav.services", Shirt], ["commerce", "admin.nav.commerce", Activity], ["options?kind=fit", "Fit", Pencil], ["audit", "admin.nav.audit", Activity]];
   return (
-    <div className="admin-shell">
-      <aside className="admin-nav">
+    <div className="admin-shell admin-shell--owner" onClickCapture={event => { const form = event.target.closest("form[data-admin-editor]"); if (form && event.target.closest("button[data-admin-mutates]")) form.dataset.adminDirty = "true"; }} onChangeCapture={event => { const form = event.target.closest("form[data-admin-editor]"); if (form) form.dataset.adminDirty = "true"; }}>
+      <aside className={`admin-nav owner-admin-nav ${menuOpen ? "is-open" : ""}`}>
         <p className="eyebrow">{t("THE ATELIER DESK")}</p>
-        <h2>{t("Room to create.")}</h2>
-        <nav aria-label={t("Atelier workspace")}>
-          {sections.map(([path, label, Icon]) => (
-            <NavLink
-              key={path}
-              end={!path}
-              to={`/admin${path ? `/${path}` : ""}`}
-            >
-              <Icon size={18} />
-              {t(label)}
-            </NavLink>
-          ))}
-        </nav>
+        <h2>{t("admin.workspace")}</h2>
+        <button type="button" className="admin-menu-toggle button secondary" aria-expanded={menuOpen} aria-controls="admin-task-drawer" onClick={() => setMenuOpen(value => !value)}>{t("admin.menu.toggle")}</button>
+        <div id="admin-task-drawer" className="admin-nav-drawer">
+        <Field className="admin-task-search" name="admin-task-search" label={t("admin.searchTasks")} type="search" value={search} onChange={event => setSearch(event.target.value)} />
+        <div className="admin-nav-groups">
+          {ownerGroups.map(group => {
+            const tasks = [...group.tasks, ...(group.id === "marketing" && commerce.data?.enabled ? [["commerce", "admin.nav.commerce", Activity]] : [])];
+            const matches = tasks.filter(([, label]) => t(label).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+            const advanced = group.id === "business" ? extraTasks.filter(([, label]) => t(label).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())) : [];
+            if (!matches.length && !advanced.length) return null;
+            return <details className="admin-nav-group" key={group.id} open={search ? true : (groups[group.id] ?? tasks.some(([path]) => active(path)))} onToggle={event => { if (!search) { const open = event.currentTarget.open; setGroups(previous => previous[group.id] === open ? previous : { ...previous, [group.id]: open }); } }}>
+              <summary>{t(`admin.group.${group.id}`)}</summary>
+              <nav aria-label={t(`admin.group.${group.id}`)}>{matches.map(taskLink)}</nav>
+              {advanced.length > 0 && <details className="admin-advanced" open={Boolean(search) || advanced.some(([path]) => active(path))}><summary>{t("admin.nav.advanced")}</summary><nav aria-label={t("admin.nav.advanced")}>{advanced.map(taskLink)}</nav></details>}
+            </details>;
+          })}
+        </div>
+        {search && ![...ownerGroups.flatMap(group => group.tasks), ...extraTasks].some(([, label]) => t(label).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())) && <p role="status">{t("admin.noTasks")}</p>}
         <Link className="text-link" to="/catalogue">
           {t("View the collection ")}
           <ArrowUpRight size={16} />
         </Link>
+        </div>
       </aside>
       <div className="admin-content">
         <Outlet />
@@ -112,25 +145,15 @@ export function AdminDashboard() {
     <>
       <PageHeading
         eyebrow={t("ATELIER OVERVIEW")}
-        title={t("A good day to make beautiful things.")}
+        title={t("admin.dashboard.title")}
       >
         {t(
-          "Keep an eye on the details. Every request is someone's idea taking shape.",
+          "admin.dashboard.description",
         )}
       </PageHeading>
-      <div className="stat-grid">
-        {[
-          [t("Awaiting review"), data?.counts?.pendingReview],
-          [t("In the making"), data?.counts?.activeOrders],
-          [t("Total requests"), data?.counts?.totalOrders],
-          [t("Designs"), data?.counts?.designs],
-        ].map(([l, v]) => (
-          <div className="stat" key={t(l)}>
-            <span>{t(l)}</span>
-            <strong>{v ?? 0}</strong>
-          </div>
-        ))}
-      </div>
+      <div className="admin-quick-tasks"><Link to="/admin/orders?status=request_received"><ClipboardList size={22} />{t("admin.dashboard.review")}</Link><Link to="/admin/designs"><Plus size={22} />{t("admin.dashboard.catalogue")}</Link><Link to="/admin/settings?section=hero"><Settings size={22} />{t("admin.dashboard.homepage")}</Link></div>
+      <div className="stat-grid">{[...(data?.counts?.byStatus ? [["Request received",data.counts.byStatus.request_received || 0,"/admin/orders?status=request_received"],["Under review",data.counts.byStatus.under_review || 0,"/admin/orders?status=under_review"],["Quote sent",data.counts.byStatus.quote_sent || 0,"/admin/orders?status=quote_sent"],["Ready",data.counts.byStatus.ready || 0,"/admin/orders?status=ready"]] : []),["Total requests",data?.counts?.totalOrders,"/admin/orders"],["Designs",data?.counts?.designs,"/admin/designs"]].map(([label,value,to])=><Link className="stat" key={label} to={to}><span>{t(label)}</span><strong>{value ?? "?"}</strong></Link>)}</div>
+<section id="needs-attention" className="panel admin-attention-list" tabIndex={-1}><h2>{t("admin.nav.attention")}</h2>{[[data?.counts?.byStatus?.request_received,"admin.dashboard.review","/admin/orders?status=request_received"],[data?.counts?.pendingReviews,"admin.nav.reviews","/admin/reviews?status=pending"],[data?.counts?.pendingApplications,"admin.nav.work","/admin/work?attention=pending"],[data?.counts?.openHelpRequests,"admin.nav.support","/admin/support?attention=open"],[data?.counts?.missingDesignPhotos,"admin.dashboard.missingPhotos","/admin/designs?attention=missing_photo"],[data?.counts?.missingDesignPrices,"admin.dashboard.missingPrices","/admin/designs?attention=missing_price"]].filter(([count])=>Number.isInteger(count)&&count>0).map(([count,label,to])=><p key={label}><Link className="text-link" to={to}>{t(label,{0:count})} <strong>{count}</strong></Link></p>)}{data?.counts && ![data.counts.byStatus?.request_received,data.counts.pendingReviews,data.counts.pendingApplications,data.counts.openHelpRequests,data.counts.missingDesignPhotos,data.counts.missingDesignPrices].some(value=>Number.isInteger(value)&&value>0)&&<p>{t("admin.dashboard.noAttention")}</p>}</section>
       <section className="panel">
         <div className="section-heading">
           <h2>{t("Latest requests")}</h2>
@@ -181,16 +204,22 @@ const newDesign = {
   priceOptions: [],
   designDetails: {},
   defaultComponents: {},
+  searchLabels: [],
+  searchLabelsHi: [],
   includedAddonIds: [],
   serviceNotes: "",
   serviceNotesHi: "",
 };
 export function AdminDesigns() {
   useLanguage();
+  const [filters, setFilters] = useSearchParams();
+  const attention = ["missing_photo", "missing_price"].includes(filters.get("attention")) ? filters.get("attention") : "";
+  const [keyword, setKeyword] = useState(filters.get("search") || "");
   const [page, setPage] = useState(1);
   const { data, loading, error, reload, pagination } = useResource(
-    `/admin/designs?page=${page}&limit=20`,
+    `/admin/designs?page=${page}&limit=20${attention ? `&attention=${attention}` : ""}${filters.get("search") ? `&search=${encodeURIComponent(filters.get("search"))}` : ""}`,
   );
+  useEffect(() => { setPage(1); setKeyword(filters.get("search") || ""); }, [filters]);
   const { data: categories } = useResource("/admin/categories?limit=50");
   const { data: library } = useResource("/media?limit=50&purpose=catalogue");
   const [editing, setEditing] = useState(null),
@@ -202,6 +231,7 @@ export function AdminDesigns() {
     setEditing({
       ...newDesign,
       ...d,
+      code: d.code || "KS-" + crypto.randomUUID().slice(0, 8).toUpperCase(),
       category: idOf(d.category) || "",
       mediaIds: (d.mediaIds || []).map(idOf),
       coverMediaId: idOf(d.coverMediaId) || null,
@@ -213,7 +243,7 @@ export function AdminDesigns() {
             crop: null,
           })),
     });
-    setPrice(String((d.startingPricePaise ?? 50000) / 100));
+    setPrice(amountInput(d.startingPricePaise ?? 0));
     setActionError("");
     setSuccess("");
   }
@@ -274,6 +304,8 @@ export function AdminDesigns() {
         title: editing.title,
         titleHi: editing.titleHi || "",
         descriptionHi: editing.descriptionHi || "",
+        searchLabels: editing.searchLabels || [],
+        searchLabelsHi: editing.searchLabelsHi || [],
         code: editing.code,
         slug: editing.slug,
         garment: editing.garment,
@@ -281,7 +313,7 @@ export function AdminDesigns() {
         category: editing.category || null,
         startingPricePaise: current.priceOptions?.length
           ? Math.min(...current.priceOptions.map((row) => row.amountPaise))
-          : Math.round(Number(price) * 100),
+          : parseAmount(price),
         mediaIds: current.mediaIds,
         coverMediaId: current.coverMediaId,
         status: editing.status,
@@ -356,14 +388,14 @@ export function AdminDesigns() {
               type="button"
               disabled={busy}
               onClick={() => edit(structuredClone(tealTemplate.design))}
-            >
+             data-admin-discard>
               {t("Use teal kurti template")}
             </button>
             <button
               className="button"
               disabled={busy}
               onClick={() => edit(newDesign)}
-            >
+             data-admin-discard>
               <Plus size={17} />
               {t("New design")}
             </button>
@@ -372,18 +404,19 @@ export function AdminDesigns() {
       >
         {t("Create drafts, consider the details, publish when ready.")}
       </PageHeading>
+      <div className="admin-form-toolbar"><Field label={t("admin.form.search")} name="admin-design-search" type="search" value={keyword} onChange={event => setKeyword(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); const next = new URLSearchParams(filters); keyword.trim() ? next.set("search", keyword.trim()) : next.delete("search"); setFilters(next); } }} /><button type="button" className="button secondary" onClick={() => { const next = new URLSearchParams(filters); keyword.trim() ? next.set("search", keyword.trim()) : next.delete("search"); setFilters(next); }}>{t("Search")}</button>{attention && <Link className="text-link" to="/admin/designs">{t("View all designs")}</Link>}</div>
       <ErrorMessage message={actionError} />
       {success && <Notice>{success}</Notice>}
       {editing && (
-        <form className="panel" onSubmit={save}>
-          <fieldset disabled={busy} className="design-edit-fields">
+        <form className="panel" onSubmit={save} data-admin-editor>
+          <fieldset disabled={busy} className="design-edit-fields" data-admin-lock>
             <div className="section-heading">
               <h2>{editing._id ? t("Edit design") : t("New design")}</h2>
               <button
                 type="button"
                 className="text-button"
                 onClick={() => setEditing(null)}
-              >
+               data-admin-discard>
                 {t("Close editor")}
               </button>
             </div>
@@ -515,22 +548,16 @@ export function AdminDesigns() {
                 onChange={(e) => patch("description", e.target.value)}
               />
             </Field>
+            <TokenListEditor label="admin.design.searchWords" name="design-search-words" value={editing.searchLabels || []} onChange={value => patch("searchLabels", value)} hint="admin.design.searchHelp" />
+            <TokenListEditor label="admin.design.searchWordsHi" name="design-search-words-hi" value={editing.searchLabelsHi || []} onChange={value => patch("searchLabelsHi", value)} hint="admin.design.searchHelp" />
             <h3>{t("Design images")}</h3>
             <details className="image-upload-help">
               <summary>{t("How to add images")}</summary>
               <p>
                 {t(
-                  "Use the teal kurti template to attach the included board without ImageKit. For new photos, configure ImageKit on the server, then choose Upload catalogue image. JPEG, PNG and WebP up to 5 MiB are supported.",
+                  "Choose clear photos that show the front, back and important details. Upload a JPEG, PNG or WebP image up to 5 MiB, then choose the cover photo.",
                 )}
               </p>
-              <a
-                className="text-link"
-                href="https://imagekit.io/dashboard/url-endpoints"
-                target="_blank"
-                rel="noreferrer"
-              >
-                {t("Open ImageKit dashboard")}
-              </a>
             </details>
             <p className="small-print">
               {t(
@@ -550,7 +577,7 @@ export function AdminDesigns() {
                       type="button"
                       className="text-button"
                       onClick={() => patch("coverMediaId", id)}
-                    >
+                     data-admin-mutates>
                       {t("Set cover")}
                     </button>
                     <button
@@ -592,7 +619,7 @@ export function AdminDesigns() {
                             d.coverMediaId === id ? null : d.coverMediaId,
                         }))
                       }
-                    >
+                     data-admin-mutates>
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -700,7 +727,7 @@ export function AdminDesigns() {
                   </td>
                   <td>
                     <div className="row-actions">
-                      <button className="text-button" onClick={() => edit(d)}>
+                      <button className="text-button" onClick={() => edit(d)} data-admin-discard>
                         {t("Edit")}
                       </button>
                       <button
@@ -758,8 +785,11 @@ export function AdminDesigns() {
 }
 export function AdminTaxonomy({ options = false }) {
   useLanguage();
+  const [params] = useSearchParams();
+  const selectedKind = options && Object.hasOwn(optionKindLabels, params.get("kind")) ? params.get("kind") : "";
+  const [search, setSearch] = useState("");
   const kind = options ? "options" : "categories";
-  const taxonomy = usePagedCollection(`/admin/${kind}?limit=30`);
+  const taxonomy = usePagedCollection(`/admin/${kind}?limit=30${selectedKind ? `&kind=${selectedKind}` : ""}${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ""}`);
   const { data, loading, error } = taxonomy;
   const reload = taxonomy.refresh;
   const { data: optionImages } = useResource(
@@ -767,8 +797,10 @@ export function AdminTaxonomy({ options = false }) {
   );
   const [editing, setEditing] = useState(null),
     [busy, setBusy] = useState(false),
+    [photoBusy, setPhotoBusy] = useState(false),
     [actionError, setActionError] = useState("");
   const [preview, setPreview] = useState(null);
+  useEffect(() => { setEditing(null); setActionError(""); }, [selectedKind]);
   const compatibleChoices = usePagedCollection(
     options && editing && ["neck", "back"].includes(editing.kind)
       ? "/admin/options?limit=30"
@@ -777,7 +809,7 @@ export function AdminTaxonomy({ options = false }) {
   const blank = options
     ? {
         name: "",
-        kind: "neck",
+        kind: selectedKind || "neck",
         garments: ["kurti", "suit", "blouse"],
         active: true,
         description: "",
@@ -810,7 +842,7 @@ export function AdminTaxonomy({ options = false }) {
         eyebrow={t("ATELIER DETAILS")}
         title={
           options
-            ? t("Choices that make it personal.")
+            ? selectedKind ? t(`admin.options.${selectedKind === "neck" ? "front" : selectedKind}.title`) : t("Choices that make it personal.")
             : t("A well-organized collection.")
         }
         action={
@@ -821,18 +853,23 @@ export function AdminTaxonomy({ options = false }) {
                 ...blank,
               })
             }
-          >
+           data-admin-discard>
             <Plus size={16} />
             {options ? t("New option") : t("New category")}
           </button>
         }
       />
+      <p>{t(options ? "admin.options.description" : "Create categories to help customers find the right garment design.")}</p>
+      {selectedKind === "sleeveLength" && <Notice>{t("admin.options.lengthFree")}</Notice>}
+      <Field label={t("admin.form.search")} name="admin-option-search" type="search" value={search} onChange={event => setSearch(event.target.value)} />
       <ErrorMessage message={actionError} />
       {editing && (
         <form
           className="panel"
+          data-admin-editor
           onSubmit={async (e) => {
             e.preventDefault();
+            if (photoBusy || busy) return;
             setBusy(true);
             setActionError("");
             try {
@@ -909,8 +946,8 @@ export function AdminTaxonomy({ options = false }) {
             } finally {
               setBusy(false);
             }
-          }}
-        >
+          }}>
+<fieldset className="admin-form-fields" data-admin-lock disabled={busy || photoBusy}>
           <h2>
             {options
               ? editing._id
@@ -946,6 +983,7 @@ export function AdminTaxonomy({ options = false }) {
               <Field label={t("Option type")} name="optionKind">
                 <select
                   id="optionKind"
+                  disabled={Boolean(selectedKind)}
                   value={editing.kind}
                   onChange={(e) =>
                     setEditing({
@@ -983,7 +1021,7 @@ export function AdminTaxonomy({ options = false }) {
                 />
               </Field>
               <Field label={t("Stable option code")} name="option-code" value={editing.code || ""} onChange={event=>setEditing({...editing,code:event.target.value.toUpperCase()})}/>
-              <CatalogueImages ids={editing.imageMediaIds?.length ? editing.imageMediaIds : editing.imageMediaId ? [editing.imageMediaId] : []} onChange={ids=>setEditing({...editing,imageMediaIds:ids,imageMediaId:ids[0]||null})}/>
+              <CatalogueImages scope={`${kind}:${editing._id || selectedKind || "new"}`} onBusyChange={setPhotoBusy} ids={editing.imageMediaIds?.length ? editing.imageMediaIds : editing.imageMediaId ? [editing.imageMediaId] : []} onChange={ids=>setEditing(current=>current ? {...current,imageMediaIds:ids,imageMediaId:ids[0]||null} : current)}/>
               {editing.sourceCrops?.length>0 && <details><summary>{t("Source and crop provenance")}</summary><pre>{JSON.stringify(editing.sourceCrops,null,2)}</pre></details>}
               <fieldset>
                 <legend>{t("Applicable garments")}</legend>
@@ -1480,14 +1518,15 @@ export function AdminTaxonomy({ options = false }) {
               type="button"
               className="button secondary"
               onClick={() => setEditing(null)}
-            >
+             data-admin-discard>
               {t("Cancel")}
             </button>
             <Button className="button" busy={busy}>
               {options ? t("Save option") : t("Save category")}
             </Button>
           </div>
-        </form>
+        </fieldset>
+</form>
       )}
       {loading ? (
         <Spinner />
@@ -1549,7 +1588,7 @@ export function AdminTaxonomy({ options = false }) {
                               : {}),
                           })
                         }
-                      >
+                       data-admin-discard>
                         {t("Edit")}
                       </button>
                       <button
@@ -1840,300 +1879,7 @@ export function AdminSettings() {
     />
   );
 }
-function SettingsForm({ settings, onSave }) {
-  useLanguage();
-  const [draft, setDraft] = useState({
-      businessName: "Khwab Stitch",
-      tagline: "",
-      whatsapp: "",
-      instagram: "",
-      contactEmail: "",
-      announcement: "",
-      about: "",
-      faqs: [],
-      bannerMediaId: null,
-      ...settings,
-    }),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [saved, setSaved] = useState(false);
-  const { data: media } = useResource("/media?limit=50&purpose=banner");
-  const patch = (k, v) =>
-    setDraft((d) => ({
-      ...d,
-      [k]: v,
-    }));
-  return (
-    <>
-      <PageHeading
-        eyebrow={t("YOUR ATELIER, IN YOUR WORDS")}
-        title={t("The details visitors see.")}
-      />
-      <Notice>
-        {t(
-          "English is used when a Hindi translation has not been added. Customer-entered information is shown exactly as provided.",
-        )}
-      </Notice>
-      <ErrorMessage message={error} />
-      {saved && (
-        <Notice>
-          {t("Website content saved. Refresh public pages to see the changes.")}
-        </Notice>
-      )}
-      <form
-        className="panel"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          setError("");
-          try {
-            const {
-              businessName,
-              tagline,
-              whatsapp,
-              instagram,
-              contactEmail,
-              announcement,
-              about,
-              taglineHi,
-              announcementHi,
-              aboutHi,
-              faqs,
-              bannerMediaId,
-              revision,
-            } = draft;
-            await api("/admin/settings", {
-              method: "PATCH",
-              body: {
-                businessName,
-                tagline,
-                whatsapp,
-                instagram,
-                contactEmail,
-                announcement,
-                about,
-                taglineHi,
-                announcementHi,
-                aboutHi,
-                faqs,
-                bannerMediaId,
-                revision,
-                ...(draft.serviceAreas
-                  ? { serviceAreas: draft.serviceAreas }
-                  : {}),
-                ...(draft.garmentBasePrices
-                  ? { garmentBasePrices: draft.garmentBasePrices }
-                  : {}),
-                ...(draft.welcome ? { welcome: draft.welcome } : {}),
-                ...(draft.policies ? { policies: draft.policies } : {}),
-                ...(draft.support ? { support: draft.support } : {}),
-                ...(draft.facebook !== undefined
-                  ? { facebook: draft.facebook }
-                  : {}),
-              },
-            });
-            setSaved(true);
-            onSave();
-          } catch (e) {
-            setError(e);
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <div className="form-grid">
-          {[
-            ["businessName", t("Business name")],
-            ["tagline", t("Tagline")],
-            ["whatsapp", t("WhatsApp number")],
-            ["instagram", t("Instagram URL")],
-            ["contactEmail", t("Contact email")],
-            ["announcement", t("Announcement bar")],
-            ["taglineHi", t("Hindi tagline (optional)")],
-            ["announcementHi", t("Hindi announcement (optional)")],
-          ].map(([k, l]) => (
-            <Field
-              key={k}
-              label={t(l)}
-              name={`setting-${k}`}
-              required={k === "businessName"}
-              type={k === "contactEmail" ? "email" : "text"}
-              value={draft[k] || ""}
-              onChange={(e) => patch(k, e.target.value)}
-              maxLength={
-                k.startsWith("announcement")
-                  ? 300
-                  : k.startsWith("tagline")
-                    ? 180
-                    : 200
-              }
-              lang={k.endsWith("Hi") ? "hi" : undefined}
-            />
-          ))}
-        </div>
-        <Field label={t("About the atelier")} name="about">
-          <textarea
-            id="about"
-            rows="4"
-            maxLength="3000"
-            value={draft.about}
-            onChange={(e) => patch("about", e.target.value)}
-          />
-        </Field>
-        <Field label={t("Hindi about text (optional)")} name="aboutHi">
-          <textarea
-            id="aboutHi"
-            lang="hi"
-            rows="4"
-            maxLength="3000"
-            value={draft.aboutHi || ""}
-            onChange={(e) => patch("aboutHi", e.target.value)}
-          />
-        </Field>
-        <Field label={t("Website banner")} name="bannerMediaId">
-          <select
-            id="bannerMediaId"
-            value={idOf(draft.bannerMediaId) || ""}
-            onChange={(e) => patch("bannerMediaId", e.target.value || null)}
-          >
-            <option value="">{t("Illustrated default")}</option>
-            {media
-              ?.filter((m) => m.purpose === "banner" && !m.private)
-              .map((m, i) => (
-                <option key={m._id} value={m._id}>
-                  {t("Banner image {0} \xB7 {1}", {
-                    0: i + 1,
-                    1: date(m.createdAt),
-                  })}
-                </option>
-              ))}
-          </select>
-        </Field>
-        <h2>{t("Helpful answers")}</h2>
-        <SettingsEnhancements draft={draft} patch={patch} />
-        {draft.faqs.map((f, i) => (
-          <div className="faq-editor" key={i}>
-            <Field
-              label={t("Question {0}", {
-                0: i + 1,
-              })}
-              name={`faq-q-${i}`}
-              required
-              value={f.question}
-              maxLength="200"
-              onChange={(e) =>
-                patch(
-                  "faqs",
-                  draft.faqs.map((x, j) =>
-                    j === i
-                      ? {
-                          ...x,
-                          question: e.target.value,
-                        }
-                      : x,
-                  ),
-                )
-              }
-            />
-            <Field
-              label={t("Answer {0}", {
-                0: i + 1,
-              })}
-              name={`faq-a-${i}`}
-            >
-              <textarea
-                id={`faq-a-${i}`}
-                required
-                rows="3"
-                maxLength="2000"
-                value={f.answer}
-                onChange={(e) =>
-                  patch(
-                    "faqs",
-                    draft.faqs.map((x, j) =>
-                      j === i
-                        ? {
-                            ...x,
-                            answer: e.target.value,
-                          }
-                        : x,
-                    ),
-                  )
-                }
-              />
-            </Field>
-            <Field
-              label={t("Hindi question (optional)")}
-              name={`faq-q-hi-${i}`}
-              lang="hi"
-              maxLength="200"
-              value={f.questionHi || ""}
-              onChange={(e) =>
-                patch(
-                  "faqs",
-                  draft.faqs.map((x, j) =>
-                    j === i ? { ...x, questionHi: e.target.value } : x,
-                  ),
-                )
-              }
-            />
-            <Field label={t("Hindi answer (optional)")} name={`faq-a-hi-${i}`}>
-              <textarea
-                id={`faq-a-hi-${i}`}
-                lang="hi"
-                rows="3"
-                maxLength="2000"
-                value={f.answerHi || ""}
-                onChange={(e) =>
-                  patch(
-                    "faqs",
-                    draft.faqs.map((x, j) =>
-                      j === i ? { ...x, answerHi: e.target.value } : x,
-                    ),
-                  )
-                }
-              />
-            </Field>
-            <button
-              type="button"
-              className="text-button danger"
-              onClick={() =>
-                patch(
-                  "faqs",
-                  draft.faqs.filter((_, j) => j !== i),
-                )
-              }
-            >
-              {t("Remove answer")}
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          className="button secondary small"
-          disabled={draft.faqs.length >= 20}
-          onClick={() =>
-            patch("faqs", [
-              ...draft.faqs,
-              {
-                question: "",
-                answer: "",
-              },
-            ])
-          }
-        >
-          <Plus size={15} />
-          {t("Add a question")}
-        </button>
-        <div className="form-actions">
-          <Button className="button" busy={busy}>
-            {t("Save website content")}
-          </Button>
-        </div>
-      </form>
-    </>
-  );
-}
+function SettingsForm(props) { return <AdminWebsiteSettings {...props} />; }
 export function AdminAudit() {
   useLanguage();
   const [page, setPage] = useState(1);

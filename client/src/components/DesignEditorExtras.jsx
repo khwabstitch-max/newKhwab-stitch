@@ -356,7 +356,7 @@ export function DesignEditorExtras({ editing, setEditing, busy }) {
                   editing.priceOptions.filter((_, i) => i !== index),
                 )
               }
-            >
+             data-admin-mutates>
               <Trash2 size={14} />
               {t("Remove price option")}
             </button>
@@ -378,7 +378,7 @@ export function DesignEditorExtras({ editing, setEditing, busy }) {
               },
             ])
           }
-        >
+         data-admin-mutates>
           <Plus size={15} />
           {t("Add price option")}
         </button>
@@ -422,7 +422,7 @@ export function DesignEditorExtras({ editing, setEditing, busy }) {
                 },
               ])
             }
-          >
+           data-admin-mutates>
             <Plus size={15} />
             {t("Add preview")}
           </button>
@@ -447,7 +447,7 @@ export function DesignEditorExtras({ editing, setEditing, busy }) {
                 })),
               );
             }}
-          >
+           data-admin-mutates>
             {t("Use teal board preview layout")}
           </button>
         </div>
@@ -548,7 +548,7 @@ export function DesignEditorExtras({ editing, setEditing, busy }) {
                       ],
                     }))
                   }
-                >
+                 data-admin-discard>
                   {t("Use as cover preview")}
                 </button>
                 <button
@@ -557,7 +557,7 @@ export function DesignEditorExtras({ editing, setEditing, busy }) {
                   disabled={index === 0}
                   aria-label={t("Move preview {0} up", { 0: index + 1 })}
                   onClick={() => reorder(index, -1)}
-                >
+                 data-admin-mutates>
                   <ArrowUp size={15} />
                 </button>
                 <button
@@ -566,7 +566,7 @@ export function DesignEditorExtras({ editing, setEditing, busy }) {
                   disabled={index === views.length - 1}
                   aria-label={t("Move preview {0} down", { 0: index + 1 })}
                   onClick={() => reorder(index, 1)}
-                >
+                 data-admin-mutates>
                   <ArrowDown size={15} />
                 </button>
                 <button
@@ -579,7 +579,7 @@ export function DesignEditorExtras({ editing, setEditing, busy }) {
                       editing.imageViews.filter((_, i) => i !== index),
                     )
                   }
-                >
+                 data-admin-mutates>
                   <Trash2 size={15} />
                 </button>
               </div>

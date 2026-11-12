@@ -140,10 +140,7 @@ export function AccountOverview() {
         <section className="panel">
           <h2>{t("Actions and latest updates")}</h2>
           <p>
-            {data?.actionsNeeded || 0}{" "}
-            {t(
-              "actions awaiting your attention. Open an order to review its current quote and confirmed details.",
-            )}
+            {t("account.actions.summary", { count: data?.actionsNeeded || 0 })}
           </p>
           {data?.recentOrders?.length ? (
             data.recentOrders.map((o) => (
@@ -909,7 +906,7 @@ export function Conversation({ id }) {
         />
         {attachments.length > 0 && (
           <p className="small-print">
-            {attachments.length} {t("private images ready to send")}
+            {t("account.attachments.ready", { count: attachments.length })}
           </p>
         )}
         {uncertain && (
@@ -986,7 +983,7 @@ export function AccountSupport() {
         }
       >
         {t(
-          "Apna question bhej dijiye. Hamari team aapko stated support hours ke andar guide karegi. Aap apna draft save karke baad mein continue kar sakte hain.",
+          "Send us your question. Our team will reply during the stated support hours. You can save your draft and continue later.",
         )}
       </PageHeading>
       <ErrorMessage message={error} />
@@ -1011,7 +1008,7 @@ export function AccountSupport() {
                 )
                 .join(", ")}{" "}
               · {String(site.support.startHour).padStart(2, "0")}:00–
-              {String(site.support.endHour).padStart(2, "0")}:00 · Asia/Kolkata
+              {String(site.support.endHour).padStart(2, "0")}:00 · {t("India time (Asia/Kolkata)")}
             </p>
           )}
           <form
@@ -1143,11 +1140,9 @@ export function AccountSupport() {
             </Notice>
             {form.kind === "complaint" && (
               <p className="small-print">
-                {t(
-                  site.support
-                    ? `We aim to provide an initial human response within ${site.support.responseHours} hours during configured support hours. Correction or transport plans and their timelines are confirmed separately.`
-                    : "The team will reply here. Support hours and an initial response target will be confirmed by the atelier; correction and transport plans are agreed separately.",
-                )}
+                {site.support
+                  ? t("We aim to provide an initial human response within {0} hours during configured support hours. Correction or transport plans and their timelines are confirmed separately.", { 0: site.support.responseHours })
+                  : t("The team will reply here. Support hours and an initial response target will be confirmed by the atelier; correction and transport plans are agreed separately.")}
               </p>
             )}
             {uncertain && (
@@ -1280,7 +1275,7 @@ function ConversationIndex() {
             </span>
             {c.unread > 0 && (
               <Badge>
-                {c.unread} {t("unread messages")}
+                {t("account.messages.unread", { count: c.unread })}
               </Badge>
             )}
           </Link>

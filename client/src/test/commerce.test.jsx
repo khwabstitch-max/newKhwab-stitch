@@ -73,22 +73,30 @@ it("disabled programmes keep balances and history visible while hiding unavailab
 });
 it("admin credit retries preserve the event ID and exact paise after an uncertain failure", async () => {
   let fail = true;
+  const customer = { _id: order._id, name: "Test customer", email: "customer@example.test" };
+  vi.spyOn(window, "confirm").mockReturnValue(true);
   boundary.api.mockImplementation(async (path, options) => {
     if (path === "/admin/commerce/settings") return { data: { enabled: false } };
     if (path.startsWith("/admin/commerce/offers")) return list([]);
+    if (path.startsWith("/admin/customers?")) return list([customer]);
     if (path === "/admin/commerce/credits" && options?.method === "POST") { if (fail) { fail = false; throw Error("The result is uncertain."); } return { data: { balancePaise: 12345 } }; }
     return list([]);
   });
   mount(<AdminCommerce />);
   const user = userEvent.setup();
-  await user.type(screen.getByLabelText("Customer account ID", { exact: false }), order._id);
-  await user.type(screen.getByLabelText("Signed credit amount (₹)", { exact: false }), "123.45");
+  await user.type(screen.getByLabelText("Find a customer by name or email"), "customer");
+  await user.click(await screen.findByRole("radio", { name: /Test customer.*customer@example.test/ }));
+  await user.type(screen.getByLabelText("Credit amount (₹)"), "123.45");
   await user.type(screen.getByLabelText("Reason for adjustment", { exact: false }), "Approved service adjustment");
   await user.click(screen.getByRole("button", { name: "Save credit adjustment" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("uncertain");
-  await user.click(screen.getByRole("button", { name: "Save credit adjustment" }));
+  expect(screen.getByLabelText("Find a customer by name or email")).toBeDisabled();
+  expect(screen.getByLabelText("Credit amount (₹)")).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "Retry same request" }));
   await screen.findByText(/Credit adjustment saved/);
   const calls = boundary.api.mock.calls.filter(([path]) => path === "/admin/commerce/credits");
   expect(calls).toHaveLength(2); expect(calls[0][1].body).toEqual(calls[1][1].body);
-  expect(calls[0][1].body.deltaPaise).toBe(12345);
+  expect(calls[0][1].body).toMatchObject({ owner: customer._id, deltaPaise: 12345, reason: "Approved service adjustment" });
+  expect(calls[0][1].body.clientId).toEqual(expect.any(String));
+  expect(window.confirm).toHaveBeenCalledTimes(1);
 });

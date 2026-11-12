@@ -1,6 +1,9 @@
-import { t, localize } from "../i18n/core";
+import { t } from "../i18n/core";
 import { LanguageSwitcher, useLanguage } from "../i18n/Language";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { DEFAULT_HOMEPAGE } from "../data/homepage";
+import { homepageBlock, homepageText, formatSupportSummary } from "../lib/public-homepage";
+import "./public-experience.css";
 import {
   Link,
   NavLink,
@@ -16,6 +19,8 @@ import {
   Scissors,
   UserRound,
   LogOut,
+  Search,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useSite } from "../lib/hooks";
@@ -60,153 +65,109 @@ export function Logo({ variant = "horizontal" }) {
   );
 }
 export function Layout() {
-  useLanguage();
+  const { language } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const toggle = useRef(null), navigation = useRef(null);
   const { user, profile, logout } = useAuth();
   const site = useSite();
-  return (
-    <>
-      <a className="skip-link" href="#main">
-        {t("Skip to content")}
-      </a>
-      <div className="topbar">
-        <span>
-          {localize(site, "announcement") ||
-            t("Made thoughtfully. Made for you.")}
-        </span>
-        <LanguageSwitcher />
-        <span className="topbar-right">
-          {t("CUSTOM STITCHING \xB7 YOUR FABRIC, OUR CRAFT")}
-        </span>
+  const footer = homepageBlock(site.homepage?.footer, DEFAULT_HOMEPAGE.footer, ["description"], language);
+  const announcement = homepageText(site, "announcement", language);
+  const supportHours = formatSupportSummary(site.support, t);
+  const garments = ["kurti", "suit", "blouse", "alteration"];
+  useEffect(() => {
+    setOpen(false);
+    navigation.current?.querySelectorAll("details[open]").forEach((details) => details.removeAttribute("open"));
+    setSearch(location.pathname === "/catalogue" ? new URLSearchParams(location.search).get("q") || "" : "");
+  }, [location.pathname, location.search]);
+  useEffect(() => {
+    if (!open) return;
+    const controls = () => [...(navigation.current?.querySelectorAll("a[href],button,input,select,summary") || [])]
+      .filter((control) => !control.disabled && (!control.closest("details:not([open])") || control.tagName === "SUMMARY"));
+    controls()[0]?.focus();
+    const keys = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault(); setOpen(false); toggle.current?.focus();
+      }
+      if (event.key !== "Tab") return;
+      const available = controls(), first = available[0], last = available.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    const outside = (event) => {
+      if (!navigation.current?.contains(event.target) && !toggle.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("keydown", keys);
+    document.addEventListener("pointerdown", outside);
+    return () => { document.removeEventListener("keydown", keys); document.removeEventListener("pointerdown", outside); };
+  }, [open]);
+  return <>
+    <a className="skip-link" href="#main">{t("Skip to content")}</a>
+    <header className="header public-header">
+      <div className="header-inner">
+        <Logo />
+        <button ref={toggle} type="button" className="mobile-menu icon-button"
+          aria-label={t(open ? "public.nav.close" : "public.nav.open")} aria-expanded={open} aria-controls="primary-navigation"
+          onClick={() => setOpen((value) => !value)}>{open ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}</button>
+        <nav ref={navigation} id="primary-navigation" className={open ? "nav public-nav open" : "nav public-nav"} aria-label={t("public.nav.label")}
+          onClick={(event) => { if (event.target.closest("a")) setOpen(false); }}>
+          <details className="nav-designs" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.removeAttribute("open"); }}
+            onKeyDown={(event) => { if (event.key === "Escape" && event.currentTarget.open) { event.preventDefault(); event.stopPropagation(); event.currentTarget.removeAttribute("open"); event.currentTarget.querySelector("summary")?.focus(); } }}>
+            <summary>{t("public.nav.designs")}<ChevronDown size={14} aria-hidden="true" /></summary>
+            <div className="nav-design-links">
+              <NavLink to="/catalogue">{t("public.nav.all")}</NavLink>
+              {garments.map((garment) => <Link key={garment} to={"/catalogue?garment=" + garment}>{t("public.garment." + garment)}</Link>)}
+            </div>
+          </details>
+          <NavLink className="public-nav-link" to="/how-it-works">{t("public.nav.how")}</NavLink>
+          <NavLink className="public-nav-link" to="/contact">{t("public.nav.help")}</NavLink>
+          <form className="public-search" role="search" onSubmit={(event) => {
+            event.preventDefault();
+            const query = search.trim();
+            navigate("/catalogue" + (query ? "?q=" + encodeURIComponent(query) : ""));
+            setOpen(false);
+          }}>
+            <input type="search" aria-label={t("public.nav.search")} placeholder={t("public.nav.search")} value={search} onChange={(event) => setSearch(event.target.value)} maxLength={100} />
+            <button type="submit" aria-label={t("public.nav.searchSubmit")}><Search size={18} aria-hidden="true" /></button>
+          </form>
+          <LanguageSwitcher />
+          <NavLink className="public-account" to={user ? "/account" : "/login"} aria-label={t(user ? "public.nav.account" : "Sign in")} title={t(user ? "public.nav.account" : "Sign in")}>
+            <UserRound size={21} aria-hidden="true" /><span className="sr-only">{t(user ? "public.nav.account" : "Sign in")}</span>
+          </NavLink>
+          <Link className="button small" to="/request">{t("public.action.start")}<ArrowUpRight size={16} aria-hidden="true" /></Link>
+        </nav>
       </div>
-      <header className="header">
-        <div className="header-inner">
-          <Logo />
-          <button
-            className="mobile-menu icon-button"
-            aria-label={open ? t("Close navigation") : t("Open navigation")}
-            aria-expanded={open}
-            onClick={() => setOpen(!open)}
-          >
-            {open ? <X /> : <Menu />}
-          </button>
-          <nav
-            className={open ? "nav open" : "nav"}
-            aria-label={t("Main navigation")}
-            onClick={() => setOpen(false)}
-          >
-            <NavLink to="/catalogue">{t("The collection")}</NavLink>
-            <NavLink to="/how-it-works">{t("How it works")}</NavLink>
-            <NavLink to="/contact">{t("Our atelier")}</NavLink>
-            <NavLink to="/account/support">{t("Master tailor help")}</NavLink>
-            {user ? (
-              <NavLink to="/account">{t("My account")}</NavLink>
-            ) : (
-              <NavLink to="/login" className="nav-signin">
-                <UserRound size={16} />
-                {t("Sign in")}
-              </NavLink>
-            )}
-            {profile?.role === "admin" && (
-              <NavLink to="/admin">{t("Admin")}</NavLink>
-            )}
-            <Link className="button small" to="/request">
-              {t("Start your stitch ")}
-              <ArrowUpRight size={16} />
-            </Link>
-            {user && (
-              <button
-                className="icon-button"
-                title={t("Sign out")}
-                aria-label={t("Sign out")}
-                onClick={async () => {
-                  await logout();
-                  navigate("/login", { replace: true });
-                }}
-              >
-                <LogOut size={16} />
-              </button>
-            )}
-          </nav>
+    </header>
+    <main id="main"><Outlet /></main>
+    <footer className="footer public-footer">
+      <div className="container footer-grid">
+        <div className="public-footer-brand"><Logo variant="seal" /><p>{footer.description}</p>{supportHours && <p className="public-footer-hours">{supportHours}</p>}{announcement && <p className="public-footer-announcement">{announcement}</p>}</div>
+        <div><h3>{t("public.footer.explore")}</h3>
+          <Link to="/catalogue">{t("public.nav.all")}</Link>
+          <Link to="/request?source=reference">{t("public.action.reference")}</Link>
+          <Link to="/how-it-works">{t("public.nav.how")}</Link>
+          <Link to="/contact">{t("public.footer.contact")}</Link>
         </div>
-      </header>
-      <main id="main">
-        <Outlet />
-      </main>
-      <footer className="footer">
-        <div className="container footer-grid">
-          <div>
-            <Logo variant="seal" />
-            <p>
-              {t("Your fabric. Your story.")}
-              <br />
-              {t("A little of our craft.")}
-            </p>
-          </div>
-          <div>
-            <h3>{t("Explore")}</h3>
-            <Link to="/catalogue">{t("The collection")}</Link>
-            <Link to="/how-it-works">{t("How stitching works")}</Link>
-            <Link to="/request">{t("Start a request")}</Link>
-          </div>
-          <div>
-            <h3>{t("Here to help")}</h3>
-            <Link to="/contact">{t("Contact the atelier")}</Link>
-            <Link to="/orders">{t("Track a request")}</Link>
-            <Link to="/profile">{t("Your profile")}</Link>
-            <Link to="/account/support">
-              {t("Need Help from a Master Tailor?")}
-            </Link>
-          </div>
-          <div>
-            <h3>{t("Made with care")}</h3>
-            <p>
-              {t("Custom stitching & alterations.")}
-              <br />
-              {t("Fabric provided by customer.")}
-              <br />
-              {t("Final quote after review.")}
-            </p>
-            {site.instagram && (
-              <a
-                href={site.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Instagram
-              </a>
-            )}
-            {site.facebook && (
-              <a href={site.facebook} target="_blank" rel="noopener noreferrer">
-                Facebook
-              </a>
-            )}
-            {site.whatsapp && (
-              <a
-                href={`https://wa.me/${site.whatsapp.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                WhatsApp
-              </a>
-            )}
-          </div>
+        <div><h3>{t("public.footer.help")}</h3>
+          <Link to="/contact">{t("public.action.guidance")}</Link>
+          <Link to="/orders">{t("public.footer.track")}</Link>
+          <Link to="/account">{t("public.nav.account")}</Link>
+          <Link to="/account/benefits">{t("public.footer.benefits")}</Link>
+          {user && <button type="button" className="text-button" onClick={async () => { await logout(); navigate("/login", { replace: true }); }}><LogOut size={15} aria-hidden="true" />{t("Sign out")}</button>}
         </div>
-        <div className="container footer-bottom">
-          <span>
-            {t("\xA9 {0} Khwab Stitch. Crafted with intention.", {
-              0: new Date().getFullYear(),
-            })}
-          </span>
-          <div>
-            <Link to="/privacy">{t("Privacy")}</Link>
-            <Link to="/terms">{t("Service terms")}</Link>
-          </div>
+        <div><h3>{t("public.footer.information")}</h3>
+          <Link to="/privacy">{t("Privacy")}</Link><Link to="/terms">{t("Service terms")}</Link><Link to="/account/work">{t("public.footer.work")}</Link>
+          {profile?.role === "admin" && <Link to="/admin">{t("Admin")}</Link>}
+          {/^https:\/\/(?:www\.)?instagram\.com\//.test(site.instagram || "") && <a href={site.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>}
+          {/^https:\/\/(?:www\.)?facebook\.com\//.test(site.facebook || "") && <a href={site.facebook} target="_blank" rel="noopener noreferrer">Facebook</a>}
+          {/^[+\d\s()-]{10,25}$/.test(site.whatsapp || "") && <a href={`https://wa.me/${site.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
         </div>
-      </footer>
-    </>
-  );
+      </div>
+      <div className="container footer-bottom"><span>{t("© {0} Khwab Stitch. Crafted with intention.", { 0: new Date().getFullYear() })}</span><span>{t("Fabric provided by customer.")}</span></div>
+    </footer>
+  </>;
 }
 export function Protected({ admin = false }) {
   useLanguage();

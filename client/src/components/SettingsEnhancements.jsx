@@ -1,11 +1,13 @@
 import { t } from "../i18n/core";
 import { readable } from "../lib/api";
 import { Field, Notice } from "./ui";
+import { AdminPolicyEditor } from "./AdminPolicyEditor";
+import { TokenListEditor } from "./AdminFields";
 
 export function SettingsEnhancements({ draft, patch }) {
   return (
     <>
-      <h2>{t("Welcome and service policies")}</h2>
+      <details className="admin-advanced"><summary>{t("admin.home.legacy")}</summary>
       {["title", "tagline", "description"].map((k) => (
         <Field
           key={k}
@@ -24,70 +26,8 @@ export function SettingsEnhancements({ draft, patch }) {
           }
         />
       ))}
-      {draft.policies ? (
-        <fieldset>
-          <legend>{t("Versioned assurance policy")}</legend>
-          {[
-            "version",
-            "assurance",
-            "alterationMargin",
-            "correctionTransport",
-          ].map((k) => (
-            <Field
-              key={k}
-              label={readable(k)}
-              name={`policy-${k}`}
-              required={k === "version"}
-            >
-              {k === "version" ? (
-                <input
-                  id={`policy-${k}`}
-                  required
-                  maxLength={50}
-                  value={draft.policies[k] || ""}
-                  onChange={(e) =>
-                    patch("policies", {
-                      ...draft.policies,
-                      [k]: e.target.value,
-                    })
-                  }
-                />
-              ) : (
-                <textarea
-                  id={`policy-${k}`}
-                  maxLength={k === "assurance" ? 2500 : 1500}
-                  rows={3}
-                  value={draft.policies[k] || ""}
-                  onChange={(e) =>
-                    patch("policies", {
-                      ...draft.policies,
-                      [k]: e.target.value,
-                    })
-                  }
-                />
-              )}
-            </Field>
-          ))}
-        </fieldset>
-      ) : (
-        <button
-          className="button secondary small"
-          type="button"
-          onClick={() =>
-            patch("policies", {
-              version: "service-v1",
-              assurance:
-                "We stitch your fabric with care according to the measurements and design details you approve. If we make an error against those confirmed details, we take responsibility and will work with you to correct it without an additional correction stitching charge.",
-              alterationMargin:
-                "Where the fabric and design allow, we aim to leave approximately 1.5 inches of alteration margin on each side. We will confirm the available margin when reviewing your garment.",
-              correctionTransport:
-                "Measurement changes, new design requests, fabric limitations and any correction transport charges are reviewed separately. We confirm the plan and any charge before proceeding.",
-            })
-          }
-        >
-          {t("Configure assurance policy")}
-        </button>
-      )}
+      </details>
+      <AdminPolicyEditor value={draft.policies} onChange={value => patch("policies", value)} />
       <h2>{t("Stitching starting prices")}</h2>
       <p className="small-print">
         {t(
@@ -142,27 +82,7 @@ export function SettingsEnhancements({ draft, patch }) {
                 )
               }
             />
-            <Field
-              label={t("PIN prefixes (comma separated)")}
-              name={`area-pin-${i}`}
-              required
-              value={area.pinPrefixes.join(",")}
-              onChange={(e) =>
-                patch(
-                  "serviceAreas",
-                  draft.serviceAreas.map((a, j) =>
-                    j === i
-                      ? {
-                          ...a,
-                          pinPrefixes: e.target.value
-                            .split(",")
-                            .map((v) => v.trim()),
-                        }
-                      : a,
-                  ),
-                )
-              }
-            />
+            <TokenListEditor label="admin.delivery.pinAreas" name={`area-pin-${i}`} value={area.pinPrefixes} max={30} hint="admin.delivery.pinHelp" onChange={values => patch("serviceAreas", draft.serviceAreas.map((value, position) => position === i ? { ...value, pinPrefixes: values } : value))} />
             {["inboundPaise", "outboundPaise"].map((k) => (
               <Field
                 key={k}

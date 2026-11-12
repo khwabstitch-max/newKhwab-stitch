@@ -3,7 +3,11 @@ import { GuideModal } from "../components/GuideModal";
 import { DesignGuideExplorer } from "../components/DesignGuideExplorer";
 import { t, localize, labelToken } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { HomeCarousel } from "../components/HomeCarousel";
+import { DEFAULT_HOMEPAGE } from "../data/homepage";
+import { formatSupportSummary, homepageBlock, homepageText, publicHref } from "../lib/public-homepage";
+import "../components/public-experience.css";
 import {
   Link,
   useNavigate,
@@ -18,7 +22,6 @@ import {
   Ruler,
   Scissors,
   Sparkles,
-  Shirt,
   Leaf,
   Search,
   MessageCircle,
@@ -47,8 +50,9 @@ import {
 } from "../components/ui";
 export function DesignCard({ design, index = 0 }) {
   useLanguage();
+  const location = useLocation();
   return (
-    <Link className="design-card" to={`/designs/${design.slug}`}>
+    <Link className="design-card public-design-card" to={`/designs/${design.slug}`} state={location.pathname === "/catalogue" ? { catalogueReturnTo: location.pathname + location.search } : undefined}>
       <div className={`design-image tone-${index % 4}`}>
         {design.coverView ? (
           <DesignImage
@@ -70,266 +74,147 @@ export function DesignCard({ design, index = 0 }) {
         </span>
       </div>
       <div className="design-info">
-        <span className="eyebrow">
-          {design.garment === "suit"
-            ? t("SUIT / KAMEEZ")
-            : labelToken(design.garment)}
-        </span>
+        <div className="design-card-meta">
+          <span className="eyebrow">
+            {design.garment === "suit"
+              ? t("SUIT / KAMEEZ")
+              : labelToken(design.garment)}
+          </span>
+          <span className="design-custom-badge">{t("public.card.customBadge")}</span>
+        </div>
         <h3>{localize(design, "title")}</h3>
         <p>
-          {t("Stitching starting from")}{" "}
-          <strong>{money(design.startingPricePaise)}</strong>
+          {Number.isSafeInteger(design.startingPricePaise) && design.startingPricePaise >= 0
+            ? <>{t("public.card.price")} <strong>{money(design.startingPricePaise)}</strong></>
+            : <strong>{t("public.card.pending")}</strong>}
         </p>
-        <small>{t("Fabric provided by customer.")}</small>
+        <small>{t("public.card.fabric")}</small>
+        <span className="design-card-cta">
+          {t("public.card.choose")}
+          <ArrowRight size={15} aria-hidden="true" />
+        </span>
       </div>
     </Link>
   );
 }
 export function Home() {
-  useLanguage();
+  const { language } = useLanguage();
   const site = useSite();
-  const { data, loading, error, reload } = useResource("/designs?limit=3", { publicRead: true });
+  const collection = useResource("/designs?limit=3", { publicRead: true });
+  const services = useResource("/services?limit=50", { publicRead: true });
+  const homepage = site.homepage || {};
+  const hero = homepageBlock(homepage.hero, DEFAULT_HOMEPAGE.hero, ["eyebrow", "headline", "description"], language);
+  const heroCtas = homepageBlock(homepage.hero, DEFAULT_HOMEPAGE.hero, ["primaryCtaLabel", "secondaryCtaLabel"], language);
+  const help = homepageBlock(homepage.help, DEFAULT_HOMEPAGE.help, ["title", "description"], language);
+  const designs = homepage.featuredDesigns?.length ? homepage.featuredDesigns.slice(0, 3) : collection.data || [];
+  const garments = [...new Set((services.data || []).flatMap((service) => service.itemTypes || []))]
+    .filter((garment) => ["kurti", "suit", "blouse", "alteration"].includes(garment));
+  const process = Array.isArray(homepage.process) && homepage.process.length === 4 &&
+    homepage.process.every((item) => homepageText(item, "title", language) && (!item.description || homepageText(item, "description", language)))
+    ? homepage.process : DEFAULT_HOMEPAGE.process;
+  const photo = homepage.hero?.imageUrl || site.bannerImageUrl || designs.find((design) => design.coverImageUrl)?.coverImageUrl;
+  const faqs = (site.faqs || []).filter((faq) => homepageText(faq, "question", language) && homepageText(faq, "answer", language)).slice(0, 4);
   return (
-    <>
-      <section className="hero">
-        <div className="container hero-grid">
-          <div className="hero-copy">
-            <p className="eyebrow">
-              <span className="little-line" />
-              {t(site.welcome?.title || "Welcome to Khwab Stitch")}
-            </p>
-            <h1>
-              {site.welcome?.tagline
-                ? t(site.welcome.tagline)
-                : t("Aapki Soch,")}
-              <br />
-              {!site.welcome?.tagline && <em>{t("Hamari Silai.")}</em>}
-            </h1>
-            <p className="hero-description">
-              {t(
-                site.welcome?.description ||
-                  "Apne kapde ko dijiye apni pasand ka andaaz. Hamare designs mein se chuniye ya apni inspiration share kijiye — hum aapki confirmed measurements aur design details ke hisaab se care ke saath silai karenge.",
-              )}
-            </p>
-            <div className="hero-actions">
-              <Link to="/catalogue" className="button">
-                {t("Explore Designs ")}
-                <ArrowUpRight size={18} />
-              </Link>
-              <Link to="/account/support" className="text-link">
-                {t("Need Help from a Master Tailor? ")}
-                <ArrowRight size={16} />
-              </Link>
-            </div>
-            <div className="hero-note">
-              <Scissors size={16} />
-              <span>
-                {t(
-                  "Custom stitching on your fabric. Final price and timeline confirmed after review.",
-                )}
-              </span>
-            </div>
-          </div>
-          <div className="hero-visual">
-            <div className="hero-arch">
-              <span className="arch-top">
-                {t("KHWABSTITCH \xB7 MADE WITH CARE")}
-              </span>
-              <div className="hero-art">
-                {site.bannerImageUrl ? (
-                  <img
-                    src={site.bannerImageUrl}
-                    alt={t("Khwab Stitch atelier inspiration")}
-                  />
-                ) : (
-                  <GarmentArt garment="kurti" variant={1} large />
-                )}
-              </div>
-              <div className="fabric fabric-one" />
-              <div className="fabric fabric-two" />
-              <span className="hero-spark spark-one">✧</span>
-              <span className="hero-spark spark-two">✧</span>
-              <div className="swatch-note">
-                {t("A stitch of imagination.")}
-                <br />
-                <em>{t("A fit that feels like you.")}</em>
-              </div>
-            </div>
-            <div className="floating-note">
-              <span className="note-icon">
-                <Ruler size={24} />
-              </span>
-              <div>
-                <strong>{t("Made to your measure")}</strong>
-                <small>{t("Because every body has its own story.")}</small>
-              </div>
-            </div>
-            <span className="visual-caption">
-              {t(
-                "ILLUSTRATED DESIGN INSPIRATION \xB7 NOT A READY-MADE GARMENT",
-              )}
-            </span>
-          </div>
-        </div>
-      </section>
-      <div className="promise-strip">
-        <div className="container promises">
-          <span>
-            <Scissors size={18} />
-            {t("CUSTOM STITCHING")}
-          </span>
-          <i>✧</i>
-          <span>
-            <Ruler size={18} />
-            {t("PERSONAL MEASUREMENTS")}
-          </span>
-          <i>✧</i>
-          <span>
-            <Leaf size={18} />
-            {t("YOUR FABRIC, BEAUTIFULLY USED")}
-          </span>
-          <i>✧</i>
-          <span>
-            <Sparkles size={18} />
-            {t("FINISHING WITH CARE")}
-          </span>
-        </div>
-      </div>
-      <section className="section container">
-        <div className="section-heading">
+    <div className="public-home">
+      <section className="home-hero">
+        <div className="container home-hero-grid">
           <div>
-            <p className="eyebrow">{t("THE COLLECTION")}</p>
-            <h2>
-              {t("Something ")}
-              <em>{t("so you.")}</em>
-            </h2>
-            <p className="muted">
-              {t("A starting point for your next favourite outfit.")}
-            </p>
-          </div>
-          <ArrowLink to="/catalogue">{t("View all designs")}</ArrowLink>
-        </div>
-        {loading ? (
-          <Spinner label={t("Opening the collection\u2026")} />
-        ) : error ? (
-          <ErrorMessage message={error} retry={reload} />
-        ) : data?.length ? (
-          <div className="design-grid">
-            {data.map((d, i) => (
-              <DesignCard key={d._id} design={d} index={i} />
-            ))}
-          </div>
-        ) : (
-          <Empty title={t("The collection is being curated")}>
-            {t(
-              "Have something in mind? Share your own inspiration in a stitching request.",
-            )}
-          </Empty>
-        )}
-        <p className="collection-footnote">
-          {t(
-            "Designs are stitching references. Final pricing and delivery are agreed after review.",
-          )}
-        </p>
-      </section>
-      <section className="process-section">
-        <div className="container">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">{t("A SIMPLE LITTLE JOURNEY")}</p>
-              <h2>
-                {t("From a piece of fabric")}
-                <br />
-                {t("to ")}
-                <em>{t("a piece of you.")}</em>
-              </h2>
+            <p className="eyebrow">{hero.eyebrow}</p>
+            <h1>{hero.headline}</h1>
+            <p className="home-hero-description">{hero.description}</p>
+            <div className="home-hero-actions">
+              <Link className="button" to="/catalogue">{heroCtas.primaryCtaLabel || t("public.action.explore")}<ArrowRight size={17} aria-hidden="true" /></Link>
+              <Link className="button secondary" to="/request?source=reference">{heroCtas.secondaryCtaLabel || t("public.action.reference")}</Link>
             </div>
-            <p className="process-intro">
-              {t("We keep the process personal, thoughtful,")}
-              <br />
-              {t("and easy to follow.")}
-            </p>
+            <Link className="home-hero-guidance" to="/contact">{t("public.action.guidance")}<ArrowRight size={16} aria-hidden="true" /></Link>
           </div>
-          <div className="process-grid">
-            {[
-              [
-                "01",
-                t("Bring your idea"),
-                t(
-                  "Choose a design or share inspiration. Tell us what you have in mind.",
-                ),
-                Shirt,
-              ],
-              [
-                "02",
-                t("Make it your own"),
-                t(
-                  "Share your measurements and preferences. Need a hand? Just ask.",
-                ),
-                Ruler,
-              ],
-              [
-                "03",
-                t("Let us craft it"),
-                t(
-                  "Review your personal quote. Once accepted and fabric inspected, we begin.",
-                ),
-                Scissors,
-              ],
-            ].map(([n, title, copy, Icon]) => (
-              <div className="process-card" key={n}>
-                <div className="process-top">
-                  <span>{n}</span>
-                  <Icon size={25} strokeWidth={1.3} />
+          <figure className="home-hero-figure">
+            <div className="home-hero-image">
+              {photo ? <img src={photo} alt="" width="800" height="1000" fetchPriority="high" /> : <GarmentArt garment="kurti" large />}
+            </div>
+            <figcaption>{t(photo ? "public.designPhoto" : "public.illustration")}</figcaption>
+          </figure>
+        </div>
+      </section>
+      <HomeCarousel slides={homepage.slides || DEFAULT_HOMEPAGE.slides} />
+      {(garments.length > 0 || services.error) && <section className="container public-section" aria-labelledby="home-garments-title">
+        <div className="public-section-heading"><h2 id="home-garments-title">{t("public.garments.title")}</h2><p>{t("public.garments.description")}</p></div>
+        {services.error ? <ErrorMessage message={services.error} retry={services.reload} /> : <div className="home-garments">
+          {garments.map((garment) => {
+            const basePrice = site.garmentBasePrices?.[garment];
+            return (
+              <article className="home-garment-card" key={garment}>
+                <div className="home-garment-art" aria-hidden="true">
+                  <GarmentArt garment={garment} />
                 </div>
-                <h3>{t(title)}</h3>
-                <p>{t(copy)}</p>
-              </div>
+                <div className="home-garment-body">
+                  <h3>
+                    <Link to={"/catalogue?garment=" + garment}>{t("public.garment." + garment)}</Link>
+                  </h3>
+                  <p className="home-garment-desc">{t("public.garmentDesc." + garment)}</p>
+                  {Number.isSafeInteger(basePrice) && basePrice >= 0 && (
+                    <p className="home-garment-price">
+                      {t("public.card.price")} <strong>{money(basePrice)}</strong>
+                    </p>
+                  )}
+                  <small className="home-garment-fabric">{t("public.card.fabric")}</small>
+                  <Link className="home-garment-cta" to={"/catalogue?garment=" + garment}>
+                    {t("public.garmentCta." + garment)}
+                    <ArrowUpRight size={15} aria-hidden="true" />
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
+        </div>}
+      </section>}
+      <section className="container public-section" aria-labelledby="home-collection-title">
+        <div className="public-collection-header">
+          <div className="public-section-heading"><h2 id="home-collection-title">{t("public.collection.title")}</h2><p>{t("public.collection.description")}</p></div>
+          <ArrowLink to="/catalogue">{t("public.nav.all")}</ArrowLink>
+        </div>
+        {collection.loading && !designs.length ? <Spinner label={t("Opening the collection…")} />
+          : collection.error && !designs.length ? <ErrorMessage message={collection.error} retry={collection.reload} />
+          : designs.length ? <div className="design-grid">{designs.map((design, index) => <DesignCard key={design._id} design={design} index={index} />)}</div>
+          : <Empty title={t("public.collection.empty")}><p>{t("public.collection.emptyHelp")}</p><Link className="button secondary" to="/request?source=reference">{t("public.action.reference")}</Link></Empty>}
+      </section>
+      <section className="home-process public-section">
+        <div className="container">
+          <div className="public-section-heading"><h2>{t("public.process.title")}</h2></div>
+          <ol className="home-process-grid">{process.map((item, index) => <li key={index}>
+            <h3>{homepageText(item, "title", language)}</h3>
+            {homepageText(item, "description", language) && <p>{homepageText(item, "description", language)}</p>}
+          </li>)}</ol>
+          <ul className="home-commitments" aria-label={t("public.commitments.title")}>
+            {[1, 2, 3, 4].map((step) => (
+              <li key={step}>
+                <Check size={16} aria-hidden="true" />
+                <span>{t(`public.commitments.${step}`)}</span>
+              </li>
             ))}
-          </div>
-          <Link to="/request" className="button">
-            {t("Let's make something beautiful ")}
-            <ArrowUpRight size={17} />
-          </Link>
+          </ul>
+          <ArrowLink to="/how-it-works">{t("public.process.details")}</ArrowLink>
         </div>
       </section>
-      <section className="section container personal-section">
-        <div className="personal-mark">
-          <img
-            className="personal-brand-seal"
-            src="/brand/khwab-stitch-logo.svg"
-            alt={t("KhwabStitch \u2014 Where Fabric Becomes Art")}
-            width="270"
-            height="270"
-            loading="lazy"
-          />
-          <span>
-            {t(
-              "\u0939\u092E\u093E\u0930\u0940 \u0915\u093E\u0930\u0940\u0917\u0930\u0940",
-            )}
-            <br />
-            {t("\u0906\u092A\u0915\u0940 \u0915\u0939\u093E\u0928\u0940")}
-          </span>
-        </div>
-        <div>
-          <p className="eyebrow">{t("SMALL ATELIER. PERSONAL ATTENTION.")}</p>
-          <h2>
-            {t("Not just stitched.")}
-            <br />
-            <em>{t("Thoughtfully made.")}</em>
-          </h2>
-          <p>{localize(site, "about")}</p>
-          <ArrowLink to="/contact">{t("Say hello to the atelier")}</ArrowLink>
+      <section className="container public-section">
+        <div className="home-help">
+          <h2>{help.title}</h2><p>{help.description}</p>
+          <Link className="button secondary" to="/contact">{t("public.action.guidance")}<ArrowRight size={17} aria-hidden="true" /></Link>
+          <HomeResume />
+          <details className="public-guides" id="guides"><summary>{t("public.help.guides")}</summary><HomeGuidesShowcase /></details>
         </div>
       </section>
-      <HomeGuidesShowcase />
-      <HomeResume />
       <SelectedReviews />
-    </>
+      {faqs.length > 0 && <section className="container public-section home-faqs">
+        <div className="public-section-heading"><h2>{t("public.faq.title")}</h2></div>
+        {faqs.map((faq, index) => <details key={index}><summary>{homepageText(faq, "question", language)}</summary><p>{homepageText(faq, "answer", language)}</p></details>)}
+        <ArrowLink to="/contact">{t("public.faq.more")}</ArrowLink>
+      </section>}
+    </div>
   );
 }
 function HomeGuidesShowcase() {
-  const [activeGuide, setActiveGuide] = useState(null);
+  const [activeGuideId, setActiveGuide] = useState(null);
 
   const guides = [
     {
@@ -370,15 +255,13 @@ function HomeGuidesShowcase() {
     },
   ];
 
+  const activeGuide = guides.find((guide) => guide.id === activeGuideId);
   return (
     <section className="section container guides-showcase-section">
       <div className="section-heading">
         <div>
           <p className="eyebrow">{t("ATELIER VISUAL REFERENCES")}</p>
-          <h2>
-            {t("Fit & Design ")}
-            <em>{t("Guides.")}</em>
-          </h2>
+          <h2>{t("public.guides.title")}</h2>
           <p className="muted">
             {t(
               "Explore our official styling, neckline, and measurement charts before placing your request.",
@@ -393,10 +276,10 @@ function HomeGuidesShowcase() {
           <div
             key={g.id}
             className="home-guide-card"
-            onClick={() => setActiveGuide(g)}
+            onClick={() => setActiveGuide(g.id)}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => e.key === "Enter" && setActiveGuide(g)}
+            onKeyDown={(e) => { if (["Enter", " "].includes(e.key)) { e.preventDefault(); setActiveGuide(g.id); } }}
           >
             <div className="home-guide-thumb-wrap">
               <img src={g.img} alt={g.title} loading="lazy" />
@@ -434,42 +317,20 @@ function HomeResume() {
   const { profile } = useAuth();
   const { data } = useResource(profile ? "/drafts?limit=1" : null);
   if (!profile) return null;
-  return (
-    <section className="section container">
-      <div className="panel">
-        <h2>
-          {t("Welcome back, {0}.", {
-            0: profile.name?.split(" ")[0] || t("there"),
-          })}
-        </h2>
-        <div className="stack-actions">
-          {data?.[0] && (
-            <Link className="button" to={`/request?draft=${data[0]._id}`}>
-              {t("Continue your saved request")}
-            </Link>
-          )}
-          <Link className="button secondary" to="/request">
-            {t("Start a new request")}
-          </Link>
-          <Link className="text-link" to="/account">
-            {t("My account")}
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
+  return <section className="home-resume"><h3>{t("public.help.saved")}</h3><div className="stack-actions">
+    {data?.[0] && <Link className="button secondary" to={`/request?draft=${data[0]._id}`}>{t("public.help.resume")}</Link>}
+    <Link className="text-link" to="/request">{t("public.help.new")}</Link>
+    <Link className="text-link" to="/account">{t("public.nav.account")}</Link>
+  </div></section>;
 }
 function SelectedReviews() {
   const { data } = useResource("/reviews?limit=3", { publicRead: true });
   if (!data?.length) return null;
   return (
-    <section className="section container selected-reviews">
-      <p className="eyebrow">{t("WORDS FROM OUR CUSTOMERS")}</p>
-      <h2>{t("A little care, remembered.")}</h2>
+    <section className="container public-section selected-reviews">
+      <h2>{t("public.reviews.title")}</h2>
       <p className="small-print">
-        {t(
-          "Selected customer reviews, moderated before public display. This is not the complete review history.",
-        )}
+        {t("public.reviews.note")}
       </p>
       <div className="account-cards">
         {data.map((r) => (
@@ -489,6 +350,7 @@ export function Catalogue() {
   const q = params.get("q") || "";
   const page = Number(params.get("page") || 1);
   const [search, setSearch] = useState(q);
+  useEffect(() => setSearch(q), [q]);
   const { data, loading, error, pagination, reload } = useResource(
     `/designs?limit=12&page=${page}${garment ? `&garment=${garment}` : ""}${q ? `&search=${encodeURIComponent(q)}` : ""}`,
   );
@@ -604,6 +466,9 @@ export function Catalogue() {
 export function DesignDetails() {
   useLanguage();
   const { slug } = useParams();
+  const location = useLocation();
+  const previous = publicHref(location.state?.catalogueReturnTo);
+  const backTo = previous?.startsWith("/catalogue") ? previous : "/catalogue";
   const {
     data: design,
     loading,
@@ -614,14 +479,14 @@ export function DesignDetails() {
   if (error)
     return (
       <div className="container page">
-        <BackLink />
+        <BackLink to={backTo} />
         <ErrorMessage message={error} retry={reload} />
       </div>
     );
   if (!design) return <NotFound />;
   return (
     <div className="container page">
-      <BackLink />
+      <BackLink to={backTo} />
       <DesignPresentation design={design} />
     </div>
   );
@@ -687,7 +552,7 @@ export function HowItWorks() {
         )}
       </Notice>
       <Link to="/request" className="button">
-        {t("Start your stitching request ")}
+        {t("Start your stitching request")}
         <ArrowRight size={17} />
       </Link>
     </div>
@@ -697,6 +562,7 @@ export function Contact() {
   useLanguage();
   const s = useSite();
   const phone = (s.whatsapp || "").replace(/\D/g, "");
+  const supportHours = formatSupportSummary(s.support, t);
   return (
     <div className="container page">
       <PageHeading
@@ -723,7 +589,7 @@ export function Contact() {
               target="_blank"
               rel="noreferrer"
             >
-              {t("Chat on WhatsApp ")}
+              {t("Chat on WhatsApp")}
               <ArrowUpRight size={17} />
             </a>
           )}
@@ -739,7 +605,7 @@ export function Contact() {
               target="_blank"
               rel="noreferrer"
             >
-              {t("Visit Instagram ")}
+              {t("Visit Instagram")}
               <ArrowUpRight size={17} />
             </a>
           )}
@@ -759,6 +625,7 @@ export function Contact() {
             "We are a home-based custom stitching service. Contact the atelier to arrange fabric handover and appointments. Fabric is provided by you; quotes and delivery commitments follow a personal review.",
           )}
         </p>
+        {supportHours && <p><strong>{supportHours}</strong></p>}
       </section>
       {s.faqs?.length > 0 && (
         <section className="faq">
@@ -862,7 +729,7 @@ export function Login() {
       <div className="container page narrow">
         <PageHeading title={t("Welcome back.")} />
         <Link className="button" to={from}>
-          {t("Continue ")}
+          {t("Continue")}
           <ArrowRight size={17} />
         </Link>
       </div>
@@ -878,7 +745,7 @@ export function Login() {
           <Notice>
             <strong>{t("Your design choices are ready.")}</strong>{" "}
             {t(
-              "Apni stitching request submit karne aur uska status track karne ke liye login karein ya account banayein. Aapki selections save rahengi.",
+              "public.auth.draftReady",
             )}
           </Notice>
         )}

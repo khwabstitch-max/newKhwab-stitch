@@ -1,0 +1,142 @@
+.public-home { --public-section-space: clamp(40px, 6vw, 76px); }
+.public-home .public-section { padding-block: var(--public-section-space); }
+.public-home .public-section-heading { max-width: 700px; margin-bottom: 28px; }
+.public-home .public-section-heading p { color: var(--color-muted); margin-bottom: 0; }
+.public-home .home-hero { padding-block: clamp(38px, 7vw, 82px); background: var(--color-ivory); }
+.public-home .home-hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: clamp(28px, 5vw, 76px); align-items: center; }
+.public-home .home-hero h1 { font-size: clamp(36px, 4.3vw, 62px); line-height: 1.12; text-wrap: balance; margin-bottom: 22px; }
+.public-home .home-hero-description { color: var(--color-muted); font-size: 16px; line-height: 1.8; max-width: 620px; }
+.public-home .home-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0 14px; }
+.public-home .home-hero-guidance { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--color-teal); font-weight: 600; }
+.public-home .home-hero-figure { margin: 0; min-width: 0; }
+.public-home .home-hero-image { aspect-ratio: 4/5; border-radius: var(--radius-card); overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); display: grid; place-items: center; }
+.public-home .home-hero-image img { width: 100%; height: 100%; object-fit: contain; }
+.public-home .home-hero-image .garment-art { width: 84%; max-height: 440px; }
+.public-home figcaption { color: var(--color-muted); font-size: 12px; line-height: 1.6; margin-top: 10px; }
+.home-promotion { margin-block: 12px 8px; }
+.home-promo-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); overflow: hidden; }
+.home-promo-card.has-image { display: grid; grid-template-columns: 1.2fr 1fr; }
+.home-promo-copy { padding: clamp(24px, 4vw, 42px); align-self: center; }
+.home-promo-copy h2 { font-size: clamp(25px, 3vw, 34px); }
+.home-promo-copy p { max-width: 650px; color: var(--color-muted); }
+.home-offer-details { margin-block: 16px; padding-block: 8px; border-block: 1px solid var(--color-border); }
+.home-offer-details summary { cursor: pointer; min-height: 44px; padding-block: 10px; font-weight: 600; }
+.home-offer-details dl { display: grid; gap: 10px; margin-block: 12px; }
+.home-offer-details dl > div { display: flex; justify-content: space-between; gap: 18px; }
+.home-offer-details dd { margin: 0; text-align: end; font-weight: 600; }
+.home-promo-card figure { margin: 0; aspect-ratio: 3/2; background: var(--color-ivory); }
+.home-promo-card figure img { width: 100%; height: 100%; object-fit: contain; }
+.home-promo-controls { display: flex; justify-content: center; align-items: center; gap: 14px; padding-top: 12px; }
+.home-promo-controls button { min-width: 44px; min-height: 44px; }
+.home-promo-dots { display: flex; }
+.home-promo-dots button { border: 0; background: transparent; display: grid; place-items: center; }
+.home-promo-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--color-border); }
+.home-promo-dots [aria-pressed="true"] span { background: var(--color-teal); width: 22px; border-radius: 8px; }
+.public-home .home-garments { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.public-home .home-garment-card { border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); overflow: hidden; display: flex; flex-direction: column; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.public-home .home-garment-card:hover { border-color: var(--color-teal); box-shadow: var(--shadow-card); }
+.public-home .home-garment-art { background: var(--color-ivory); aspect-ratio: 4/3; display: grid; place-items: center; padding: 18px; border-bottom: 1px solid var(--color-border); }
+.public-home .home-garment-art .garment-art { max-height: 140px; width: auto; max-width: 78%; }
+.public-home .home-garment-body { padding: 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.public-home .home-garment-body h3 { font-size: 22px; margin: 0; }
+.public-home .home-garment-body h3 a:hover { color: var(--color-teal); }
+.public-home .home-garment-desc { color: var(--color-muted); font-size: 14px; line-height: 1.6; margin: 0; }
+.public-home .home-garment-price { font-size: 14px; margin: 2px 0 0; color: var(--color-charcoal); }
+.public-home .home-garment-price strong { color: var(--color-teal); }
+.public-home .home-garment-fabric { color: var(--color-muted); font-size: 12px; line-height: 1.5; }
+.public-home .home-garment-cta { margin-top: auto; padding-top: 8px; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--color-teal); }
+.public-home .public-collection-header { display: flex; gap: 24px; justify-content: space-between; align-items: end; margin-bottom: 28px; }
+.public-home .public-collection-header .public-section-heading { margin-bottom: 0; }
+.public-home .design-grid { align-items: stretch; }
+.public-design-card .design-image { aspect-ratio: 4/5; height: auto; }
+.public-design-card .design-info { padding: 20px 4px; display: flex; flex-direction: column; }
+.public-design-card .design-card-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.public-design-card .design-custom-badge { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--color-teal); background: #174c4612; border: 1px solid #174c462e; border-radius: 999px; padding: 3px 10px; line-height: 1.4; }
+.public-design-card .design-info h3 { font-size: 24px; margin: 10px 0 10px; }
+.public-design-card .design-info small { color: var(--color-muted); line-height: 1.65; }
+.public-design-card .design-card-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; min-height: 36px; font-size: 14px; font-weight: 600; color: var(--color-teal); }
+.public-home .home-process { background: var(--color-surface); border-block: 1px solid var(--color-border); }
+.public-home .home-process-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0 0 26px; counter-reset: steps; }
+.public-home .home-process-grid li { counter-increment: steps; }
+.public-home .home-process-grid li:before { content: counter(steps, decimal-leading-zero); display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; color: var(--color-teal); border: 1px solid var(--color-border); margin-bottom: 20px; font-weight: 600; }
+.public-home .home-process-grid h3 { font-size: 23px; }
+.public-home .home-process-grid p { color: var(--color-muted); font-size: 14px; }
+.public-home .home-commitments { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; list-style: none; padding: 20px 0 24px; margin: 0 0 12px; border-top: 1px solid var(--color-border); }
+.public-home .home-commitments li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.55; color: var(--color-charcoal); }
+.public-home .home-commitments li svg { color: var(--color-teal); margin-top: 3px; }
+.public-home .home-help { background: var(--color-surface); padding: clamp(26px, 5vw, 50px); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.public-home .home-help > p { color: var(--color-muted); max-width: 720px; }
+.public-home .public-guides { border-top: 1px solid var(--color-border); margin-top: 26px; padding-top: 16px; }
+.public-home .public-guides > summary { min-height: 44px; padding: 10px 0; cursor: pointer; font-weight: 600; }
+.public-home .public-guides .guides-showcase-section { padding: 24px 0; }
+.public-home .public-guides .container { padding-inline: 0; }
+.public-home .home-resume { margin-top: 26px; padding-top: 26px; border-top: 1px solid var(--color-border); }
+.public-home .home-resume h3 { font-size: 24px; }
+.public-home .home-faqs { max-width: 880px; }
+.public-home .home-faqs details { border-top: 1px solid var(--color-border); padding-block: 8px; }
+.public-home .home-faqs summary { min-height: 44px; padding-block: 12px; cursor: pointer; font-weight: 600; }
+.public-home .home-faqs details p { color: var(--color-muted); margin: 4px 0 20px; }
+.public-header .header-inner { max-width: 1340px; gap: 24px; padding-block: 10px; }
+.public-header .brand-monogram { width: 54px; height: 54px; }
+.public-header .brand-wordmark { font-size: 25px; }
+.public-header .brand-tagline { font-size: 9px; letter-spacing: .3px; }
+.public-header .header-inner .nav { gap: 18px; font-size: 13px; flex: 1; justify-content: flex-end; }
+.public-header .public-nav-link, .public-header .nav-designs > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; white-space: nowrap; }
+.public-header .nav-designs { position: relative; }
+.public-header .nav-designs > summary { gap: 5px; list-style: none; }
+.public-header .nav-designs > summary::-webkit-details-marker { display: none; }
+.public-header .nav-design-links { position: absolute; top: 100%; left: 0; z-index: 30; min-width: 220px; display: grid; padding: 10px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-control); box-shadow: var(--shadow-card); }
+.public-header .nav-design-links a { min-height: 44px; padding: 10px; display: flex; align-items: center; }
+.public-header .public-search { display: flex; align-items: center; width: 160px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
+.public-header .public-search input { min-height: 44px; border: 0; background: transparent; padding: 8px 0 8px 12px; }
+.public-header .public-search button { flex-shrink: 0; width: 44px; min-height: 44px; border: 0; background: transparent; display: grid; place-items: center; color: var(--color-teal); }
+.public-header .language-picker { margin: 0; }
+.public-header .public-account { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+.public-footer .footer-grid { grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 32px; }
+.public-footer .footer-grid a:not(.logo) { display: flex; align-items: center; min-height: 44px; line-height: 1.6; }
+.public-footer .public-footer-brand { max-width: 280px; }
+.public-footer .public-footer-brand .brand-seal { max-width: 130px; }
+.public-footer .public-footer-hours { font-size: 13px; color: var(--color-muted); margin-top: 8px; }
+.public-footer .public-footer-announcement { border-top: 1px solid currentColor; padding-top: 16px; }
+html[lang="hi"] .public-home .home-hero h1 { line-height: 1.45; letter-spacing: 0; font-size: clamp(32px, 4vw, 54px); }
+@media (max-width: 1100px) {
+  .public-header .header-inner .nav { gap: 10px; }
+  .public-header .public-search { width: 130px; }
+  .public-header .brand-tagline { display: none; }
+}
+@media (max-width: 900px) {
+  .public-home .home-hero-grid { grid-template-columns: 1fr 0.8fr; gap: 28px; }
+  .public-home .home-hero h1 { font-size: clamp(34px, 5vw, 48px); }
+  .public-home .home-garments, .public-home .home-process-grid, .public-home .home-commitments { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .public-header .header-inner { justify-content: space-between; }
+  .public-header .header-inner .public-nav { display: none; }
+  .public-header .header-inner .public-nav.open { display: flex; align-items: stretch; gap: 6px; padding: 20px 24px; background: var(--color-surface); max-height: calc(100dvh - 96px); overflow-y: auto; }
+  .public-header .nav-design-links { position: static; box-shadow: none; margin-bottom: 8px; }
+  .public-header .public-search { width: 100%; }
+  .public-header .language-picker { align-self: flex-start; }
+  .public-header .public-account { justify-content: flex-start; gap: 10px; }
+  .public-header .public-nav .button { align-self: flex-start; }
+  .public-footer .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .public-home .home-hero-grid { grid-template-columns: 1fr; }
+  .public-home .home-hero h1 { font-size: clamp(34px, 8.6vw, 46px); }
+  .public-home .home-hero-description { font-size: 15px; }
+  .public-home .home-hero-figure { max-width: 390px; width: 100%; justify-self: center; }
+  .public-home .home-hero-image { aspect-ratio: 5/4; }
+  .public-home .home-hero-image .garment-art { width: 62%; max-height: 280px; }
+  .public-home .home-hero-actions .button { flex: 1; justify-content: center; }
+  .public-home .public-collection-header { display: block; }
+  .public-home .public-collection-header > a { margin-top: 12px; }
+  .home-promo-card.has-image { grid-template-columns: 1fr; }
+  .home-promo-card figure { max-height: 240px; }
+  .public-home .home-garments { grid-template-columns: 1fr; gap: 14px; }
+  .public-home .home-garment-art { aspect-ratio: 16/9; }
+  .public-home .home-process-grid { gap: 24px 18px; }
+  .public-home .home-commitments { grid-template-columns: 1fr; gap: 12px; }
+  .public-header .brand-monogram { width: 46px; height: 46px; }
+  .public-header .brand-wordmark { font-size: 23px; }
+  .public-footer .footer-grid { gap: 24px; }
+}
+@media (max-width: 380px) { .public-home .home-hero-actions { flex-direction: column; } .public-home .home-process-grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .home-promotion *, .public-home *, .public-header * { scroll-behavior: auto; transition: none; animation: none; } }

@@ -8,6 +8,9 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const origin = "https://newkhwab-stitch.vercel.app";
 const simulateTransientFailure = process.argv.includes("--transient-collection");
+const capturePhase = process.argv.find(value => value.startsWith("--capture="))?.slice(10);
+if (capturePhase && !["ux-before", "ux-after"].includes(capturePhase)) throw new Error("INVALID_CAPTURE_PHASE");
+const captureLanguage = process.argv.includes("--hindi") ? "hi" : "en";
 let injectedFailure = false;
 const artifacts = path.join(root, "artifacts");
 await fs.mkdir(artifacts, { recursive: true });
@@ -75,12 +78,21 @@ try {
   session = (await send("Target.attachToTarget", { targetId: target.targetId, flatten: true })).sessionId;
   await send("Page.enable"); await send("Runtime.enable"); await send("Network.enable");
   await send("Network.setCacheDisabled", { cacheDisabled: true });
+  if (capturePhase) await send("Page.addScriptToEvaluateOnNewDocument", { source: `try { localStorage.setItem('khwab.language', '${captureLanguage}'); } catch {}` });
   if (simulateTransientFailure) await send("Fetch.enable", { patterns: [{ urlPattern: origin + "/api/designs*", requestStage: "Request" }] });
-  for (const viewport of [{ width: 1366, height: 900 }, { width: 390, height: 844 }]) {
+  const viewports = capturePhase ? [{ width: 1366, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }] : [{ width: 1366, height: 900 }, { width: 390, height: 844 }];
+  for (const viewport of viewports) {
     await send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: viewport.width < 600 });
     await send("Page.navigate", { url: origin + "/" });
     const rendered = await waitFor(async () => { const current = await state(); return current.ready === "complete" && !current.collectionLoading && (current.designCards || current.collectionEmpty || current.alerts.length) ? current : null; }, "COLLECTION_DID_NOT_SETTLE", 90000);
     results.push({ event: "home_rendered", viewport: viewport.width, ...rendered });
+    if (capturePhase) {
+      await send("Runtime.evaluate", { expression: "window.scrollTo(0,0)" });
+      const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+      const filename = `${capturePhase}-home-${captureLanguage}-${viewport.width}.png`;
+      await fs.writeFile(path.join(artifacts, filename), Buffer.from(screenshot.data, "base64"));
+      results.push({ event: "screenshot", filename, language: captureLanguage, viewport: viewport.width });
+    }
     if (rendered.alerts.length || (!rendered.designCards && !rendered.collectionEmpty)) process.exitCode = 1;
   }
   if (simulateTransientFailure) {

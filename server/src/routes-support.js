@@ -496,8 +496,10 @@ export function supportRoutes(app, ctx, auth) {
       status: z.string().max(40).optional(),
       kind: z.enum(["assistance", "complaint"]).optional(),
       overdue: z.enum(["true", "false"]).optional(),
+      attention: z.enum(["open"]).optional(),
     });
     const filter = {
+      ...(q.attention === "open" ? { status: "open" } : {}),
       ...(q.status ? { status: q.status } : {}),
       ...(q.kind ? { kind: q.kind } : {}),
       ...(q.overdue === "true"

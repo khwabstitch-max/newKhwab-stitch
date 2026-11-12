@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import { t } from "../i18n/core";
 import "./guide-modal.css";
@@ -12,30 +12,53 @@ export function GuideModal({
 }) {
   const dialogRef = useRef(null);
   const closeRef = useRef(null);
+  const openerRef = useRef(null);
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
+    openerRef.current = document.activeElement;
     if (typeof dialog.showModal === "function") dialog.showModal();
     else dialog.setAttribute("open", "");
     closeRef.current?.focus();
 
-    const handleKey = (e) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
+    return () => {
+      if (dialog.open && typeof dialog.close === "function") dialog.close();
+      openerRef.current?.focus();
     };
-    dialog.addEventListener("keydown", handleKey);
-    return () => dialog.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, []);
+
+  function handleKey(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+    }
+    if (event.key !== "Tab") return;
+    const controls = [...dialogRef.current.querySelectorAll(
+      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]',
+    )];
+    const first = controls[0], last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
 
   return (
     <dialog
       className="guide-dialog"
       ref={dialogRef}
       aria-modal="true"
-      aria-label={title}
+      aria-labelledby={titleId}
+      onKeyDown={handleKey}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
       onClick={(e) => {
         if (e.target === dialogRef.current) onClose();
       }}
@@ -44,7 +67,7 @@ export function GuideModal({
         <header className="guide-dialog-header">
           <div>
             <span className="guide-dialog-badge">{t("Khwab Stitch Guide")}</span>
-            <h3 className="guide-dialog-title">{title}</h3>
+            <h3 className="guide-dialog-title" id={titleId}>{title}</h3>
             {subtitle && <p className="guide-dialog-subtitle">{subtitle}</p>}
           </div>
           <button

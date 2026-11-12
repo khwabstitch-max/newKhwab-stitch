@@ -16,6 +16,8 @@ import {
 import { fail, requireFound } from "./errors.js";
 import { imageIds, publicImages } from "./visual-catalogue.js";
 import { fenceNewReferences } from "./reference-integrity.js";
+import { validateHomepage } from "./homepage.js";
+import { OPTION_KINDS } from "./workflow-input.js";
 import {
   idOf,
   pageQuery,
@@ -85,6 +87,11 @@ export function adminRoutes(app, ctx, auth, admin) {
       customers,
       recentOrders,
       counts,
+      missingDesignPhotos,
+      missingDesignPrices,
+      pendingReviews,
+      pendingApplications,
+      openHelpRequests,
     ] = await Promise.all([
       models.Order.countDocuments(),
       models.Order.countDocuments({
@@ -100,6 +107,11 @@ export function adminRoutes(app, ctx, auth, admin) {
         { $group: { _id: "$status", count: { $sum: 1 } } },
         { $sort: { _id: 1 } },
       ]),
+      models.Design.countDocuments({ "mediaIds.0": { $exists: false } }),
+      models.Design.countDocuments({ startingPricePaise: { $lte: 0 } }),
+      models.Review.countDocuments({ status: "pending" }),
+      models.WorkerApplication.countDocuments({ status: "submitted" }),
+      models.SupportTicket.countDocuments({ status: "open" }),
     ]);
     res.json({
       data: {
@@ -109,6 +121,12 @@ export function adminRoutes(app, ctx, auth, admin) {
           activeOrders,
           designs,
           customers,
+          byStatus: Object.fromEntries(STATUSES.map(status => [status, counts.find(item => item._id === status)?.count || 0])),
+          missingDesignPhotos,
+          missingDesignPrices,
+          pendingReviews,
+          pendingApplications,
+          openHelpRequests,
         },
         recentOrders: recentOrders.map(safeOrder),
         statusCounts: counts.map((c) => ({ status: c._id, count: c.count })),
@@ -119,14 +137,17 @@ export function adminRoutes(app, ctx, auth, admin) {
     const q = pageQuery(req.query, {
       status: z.enum(["draft", "published", "archived"]).optional(),
       garment: z.enum(GARMENTS).optional(),
+      attention: z.enum(["missing_photo", "missing_price"]).optional(),
       search: searchField,
     });
     const filter = {
       ...(q.status ? { status: q.status } : {}),
       ...(q.garment ? { garment: q.garment } : {}),
+      ...(q.attention === "missing_photo" ? { "mediaIds.0": { $exists: false } } : {}),
+      ...(q.attention === "missing_price" ? { startingPricePaise: { $lte: 0 } } : {}),
       ...(q.search
         ? {
-            $or: ["title", "titleHi"].map((field) => ({
+            $or: ["title", "titleHi", "code", "slug", "searchLabels", "searchLabelsHi"].map((field) => ({
               [field]: { $regex: escaped(q.search), $options: "i" },
             })),
           }
@@ -214,6 +235,8 @@ export function adminRoutes(app, ctx, auth, admin) {
           "DESIGN_IN_USE",
           "Only unused drafts can be deleted. Archive used designs instead.",
         );
+      if (await models.SiteSettings.exists({ "homepage.featuredDesignIds": String(current._id) }).session(session))
+        fail(409, "DESIGN_IN_USE", "Remove this design from Featured Designs before deleting it, or archive it instead.");
       await changeCategory(ctx, current.category, null, session);
       await releaseMedia(ctx, current.mediaIds, session);
       const removed = await models.Design.deleteOne(
@@ -231,14 +254,20 @@ export function adminRoutes(app, ctx, auth, admin) {
     ["options", models.DesignOption, optionInput],
   ]) {
     app.get(base + "/" + name, async (req, res) => {
-      const q = pageQuery(req.query);
+      const q = pageQuery(req.query, { search: searchField, ...(name === "options" ? { kind: z.enum(OPTION_KINDS).optional(), status: z.enum(["draft", "published", "archived"]).optional(), active: z.enum(["true", "false"]).optional() } : {}) });
+      const filter = {
+        ...(q.search ? { $or: ["name", "nameHi", ...(name === "options" ? ["code"] : ["slug"])].map(field => ({ [field]: { $regex: escaped(q.search), $options: "i" } })) } : {}),
+        ...(q.kind ? { kind: q.kind } : {}),
+        ...(q.status ? { status: q.status } : {}),
+        ...(q.active ? { active: q.active === "true" } : {}),
+      };
       const [items, total] = await Promise.all([
-        Model.find()
+        Model.find(filter)
           .sort(name === "options" ? { kind: 1, displayOrder: 1, name: 1, _id: 1 } : { name: 1, _id: 1 })
           .skip((q.page - 1) * q.limit)
           .limit(q.limit)
           .lean(),
-        Model.countDocuments(),
+        Model.countDocuments(filter),
       ]);
       const data = name === "options" ? await Promise.all(items.map(async item => {
         const images = await publicImages(ctx, item);
@@ -619,6 +648,7 @@ export function adminRoutes(app, ctx, auth, admin) {
         if (current.bannerMediaId)
           await releaseMedia(ctx, [current.bannerMediaId], session);
       }
+      await validateHomepage(ctx, fields.homepage, current.homepage, session);
       const updated = await models.SiteSettings.findOneAndUpdate(
         { _id: current._id, revision },
         { $set: fields, $inc: { revision: 1 } },

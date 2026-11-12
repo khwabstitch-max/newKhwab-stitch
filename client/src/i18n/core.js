@@ -3,7 +3,23 @@ export const LANGUAGE_KEY = "khwab.language";
 // Extend the shared catalogue so existing translations and reverse lookups stay intact.
 import { enhancements } from "./enhancements";
 import { commerceMessages } from "./commerce";
-const catalogue = { ...enhancements, ...messages, ...commerceMessages };
+import { experience, experienceCopy } from "./experience";
+import { publicCopy } from "./public-experience";
+import { adminCopy } from "./admin-experience";
+
+// Stable UI identifiers never become business enum values or persisted labels.
+export const semanticCatalogue = Object.freeze({ ...experienceCopy, ...publicCopy, ...adminCopy });
+const phrase = (value, selected, count) => {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return "";
+  const rule = new Intl.PluralRules(selected === "hi" ? "hi-IN" : "en-IN").select(Number(count));
+  return value[rule] || value.other || "";
+};
+export const translationCatalogue = Object.freeze({
+  ...enhancements, ...messages, ...commerceMessages, ...experience,
+  ...Object.fromEntries(Object.values(semanticCatalogue).filter(copy => typeof copy.en === "string" && typeof copy.hi === "string").map(copy => [copy.en, copy.hi])),
+});
+const catalogue = translationCatalogue;
 const supported = new Set(["en", "hi"]);
 let language = "en";
 try {
@@ -62,6 +78,13 @@ export function t(value, parameters = {}, selected = language) {
   const leading = value.match(/^\s*/)[0],
     trailing = value.match(/\s*$/)[0];
   const canonical = value.trim().replace(/\s+/g, " ");
+  const semantic = semanticCatalogue[canonical];
+  if (semantic) {
+    const translated = phrase(semantic[selected] || semantic.en, selected, parameters.count);
+    return leading + translated.replace(/\{([^{}]+)\}/g, (all, key) =>
+      Object.hasOwn(parameters, key) ? String(parameters[key]) : all,
+    ) + trailing;
+  }
   let english = Object.hasOwn(catalogue, canonical)
     ? canonical
     : reverse[canonical] || canonical;
@@ -90,6 +113,11 @@ export function t(value, parameters = {}, selected = language) {
     ) +
     trailing
   );
+}
+export function hasTranslation(value) {
+  if (typeof value !== "string") return false;
+  const key = value.trim().replace(/\s+/g, " ");
+  return Object.hasOwn(semanticCatalogue, key) || Object.hasOwn(catalogue, key) || Object.hasOwn(reverse, key) || templateEntries.some(entry => entry.regex.test(key));
 }
 const tokens = {
   request_received: "Request Received",
@@ -138,6 +166,23 @@ export function localize(record, field) {
     return hindi;
   return t(record[field] || "");
 }
+/** Authored content stays intact; callers can label or hide a missing translation. */
+export function contentTranslation(record, field, selected = language) {
+  const english = typeof record?.[field] === "string" ? record[field] : "";
+  const hindi = typeof record?.[field + "Hi"] === "string" ? record[field + "Hi"] : "";
+  const translated = selected === "hi" && Boolean(hindi.trim());
+  return {
+    text: translated ? hindi : english,
+    sourceLanguage: translated ? "hi" : "en",
+    missingTranslation: selected === "hi" && Boolean(english.trim()) && !hindi.trim(),
+  };
+}
+
+export function missingContentTranslations(records, fieldsToCheck = ["title", "description"]) {
+  return (records || []).flatMap(record => fieldsToCheck
+    .filter(field => contentTranslation(record, field, "hi").missingTranslation)
+    .map(field => ({ id: String(record._id || record.id || record.code || ""), field })));
+}
 const fields = {
   name: "Name",
   email: "Email",
@@ -166,6 +211,12 @@ const fields = {
   shoulder: "Shoulder",
   length: "Length",
   sleeveLength: "Sleeve Length",
+  sleeveOpening: "Sleeve Opening",
+  armhole: "Armhole",
+  frontNeckDepth: "Front Neck Depth",
+  frontNeckWidth: "Front Neck Width",
+  backNeckDepth: "Back Neck Depth",
+  backNeckWidth: "Back Neck Width",
   unit: "Measurement unit",
   method: "Measurement method",
   notes: "Instructions",
@@ -226,16 +277,15 @@ function validationMessage(message) {
 }
 export function translateError(error) {
   if (!error) return "";
-  if (typeof error === "string") return t(error);
   const message =
-    error.message ||
+    (typeof error === "string" ? error : error.message) ||
     "Request could not be completed. Please review the details and try again.";
   let result = t(message);
-  if (language === "hi" && result === message)
+  if (language === "hi" && !hasTranslation(message))
     result = t(
       "Request could not be completed. Please review the details and try again.",
     );
-  if (Array.isArray(error.details))
+  if (typeof error === "object" && Array.isArray(error.details))
     result +=
       " " +
       error.details

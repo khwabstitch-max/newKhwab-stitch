@@ -144,6 +144,9 @@ export function createModels(connection = mongoose) {
         title: { type: String, required: true },
         titleHi: text(120),
         descriptionHi: text(4000),
+        searchLabels: { type: [String], default: undefined },
+        searchLabelsHi: { type: [String], default: undefined },
+        referenceFence: { type: Number, default: 0 },
         designDetails: {
           type: new Schema(
             Object.fromEntries(
@@ -281,6 +284,7 @@ export function createModels(connection = mongoose) {
         policies: Schema.Types.Mixed,
         support: Schema.Types.Mixed,
         welcome: Schema.Types.Mixed,
+        homepage: Schema.Types.Mixed,
         features: Schema.Types.Mixed,
         facebook: text(250),
         businessName: text(100),
