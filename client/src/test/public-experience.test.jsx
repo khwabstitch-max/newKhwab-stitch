@@ -8,7 +8,7 @@ vi.mock("../lib/auth", () => ({ useAuth: () => boundary.auth }));
 vi.mock("../lib/hooks", async (original) => ({ ...(await original()), useSite: () => boundary.site }));
 import { HomeCarousel } from "../components/HomeCarousel";
 import { Layout } from "../components/Layout";
-import { Catalogue, DesignDetails, Home } from "../pages/Public";
+import { Catalogue, DesignDetails, Home, HowItWorks } from "../pages/Public";
 import { DEFAULT_HOMEPAGE } from "../data/homepage";
 import { eligibleHomepageSlides, homepageBlock, publicHref } from "../lib/public-homepage";
 import { setLanguage, t } from "../i18n/core";
@@ -185,6 +185,24 @@ it("uses admin-configured hero photo and custom CTA labels when both languages a
   const heroImg = document.querySelector(".home-hero-image img");
   expect(heroImg).toHaveAttribute("src", "https://ik.imagekit.io/khwab/hero.webp");
   expect(heroImg).not.toHaveAttribute("loading", "lazy");
+  expect(document.querySelector(".home-hero-image.has-photo")).toBeInTheDocument();
+  expect(document.querySelector(".home-hero-showcase")).toBeInTheDocument();
+  expect(screen.getByText(t("public.hero.cardTag"))).toBeInTheDocument();
+  expect(screen.getByText(t("public.hero.chip3"))).toBeInTheDocument();
   act(() => setLanguage("hi", false));
   expect(screen.getByRole("link", { name: "दर्ज़ी डिज़ाइन देखें" })).toBeInTheDocument();
+  expect(screen.getByText(t("public.hero.chip3"))).toBeInTheDocument();
+});
+
+it("explains the real customization, fabric guidance, and doorstep pickup workflow in English and Hindi", () => {
+  mount(<HowItWorks />);
+  expect(screen.getByRole("heading", { level: 1, name: "Simple, transparent stitching from your home." })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "Choose our design or share your own" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "Pick neck & sleeve styles step-by-step—or upload yours" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 3, name: "Guidance from fabric buying to final fit" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 3, name: "Doorstep fabric pickup & outfit delivery" })).toBeInTheDocument();
+  act(() => setLanguage("hi", false));
+  expect(screen.getByRole("heading", { level: 1, name: "आपके घर से आसान और पारदर्शी कस्टम सिलाई।" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 3, name: "कपड़ा खरीदने से लेकर अंतिम फिटिंग तक पूरी मदद" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 3, name: "घर से कपड़ा पिकअप और तैयार पोशाक की डिलीवरी" })).toBeInTheDocument();
 });

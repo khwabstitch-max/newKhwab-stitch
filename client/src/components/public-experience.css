@@ -3,15 +3,24 @@
 .public-home .public-section-heading { max-width: 700px; margin-bottom: 28px; }
 .public-home .public-section-heading p { color: var(--color-muted); margin-bottom: 0; }
 .public-home .home-hero { padding-block: clamp(38px, 7vw, 82px); background: var(--color-ivory); }
-.public-home .home-hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: clamp(28px, 5vw, 76px); align-items: center; }
-.public-home .home-hero h1 { font-size: clamp(36px, 4.3vw, 62px); line-height: 1.12; text-wrap: balance; margin-bottom: 22px; }
+.public-home .home-hero-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(24px, 4.5vw, 58px); align-items: center; }
+.public-home .home-hero h1 { font-size: clamp(36px, 4.2vw, 58px); line-height: 1.12; text-wrap: balance; margin-bottom: 20px; }
 .public-home .home-hero-description { color: var(--color-muted); font-size: 16px; line-height: 1.8; max-width: 620px; }
 .public-home .home-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0 14px; }
 .public-home .home-hero-guidance { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--color-teal); font-weight: 600; }
 .public-home .home-hero-figure { margin: 0; min-width: 0; }
-.public-home .home-hero-image { aspect-ratio: 4/5; border-radius: var(--radius-card); overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); display: grid; place-items: center; }
-.public-home .home-hero-image img { width: 100%; height: 100%; object-fit: contain; }
-.public-home .home-hero-image .garment-art { width: 84%; max-height: 440px; }
+.public-home .home-hero-showcase { border-radius: 18px; overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); box-shadow: 0 20px 44px rgba(23, 76, 70, 0.08); }
+.public-home .home-hero-showcase-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 11px 16px; background: #f8f4ea; border-bottom: 1px solid var(--color-border); font-size: 11.5px; }
+.public-home .home-hero-showcase-tag { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-teal); }
+.public-home .home-hero-showcase-views { color: var(--color-muted); font-weight: 500; }
+.public-home .home-hero-image { overflow: hidden; background: #fbf8f1; display: grid; place-items: center; }
+.public-home .home-hero-image.has-photo { aspect-ratio: auto; }
+.public-home .home-hero-image.has-photo img { display: block; width: 100%; height: auto; max-height: 460px; object-fit: contain; }
+.public-home .home-hero-image.is-illustration { aspect-ratio: 4/3; padding: 20px; }
+.public-home .home-hero-image .garment-art { width: 80%; max-height: 360px; }
+.public-home .home-hero-showcase-foot { list-style: none; margin: 0; padding: 12px 16px; background: #f8f4ea; border-top: 1px solid var(--color-border); display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.public-home .home-hero-showcase-foot li { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--color-charcoal); }
+.public-home .home-hero-showcase-foot li svg { color: var(--color-teal); flex-shrink: 0; }
 .public-home figcaption { color: var(--color-muted); font-size: 12px; line-height: 1.6; margin-top: 10px; }
 .home-promotion { margin-block: 12px 8px; }
 .home-promo-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); overflow: hidden; }
@@ -48,8 +57,12 @@
 .public-home .public-collection-header { display: flex; gap: 24px; justify-content: space-between; align-items: end; margin-bottom: 28px; }
 .public-home .public-collection-header .public-section-heading { margin-bottom: 0; }
 .public-home .design-grid { align-items: stretch; }
-.public-design-card .design-image { aspect-ratio: 4/5; height: auto; }
-.public-design-card .design-info { padding: 20px 4px; display: flex; flex-direction: column; }
+.public-design-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); overflow: hidden; display: flex; flex-direction: column; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.public-design-card:hover { border-color: var(--color-teal); box-shadow: var(--shadow-card); }
+.public-design-card .design-image { aspect-ratio: 4/5; height: auto; border: 0; border-bottom: 1px solid var(--color-border); }
+.public-design-card .design-image.is-board { aspect-ratio: 4/3; background: #fbf8f1; }
+.public-design-card .design-image.is-board img { object-fit: contain; }
+.public-design-card .design-info { padding: 18px 18px 20px; display: flex; flex-direction: column; flex: 1; }
 .public-design-card .design-card-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .public-design-card .design-custom-badge { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--color-teal); background: #174c4612; border: 1px solid #174c462e; border-radius: 999px; padding: 3px 10px; line-height: 1.4; }
 .public-design-card .design-info h3 { font-size: 24px; margin: 10px 0 10px; }
@@ -99,14 +112,19 @@
 .public-footer .public-footer-hours { font-size: 13px; color: var(--color-muted); margin-top: 8px; }
 .public-footer .public-footer-announcement { border-top: 1px solid currentColor; padding-top: 16px; }
 html[lang="hi"] .public-home .home-hero h1 { line-height: 1.45; letter-spacing: 0; font-size: clamp(32px, 4vw, 54px); }
+.how-support-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 26px 0; }
+.how-support-card { padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+.how-support-card svg { color: var(--color-teal); }
+.how-support-card h3 { font-size: 20px; margin: 0; }
+.how-support-card p { margin: 0; color: var(--color-muted); font-size: 14px; line-height: 1.7; }
 @media (max-width: 1100px) {
   .public-header .header-inner .nav { gap: 10px; }
   .public-header .public-search { width: 130px; }
   .public-header .brand-tagline { display: none; }
 }
 @media (max-width: 900px) {
-  .public-home .home-hero-grid { grid-template-columns: 1fr 0.8fr; gap: 28px; }
-  .public-home .home-hero h1 { font-size: clamp(34px, 5vw, 48px); }
+  .public-home .home-hero-grid { grid-template-columns: 1fr 0.9fr; gap: 24px; }
+  .public-home .home-hero h1 { font-size: clamp(32px, 4.8vw, 46px); }
   .public-home .home-garments, .public-home .home-process-grid, .public-home .home-commitments { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .public-header .header-inner { justify-content: space-between; }
   .public-header .header-inner .public-nav { display: none; }
@@ -122,8 +140,8 @@ html[lang="hi"] .public-home .home-hero h1 { line-height: 1.45; letter-spacing: 
   .public-home .home-hero-grid { grid-template-columns: 1fr; }
   .public-home .home-hero h1 { font-size: clamp(34px, 8.6vw, 46px); }
   .public-home .home-hero-description { font-size: 15px; }
-  .public-home .home-hero-figure { max-width: 390px; width: 100%; justify-self: center; }
-  .public-home .home-hero-image { aspect-ratio: 5/4; }
+  .public-home .home-hero-figure { max-width: 440px; width: 100%; justify-self: center; }
+  .public-home .home-hero-image.is-illustration { aspect-ratio: 5/4; }
   .public-home .home-hero-image .garment-art { width: 62%; max-height: 280px; }
   .public-home .home-hero-actions .button { flex: 1; justify-content: center; }
   .public-home .public-collection-header { display: block; }
@@ -131,6 +149,7 @@ html[lang="hi"] .public-home .home-hero h1 { line-height: 1.45; letter-spacing: 
   .home-promo-card.has-image { grid-template-columns: 1fr; }
   .home-promo-card figure { max-height: 240px; }
   .public-home .home-garments { grid-template-columns: 1fr; gap: 14px; }
+  .how-support-grid { grid-template-columns: 1fr; }
   .public-home .home-garment-art { aspect-ratio: 16/9; }
   .public-home .home-process-grid { gap: 24px 18px; }
   .public-home .home-commitments { grid-template-columns: 1fr; gap: 12px; }

@@ -3763,6 +3763,13 @@ html[lang="hi"] .floating-note small {
   border-radius: 120px 120px 10px 10px;
   background: #f3eadc;
 }
+.design-main-photo.is-wide {
+  height: auto;
+  aspect-ratio: 4/3;
+  max-height: 540px;
+  border-radius: 24px 24px 10px 10px;
+  background: #fbf8f1;
+}
 .design-main-photo > .garment-art {
   height: 100%;
   width: 100%;

@@ -953,4 +953,40 @@ export const messages = Object.freeze({
   "Use the teal kurti template to attach the included board without ImageKit. For new photos, configure ImageKit on the server, then choose Upload catalogue image. JPEG, PNG and WebP up to 5 MiB are supported.":
     "ImageKit के बिना शामिल बोर्ड जोड़ने के लिए टील कुर्ती का टेम्पलेट लगाएँ। नई तस्वीरों के लिए सर्वर पर ImageKit सेट करें और फिर संग्रह की तस्वीर अपलोड करें चुनें। JPEG, PNG और WebP फ़ाइलें 5 MiB तक हो सकती हैं।",
   "Open ImageKit dashboard": "ImageKit डैशबोर्ड खोलें",
+  "Simple, transparent stitching from your home.":
+    "आपके घर से आसान और पारदर्शी कस्टम सिलाई।",
+  "Choose or upload a design, customize every detail, get help from choosing fabric to measurements, and enjoy doorstep pickup & delivery.":
+    "हमारे डिज़ाइनों में से चुनें या अपनी पसंद भेजें, हर हिस्सा कस्टमाइज़ करें, कपड़ा खरीदने से लेकर नाप लेने तक सलाह पाएँ और डोरस्टेप पिकअप-डिलीवरी की सुविधा लें।",
+  "Choose our design or share your own":
+    "हमारा डिज़ाइन चुनें या अपनी पसंद भेजें",
+  "Start by picking a kurti, suit/kameez, blouse, or alteration design you want tailored from our collection—or upload your own design reference image.":
+    "हमारे कलेक्शन से अपनी पसंद की कुर्ती, सूट/कमीज़, ब्लाउज़ या अल्टरेशन डिज़ाइन चुनें—या अपने खुद के डिज़ाइन की तस्वीर अपलोड करें।",
+  "Select what you want to customize":
+    "तय करें कि क्या-क्या बदलवाना है",
+  "Tell us which parts of the chosen design you want customized—such as the front neck design, back neck design, sleeve design, or sleeve length.":
+    "चुने हुए डिज़ाइन में जो हिस्से आप अपने हिसाब से बनवाना चाहते हैं उन्हें चुनें—जैसे फ्रंट नेक डिज़ाइन, बैक नेक डिज़ाइन, आस्तीन का डिज़ाइन या आस्तीन की लंबाई।",
+  "Pick neck & sleeve styles step-by-step—or upload yours":
+    "नेक व स्लीव डिज़ाइन अगले कदमों में चुनें—या अपनी फोटो दें",
+  "Click Next to step through your selected neck and sleeve choices. Pick from our studio options on screen, or upload a photo of your own neck or sleeve pattern.":
+    "आगे बढ़कर हर चुने हुए हिस्से के लिए स्क्रीन पर दिए गए गले और आस्तीन के विकल्पों में से चुनें, या अपने नेक व स्लीव डिज़ाइन की फोटो अपलोड करें।",
+  "Enter measurements, delivery address & get help anytime":
+    "नाप व डिलीवरी पता दें और हर कदम पर मदद पाएँ",
+  "Share your body or well-fitting garment measurements in inches or centimetres along with your delivery address. Need help anywhere? Ask our master tailor—from how to measure right to which fabric to buy for your chosen design.":
+    "इंच या सेंटीमीटर में अपना या सही फिटिंग वाले कपड़े का नाप और डिलीवरी पता दर्ज करें। कहीं भी मदद चाहिए? मास्टर दर्ज़ी से पूछें—नाप लेने से लेकर डिज़ाइन के अनुसार कौन-सा कपड़ा खरीदें, हम हर कदम पर गाइड करते हैं।",
+  "Review your personal quote before stitching":
+    "सिलाई से पहले अपना व्यक्तिगत कोटेशन देखें",
+  "We inspect your design choices, customizations, measurements and pickup preference, then share a clear versioned quote covering stitching and any applicable doorstep pickup/delivery charges. Accept only when you are completely happy.":
+    "हम आपके डिज़ाइन, बदलावों, नाप और डोरस्टेप विकल्प की समीक्षा करके सिलाई व लागू पिकअप-डिलीवरी शुल्क के साथ स्पष्ट कोटेशन और संभावित तारीख भेजते हैं। आपकी पूरी सहमति के बाद ही काम शुरू होता है।",
+  "Doorstep fabric pickup, live tracking & home delivery":
+    "घर से कपड़ा पिकअप, लाइव ट्रैकिंग और तैयार डिलीवरी",
+  "With doorstep pickup & delivery, we collect your unstitched fabric from home and deliver the stitched outfit back to your door for a sensible fee shown in your quote—or you can arrange atelier handover. Track every stage in My requests.":
+    "डोरस्टेप सुविधा चुनने पर कोटेशन में तय शुल्क के साथ आपके घर से बिना सिला कपड़ा पिक किया जाता है और सिलाई पूरी होने के बाद तैयार पोशाक घर पहुँचाई जाती है—या आप स्टूडियो में भी दे सकते हैं। हर चरण की स्थिति ऑनलाइन ट्रैक करें।",
+  "Guidance from fabric buying to final fit":
+    "कपड़ा खरीदने से लेकर अंतिम फिटिंग तक पूरी मदद",
+  "Not sure whether cotton, silk, rayon or linen suits a neckline or drape best? Ask our tailor before buying your fabric, and request measurement guidance anytime inside the form or on WhatsApp.":
+    "समझ नहीं आ रहा कि चुने हुए डिज़ाइन के लिए कॉटन, सिल्क, रेयान या लिनन में से कौन-सा कपड़ा सबसे बेहतर रहेगा? कपड़ा खरीदने से पहले ही हमारे दर्ज़ी से सलाह लें, और नाप लेने में कभी भी मदद पाएँ।",
+  "Doorstep fabric pickup & outfit delivery":
+    "घर से कपड़ा पिकअप और तैयार पोशाक की डिलीवरी",
+  "Skip the trip when you need convenience: your unstitched fabric is picked up right from your doorstep and returned stitched to your address. Pickup and delivery charges are clearly agreed in your quote based on service details.":
+    "सहूलियत के लिए डोरस्टेप सेवा चुनें: आपका बिना सिला कपड़ा घर से लिया जाएगा और सिलकर वापस आपके पते पर पहुँचाया जाएगा। क्षेत्र व सेवा के अनुसार इसका शुल्क आपके कोटेशन में स्पष्ट रूप से पहले बताया जाता है।",
 });

@@ -29,6 +29,7 @@ import {
   Instagram,
   Eye,
   EyeOff,
+  Truck,
 } from "lucide-react";
 import { useResource, useSite } from "../lib/hooks";
 import { useAuth } from "../lib/auth";
@@ -51,9 +52,15 @@ import {
 export function DesignCard({ design, index = 0 }) {
   useLanguage();
   const location = useLocation();
+  const isBoard = Boolean(
+    (design.coverView && !design.coverView.crop) ||
+    (design.coverView?.crop &&
+      design.coverView.crop.width > design.coverView.crop.height * 1.15) ||
+    (!design.coverView && design.coverImageUrl),
+  );
   return (
     <Link className="design-card public-design-card" to={`/designs/${design.slug}`} state={location.pathname === "/catalogue" ? { catalogueReturnTo: location.pathname + location.search } : undefined}>
-      <div className={`design-image tone-${index % 4}`}>
+      <div className={`design-image tone-${index % 4} ${isBoard ? "is-board" : ""}`}>
         {design.coverView ? (
           <DesignImage
             image={design.coverView}
@@ -129,8 +136,31 @@ export function Home() {
             <Link className="home-hero-guidance" to="/contact">{t("public.action.guidance")}<ArrowRight size={16} aria-hidden="true" /></Link>
           </div>
           <figure className="home-hero-figure">
-            <div className="home-hero-image">
-              {photo ? <img src={photo} alt="" width="800" height="1000" fetchPriority="high" /> : <GarmentArt garment="kurti" large />}
+            <div className="home-hero-showcase">
+              <div className="home-hero-showcase-head">
+                <span className="home-hero-showcase-tag">
+                  <Scissors size={13} aria-hidden="true" />
+                  {t("public.hero.cardTag")}
+                </span>
+                <span className="home-hero-showcase-views">
+                  {t("public.hero.cardViews")}
+                </span>
+              </div>
+              <div className={`home-hero-image ${photo ? "has-photo" : "is-illustration"}`}>
+                {photo ? (
+                  <img src={photo} alt="" fetchPriority="high" />
+                ) : (
+                  <GarmentArt garment="kurti" large />
+                )}
+              </div>
+              <ul className="home-hero-showcase-foot" aria-label={t("public.commitments.title")}>
+                {[1, 2, 3].map((chip) => (
+                  <li key={chip}>
+                    <Check size={13} aria-hidden="true" />
+                    <span>{t(`public.hero.chip${chip}`)}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
             <figcaption>{t(photo ? "public.designPhoto" : "public.illustration")}</figcaption>
           </figure>
@@ -498,53 +528,79 @@ export function HowItWorks() {
     <div className="container page narrow">
       <PageHeading
         eyebrow={t("YOUR FABRIC, OUR CRAFT")}
-        title={t("A little care, at every step.")}
+        title={t("Simple, transparent stitching from your home.")}
       >
         {t(
-          "Here is how we turn your inspiration into a personally stitched garment.",
+          "Choose or upload a design, customize every detail, get help from choosing fabric to measurements, and enjoy doorstep pickup & delivery.",
         )}
       </PageHeading>
       <div className="journey">
         {[
           [
-            t("Share your inspiration"),
+            t("Choose our design or share your own"),
             t(
-              "Browse our stitching designs, or upload a reference image of your own. Choose kurti, suit/kameez, blouse, or alteration.",
+              "Start by picking a kurti, suit/kameez, blouse, or alteration design you want tailored from our collection—or upload your own design reference image.",
             ),
           ],
           [
-            t("Tell us about your fit"),
+            t("Select what you want to customize"),
             t(
-              "Share body measurements or measurements of a well-fitting garment in inches or centimetres. Select \u201CNeed assistance\u201D if you would like help. These methods are kept distinct.",
+              "Tell us which parts of the chosen design you want customized—such as the front neck design, back neck design, sleeve design, or sleeve length.",
             ),
           ],
           [
-            t("Review your personal quote"),
+            t("Pick neck & sleeve styles step-by-step—or upload yours"),
             t(
-              "We review the design, measurements, work and preferred date. You receive a versioned quote with a proposed price and date. Accept only when you are happy.",
+              "Click Next to step through your selected neck and sleeve choices. Pick from our studio options on screen, or upload a photo of your own neck or sleeve pattern.",
             ),
           ],
           [
-            t("Bring your fabric"),
+            t("Enter measurements, delivery address & get help anytime"),
             t(
-              "After your acceptance, arrange fabric handover with the atelier. We inspect it before stitching begins. Please do not send fabric before discussing the arrangement.",
+              "Share your body or well-fitting garment measurements in inches or centimetres along with your delivery address. Need help anywhere? Ask our master tailor—from how to measure right to which fabric to buy for your chosen design.",
             ),
           ],
           [
-            t("Watch it come together"),
+            t("Review your personal quote before stitching"),
             t(
-              "Follow updates in My requests: fabric inspected, stitching, ready, dispatched and delivered. Handover and dispatch details are agreed personally.",
+              "We inspect your design choices, customizations, measurements and pickup preference, then share a clear versioned quote covering stitching and any applicable doorstep pickup/delivery charges. Accept only when you are completely happy.",
             ),
           ],
-        ].map(([t, c], i) => (
-          <article key={t}>
+          [
+            t("Doorstep fabric pickup, live tracking & home delivery"),
+            t(
+              "With doorstep pickup & delivery, we collect your unstitched fabric from home and deliver the stitched outfit back to your door for a sensible fee shown in your quote—or you can arrange atelier handover. Track every stage in My requests.",
+            ),
+          ],
+        ].map(([title, copy], i) => (
+          <article key={title}>
             <span>{String(i + 1).padStart(2, "0")}</span>
             <div>
-              <h2>{t}</h2>
-              <p>{c}</p>
+              <h2>{title}</h2>
+              <p>{copy}</p>
             </div>
           </article>
         ))}
+      </div>
+      <div className="how-support-grid">
+        <article className="panel how-support-card">
+          <Scissors size={22} aria-hidden="true" />
+          <h3>{t("Guidance from fabric buying to final fit")}</h3>
+          <p>
+            {t(
+              "Not sure whether cotton, silk, rayon or linen suits a neckline or drape best? Ask our tailor before buying your fabric, and request measurement guidance anytime inside the form or on WhatsApp.",
+            )}
+          </p>
+        </article>
+        <article className="panel how-support-card">
+          <Truck size={22} aria-hidden="true" />
+          <h3>{t("Doorstep fabric pickup & outfit delivery")}</h3>
+          <p>
+            {t(
+              "Skip the trip when you need convenience: your unstitched fabric is picked up right from your doorstep and returned stitched to your address. Pickup and delivery charges are clearly agreed in your quote based on service details.",
+            )}
+          </p>
+        </article>
       </div>
       <Notice>
         {t(

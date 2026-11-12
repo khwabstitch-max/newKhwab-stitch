@@ -94,13 +94,18 @@ export function DesignGallery({ design }) {
     (design.coverImageUrl ? { url: design.coverImageUrl } : null);
   const label = localize(image, "label");
   const alt = localize(design, "title") + (label ? " — " + label : "");
+  const isWide = Boolean(
+    image &&
+    (!image.crop ||
+      (image.crop.width || 0) > (image.crop.height || 0) * 1.15),
+  );
   function enlarge(index = active) {
     setSelected(index);
     setZoomed(true);
   }
   return (
     <section className="design-gallery" aria-label={t("Design previews")}>
-      <div className="design-main-photo">
+      <div className={`design-main-photo ${isWide ? "is-wide" : ""}`}>
         {image ? (
           <DesignImage image={image} alt={alt} />
         ) : (
