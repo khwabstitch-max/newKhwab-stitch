@@ -1,6 +1,8 @@
 .design-guide-explorer {
   margin: 2rem 0;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .guide-explorer-tabs {
@@ -9,7 +11,10 @@
   border-bottom: 2px solid #e8e2d5;
   margin-bottom: 1.5rem;
   overflow-x: auto;
-  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .guide-tab-btn {
