@@ -133,7 +133,7 @@ export function Home() {
   const process = Array.isArray(homepage.process) && homepage.process.length === 4 &&
     homepage.process.every((item) => homepageText(item, "title", language) && (!item.description || homepageText(item, "description", language)))
     ? homepage.process : DEFAULT_HOMEPAGE.process;
-  const photo = homepage.hero?.imageUrl || site.bannerImageUrl || designs.find((design) => design.coverImageUrl)?.coverImageUrl;
+  const photo = homepage.hero?.imageUrl || site.bannerImageUrl || designs.find((design) => design.coverImageUrl)?.coverImageUrl || "/design-library/teal-kurti-board.png";
   const faqs = (site.faqs || []).filter((faq) => homepageText(faq, "question", language) && homepageText(faq, "answer", language)).slice(0, 4);
   return (
     <div className="public-home">
@@ -143,6 +143,24 @@ export function Home() {
             <p className="eyebrow">{hero.eyebrow}</p>
             <h1>{hero.headline}</h1>
             <p className="home-hero-description">{hero.description}</p>
+            <div className="home-hero-visual-strip" aria-label={t("Atelier tailoring highlights")}>
+              <div className="hero-visual-card">
+                <span className="hero-visual-icon"><Leaf size={15} aria-hidden="true" /></span>
+                <span className="hero-visual-label"><strong>{t("public.hero.feature1Title")}</strong><small>{t("public.hero.feature1Desc")}</small></span>
+              </div>
+              <div className="hero-visual-card">
+                <span className="hero-visual-icon"><Scissors size={15} aria-hidden="true" /></span>
+                <span className="hero-visual-label"><strong>{t("public.hero.feature2Title")}</strong><small>{t("public.hero.feature2Desc")}</small></span>
+              </div>
+              <div className="hero-visual-card">
+                <span className="hero-visual-icon"><Ruler size={15} aria-hidden="true" /></span>
+                <span className="hero-visual-label"><strong>{t("public.hero.feature3Title")}</strong><small>{t("public.hero.feature3Desc")}</small></span>
+              </div>
+              <div className="hero-visual-card">
+                <span className="hero-visual-icon"><Truck size={15} aria-hidden="true" /></span>
+                <span className="hero-visual-label"><strong>{t("public.hero.feature4Title")}</strong><small>{t("public.hero.feature4Desc")}</small></span>
+              </div>
+            </div>
             <div className="home-hero-actions">
               <Link className="button" to="/catalogue" onMouseEnter={() => prefetchPublicResource("/designs?limit=12&page=1")}>{heroCtas.primaryCtaLabel || t("public.action.explore")}<ArrowRight size={17} aria-hidden="true" /></Link>
               <Link className="button secondary" to="/request?source=reference">{heroCtas.secondaryCtaLabel || t("public.action.reference")}</Link>
@@ -161,11 +179,29 @@ export function Home() {
                 </span>
               </div>
               <div className={`home-hero-image ${photo ? "has-photo" : "is-illustration"}`}>
+                <span className="hero-stitching-badge">
+                  <Scissors size={12} aria-hidden="true" />
+                  {t("public.card.customBadge")} • {t("public.hero.fabricPill")}
+                </span>
                 {photo ? (
                   <img src={photo} alt="" fetchPriority="high" />
                 ) : (
                   <GarmentArt garment="kurti" large />
                 )}
+              </div>
+              <div className="home-hero-craft-swatches" aria-label={t("Custom styling options")}>
+                <div className="craft-swatch-item">
+                  <img src="/crops/neck/v-neck.jpg" alt="" loading="lazy" />
+                  <span>{t("Neck Design")}</span>
+                </div>
+                <div className="craft-swatch-item">
+                  <img src="/crops/sleeve/bishop-balloon.jpg" alt="" loading="lazy" />
+                  <span>{t("Sleeve Design")}</span>
+                </div>
+                <div className="craft-swatch-item">
+                  <img src="/crops/back/deep-back.jpg" alt="" loading="lazy" />
+                  <span>{t("Back Design")}</span>
+                </div>
               </div>
               <ul className="home-hero-showcase-foot" aria-label={t("public.commitments.title")}>
                 {[1, 2, 3].map((chip) => (
@@ -189,6 +225,10 @@ export function Home() {
             return (
               <article className="home-garment-card" key={garment}>
                 <div className="home-garment-art" aria-hidden="true">
+                  <span className="garment-stitching-tag">
+                    <Scissors size={11} aria-hidden="true" />
+                    {t("Aapka Fabric • Custom Stitching")}
+                  </span>
                   <GarmentArt garment={garment} />
                 </div>
                 <div className="home-garment-body">

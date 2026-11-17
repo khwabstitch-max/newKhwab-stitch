@@ -135,6 +135,34 @@
   flex-wrap: wrap;
 }
 
+.measurement-master-thumb {
+  width: 70px;
+  height: 94px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #d8cfbe;
+  background: #fbf8f1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.measurement-master-thumb:hover,
+.measurement-master-thumb:focus-visible {
+  transform: scale(1.05);
+  box-shadow: 0 4px 14px rgba(27, 77, 71, 0.18);
+  outline: 2px solid var(--color-teal, #1b4d47);
+  outline-offset: 2px;
+}
+
+.measurement-master-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .measurement-master-info,
 .guide-banner-info {
   display: flex;

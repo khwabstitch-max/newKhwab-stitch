@@ -36,6 +36,20 @@ const garmentGuidePoints = {
   ],
 };
 
+const garmentGuideImageMap = {
+  kurti: "/guides/measurement/kurti-measurement-guide.jpg",
+  blouse: "/guides/measurement/blouse-measurement-guide.jpg",
+  suit: "/guides/measurement/suit-measurement-guide.jpg",
+  kameez: "/guides/measurement/suit-measurement-guide.jpg",
+};
+
+const garmentTitleMap = {
+  kurti: { en: "Kurti Measurement Guide", hi: "कुर्ती नाप गाइड" },
+  blouse: { en: "Blouse Measurement Guide", hi: "ब्लाउज नाप गाइड" },
+  suit: { en: "Suit / Kameez Measurement Guide", hi: "सूट / कमीज़ नाप गाइड" },
+  kameez: { en: "Suit / Kameez Measurement Guide", hi: "सूट / कमीज़ नाप गाइड" },
+};
+
 export function MeasurementGuides({
   garment,
   method,
@@ -63,6 +77,8 @@ export function MeasurementGuides({
   );
 
   const points = garmentGuidePoints[garment] || garmentGuidePoints.kurti;
+  const specificGuideImage = garmentGuideImageMap[garment] || "/guides/measurement-guide.jpg";
+  const garmentTitle = garmentTitleMap[garment] ? (language === "hi" ? garmentTitleMap[garment].hi : garmentTitleMap[garment].en) : t("Measurement Guide – सही नाप, परफेक्ट फिट!");
 
   return (
     <section className="measurement-guides" aria-label={t("Measurement guides")}>
@@ -70,12 +86,22 @@ export function MeasurementGuides({
 
       {isMethodGuided && (
         <div className="measurement-master-banner">
+          <div
+            className="measurement-master-thumb"
+            onClick={() => setShowMasterGuide(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowMasterGuide(true); }}
+            aria-label={`${t("Enlarge measurement guide")} ${garmentTitle}`}
+          >
+            <img src={specificGuideImage} alt={garmentTitle} loading="lazy" />
+          </div>
           <div className="measurement-master-info">
             <span className="measurement-master-badge">
               <Sparkles size={13} aria-hidden="true" />
               {t("Official Fit Guide")}
             </span>
-            <strong>{t("Measurement Guide – सही नाप, परफेक्ट फिट!")}</strong>
+            <strong>{garmentTitle}</strong>
             <p>
               {t(
                 "Your Style, Our Stitch • Visual guidance for Kurti, Blouse & Suit",
@@ -189,11 +215,11 @@ export function MeasurementGuides({
 
       {showMasterGuide && (
         <GuideModal
-          title={t("Measurement Guide – सही नाप, परफेक्ट फिट!")}
+          title={garmentTitle}
           subtitle={t(
             "Your Style, Our Stitch • Visual guidance for Kurti, Blouse & Suit",
           )}
-          imageUrl="/guides/measurement-guide.jpg"
+          imageUrl={specificGuideImage}
           onClose={() => setShowMasterGuide(false)}
           footerNote={t(
             "Illustrations explain the method; enter your own measurements. No illustrated size is prefilled.",

@@ -675,3 +675,61 @@ export function findLengthGuide(query) {
   }
   return null;
 }
+
+export const measurementGuideCards = [
+  {
+    id: "kurti",
+    garment: "kurti",
+    name: "Kurti Measurement Guide",
+    nameHi: "कुर्ती नाप गाइड",
+    subname: "Kurti Naap Guide",
+    image: "/guides/measurement/kurti-measurement-guide.jpg",
+    description: "Numbered measurement points for Kurtis — shoulder, neck depth, bust, waist, hip, and kurti length.",
+    descriptionHi: "कुर्ती के लिए नंबर वाली नाप गाइड — कंधे, गले की गहराई, सीना, कमर, कूल्हे और कुर्ती की लंबाई।",
+    points: [
+      { num: 1, en: "Shoulder", hi: "कंधे की चौड़ाई" },
+      { num: 2, en: "Neck Depth", hi: "गले की गहराई" },
+      { num: 3, en: "Bust", hi: "सीना" },
+      { num: 4, en: "Waist", hi: "कमर" },
+      { num: 5, en: "Hip", hi: "कूल्हे" },
+      { num: 6, en: "Kurti Length", hi: "कुर्ती की लंबाई" },
+    ],
+  },
+  {
+    id: "blouse",
+    garment: "blouse",
+    name: "Blouse Measurement Guide",
+    nameHi: "ब्लाउज नाप गाइड",
+    subname: "Blouse Naap Guide",
+    image: "/guides/measurement/blouse-measurement-guide.jpg",
+    description: "Numbered measurement points for Saree Blouses — shoulder, neck depth, bust, waist, blouse length, and sleeve length.",
+    descriptionHi: "साड़ी ब्लाउज के लिए नंबर वाली नाप गाइड — कंधे, गले की गहराई, सीना, कमर, ब्लाउज की लंबाई और बाजू की लंबाई।",
+    points: [
+      { num: 1, en: "Shoulder", hi: "कंधे की चौड़ाई" },
+      { num: 2, en: "Neck Depth", hi: "गले की गहराई" },
+      { num: 3, en: "Bust", hi: "सीना" },
+      { num: 4, en: "Waist", hi: "कमर" },
+      { num: 5, en: "Blouse Length", hi: "ब्लाउज की लंबाई" },
+      { num: 6, en: "Sleeve Length", hi: "बाजू की लंबाई" },
+    ],
+  },
+  {
+    id: "suit",
+    garment: "suit",
+    name: "Suit / Kameez Measurement Guide",
+    nameHi: "सूट / कमीज़ नाप गाइड",
+    subname: "Suit & Kameez Naap Guide",
+    image: "/guides/measurement/suit-measurement-guide.jpg",
+    description: "Numbered measurement points for Salwar Suits & Kameez — shoulder, neck depth, bust, waist, hip, suit length, and sleeve arm.",
+    descriptionHi: "सलवार सूट और कमीज़ के लिए नंबर वाली नाप गाइड — कंधे, गले की गहराई, सीना, कमर, कूल्हे, सूट की लंबाई और बाजू छोर।",
+    points: [
+      { num: 1, en: "Shoulder", hi: "कंधे की चौड़ाई" },
+      { num: 2, en: "Neck Depth", hi: "गले की गहराई" },
+      { num: 3, en: "Bust", hi: "सीना" },
+      { num: 4, en: "Waist", hi: "कमर" },
+      { num: 5, en: "Suit Length", hi: "सूट की लंबाई" },
+      { num: 6, en: "Sleeve Length", hi: "बाजू की लंबाई" },
+      { num: 7, en: "Sleeve Arm", hi: "बाजू छोर" },
+    ],
+  },
+];
