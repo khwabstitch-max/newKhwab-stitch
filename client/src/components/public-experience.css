@@ -26,55 +26,46 @@
 .public-home .home-hero-description { color: var(--color-muted); font-size: 16px; line-height: 1.75; max-width: 600px; }
 .home-hero-visual-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 18px;
-  margin-bottom: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+  margin-bottom: 6px;
 }
 .hero-visual-card {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 10px 14px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5ded0);
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 .hero-visual-icon {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
   background: var(--color-teal-soft, #e6f0ed);
   color: var(--color-teal, #1c524c);
-}
-.hero-visual-thumb {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: 6px;
-  object-fit: cover;
-  display: block;
-  border: 1px solid var(--color-border, #e0d8ca);
 }
 .hero-visual-label {
   display: flex;
   flex-direction: column;
-  line-height: 1.25;
+  gap: 2px;
 }
 .hero-visual-label strong {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--color-charcoal, #222);
-  white-space: nowrap;
+  line-height: 1.3;
 }
 .hero-visual-label small {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--color-muted, #666);
-  white-space: nowrap;
+  line-height: 1.3;
 }
 .public-home .home-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0 14px; }
 .public-home .home-hero-guidance { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--color-teal); font-weight: 600; font-size: 14.5px; }
@@ -84,54 +75,36 @@
 .public-home .home-hero-showcase-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 11px 16px; background: #f4efe4; border-bottom: 1px solid var(--color-border); font-size: 11.5px; }
 .public-home .home-hero-showcase-tag { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-teal); }
 .public-home .home-hero-showcase-views { color: var(--color-muted); font-weight: 500; }
-.public-home .home-hero-image { position: relative; overflow: hidden; background: #faf6ee; display: grid; place-items: center; }
-.hero-stitching-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-teal, #1b4d47);
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border: 1px solid rgba(27, 77, 71, 0.16);
-  border-radius: 999px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
+.public-home .home-hero-image { overflow: hidden; background: #faf6ee; display: grid; place-items: center; }
 .public-home .home-hero-image.has-photo { aspect-ratio: auto; }
 .public-home .home-hero-image.has-photo img { display: block; width: 100%; height: auto; max-height: 450px; object-fit: contain; }
 .public-home .home-hero-image.is-illustration { aspect-ratio: 4/3; padding: 20px; }
 .public-home .home-hero-image .garment-art { width: 80%; max-height: 360px; }
 .home-hero-craft-swatches {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
   background: #faf6ee;
   border-top: 1px solid var(--color-border);
 }
 .craft-swatch-item {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e2dac9);
-  border-radius: 8px;
-  padding: 5px 8px;
+  border-radius: 999px;
+  padding: 4px 12px 4px 5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 .craft-swatch-item img {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 50%;
   object-fit: cover;
   display: block;
 }
@@ -139,9 +112,6 @@
   font-size: 11.5px;
   font-weight: 600;
   color: var(--color-charcoal, #2c3531);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .public-home .home-hero-showcase-foot { list-style: none; margin: 0; padding: 12px 16px; background: #f4efe4; border-top: 1px solid var(--color-border); display: flex; flex-wrap: wrap; gap: 8px 14px; }
 .public-home .home-hero-showcase-foot li { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--color-charcoal); }
@@ -169,8 +139,7 @@
 .public-home .home-garments { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
 .public-home .home-garment-card { border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); overflow: hidden; display: flex; flex-direction: column; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
 .public-home .home-garment-card:hover { border-color: var(--color-teal); box-shadow: var(--shadow-card); }
-.public-home .home-garment-art { position: relative; background: var(--color-ivory); aspect-ratio: 4/3; display: grid; place-items: center; padding: 18px; border-bottom: 1px solid var(--color-border); }
-.public-home .home-garment-art.has-garment-photo { background: #fcf9f2; padding: 10px; }
+.public-home .home-garment-art { position: relative; background: #fbf8f1; aspect-ratio: 4/3; display: grid; place-items: center; padding: 14px; border-bottom: 1px solid var(--color-border); overflow: hidden; }
 .home-garment-photo {
   width: 100%;
   height: 100%;
@@ -182,21 +151,19 @@
 .public-home .home-garment-card:hover .home-garment-photo {
   transform: scale(1.04);
 }
-.garment-stitching-tag {
-  position: absolute;
-  top: 8px;
-  left: 8px;
+.garment-stitching-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--color-teal, #1c524c);
-  background: rgba(255, 255, 255, 0.92);
-  padding: 3px 8px;
+  background: var(--color-teal-soft, #e6f0ed);
+  padding: 3px 9px;
   border-radius: 999px;
   border: 1px solid rgba(28, 82, 76, 0.16);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  width: fit-content;
+  margin-bottom: 4px;
 }
 .public-home .home-garment-art .garment-art { max-height: 140px; width: auto; max-width: 78%; }
 .public-home .home-garment-body { padding: 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
@@ -239,65 +206,53 @@
 .public-home .home-process { background: var(--color-surface); border-block: 1px solid var(--color-border); }
 .public-home .home-process-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0 0 24px; counter-reset: steps; }
 .public-home .home-process-grid li { counter-increment: steps; }
-.public-home .home-process-grid.home-process-compact li { background: var(--color-ivory); border: 1px solid var(--color-border); border-top: 3px solid var(--color-champagne); border-radius: var(--radius-card); padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; }
-.public-home .home-process-grid li:before { content: counter(steps, decimal-leading-zero); display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--color-teal); background: var(--color-teal-soft); border: 1px solid rgba(23, 76, 70, 0.16); font-size: 13px; font-weight: 700; }
 .public-home .home-process-grid.home-process-compact li.home-process-step-item:before { display: none; }
 .public-home .home-process-grid.home-process-compact li.home-process-step-item {
-  padding: 12px;
-  gap: 10px;
+  padding: 22px 20px;
+  gap: 14px;
   background: var(--color-surface, #fff);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--color-champagne);
+  border-radius: var(--radius-card, 14px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 .public-home .home-process-grid.home-process-compact li.home-process-step-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgba(28, 82, 76, 0.1);
+  transform: translateY(-3px);
+  border-color: var(--color-teal);
+  box-shadow: 0 10px 24px rgba(23, 76, 70, 0.08);
 }
-.home-process-step-media {
-  position: relative;
-  aspect-ratio: 16/10;
-  border-radius: 10px;
-  overflow: hidden;
-  background: #fbf8f1;
-  border: 1px solid var(--color-border, #e5ded0);
+.home-process-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-.home-process-step-media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.3s ease;
-}
-.home-process-step-item:hover .home-process-step-media img {
-  transform: scale(1.04);
-}
-.process-step-pill {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(23, 76, 70, 0.92);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 3px 8px;
-  border-radius: 999px;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-.process-step-tag {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.process-step-number {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-teal-soft, #e6f0ed);
   color: var(--color-teal, #1c524c);
-  margin-top: 2px;
+  border: 1px solid rgba(28, 82, 76, 0.18);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.process-step-indicator {
+  width: 24px;
+  height: 2px;
+  background: var(--color-champagne, #b39869);
+  border-radius: 999px;
+  opacity: 0.6;
 }
 .public-home .home-process-grid.home-process-compact .home-process-step-item h3 {
-  font-size: 14.5px;
+  font-size: 15.5px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.45;
   margin: 0;
+  color: var(--color-charcoal);
 }
 .public-home .home-process-grid h3 { font-size: 20px; line-height: 1.3; margin: 0; color: var(--color-charcoal); }
 .public-home .home-process-grid p { color: var(--color-muted); font-size: 14px; }
@@ -601,7 +556,7 @@ html[lang="hi"] .public-home .home-hero h1 { line-height: 1.45; letter-spacing: 
   .home-promo-card figure { max-height: 240px; }
   .public-home .home-garments { grid-template-columns: 1fr; gap: 14px; }
   .how-support-grid { grid-template-columns: 1fr; }
-  .public-home .home-garment-art { aspect-ratio: 16/9; }
+  .public-home .home-garment-art { aspect-ratio: 4/3; }
   .public-home .home-process-grid { grid-template-columns: 1fr; gap: 12px; }
   .public-home .home-process-grid.home-process-compact li { padding: 16px; }
   .public-home .home-commitments { grid-template-columns: 1fr; gap: 12px; }

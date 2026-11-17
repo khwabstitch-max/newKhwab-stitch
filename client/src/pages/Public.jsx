@@ -125,13 +125,6 @@ const garmentVisualMap = {
   alteration: "/guides/sleeve-length-guide.jpg",
 };
 
-const processStepMedia = [
-  "/crops/neck/sweetheart-neck.jpg",
-  "/crops/sleeve/bishop-balloon.jpg",
-  "/guides/measurement/kurti-measurement-guide.jpg",
-  "/design-library/teal-kurti-board.png",
-];
-
 export function Home() {
   const { language } = useLanguage();
   const site = useSite();
@@ -159,19 +152,19 @@ export function Home() {
             <p className="home-hero-description">{hero.description}</p>
             <div className="home-hero-visual-strip" aria-label={t("Atelier tailoring highlights")}>
               <div className="hero-visual-card">
-                <span className="hero-visual-icon"><Leaf size={15} aria-hidden="true" /></span>
+                <span className="hero-visual-icon"><Leaf size={16} aria-hidden="true" /></span>
                 <span className="hero-visual-label"><strong>{t("public.hero.feature1Title")}</strong><small>{t("public.hero.feature1Desc")}</small></span>
               </div>
               <div className="hero-visual-card">
-                <img src="/crops/neck/v-neck.jpg" alt="" className="hero-visual-thumb" />
+                <span className="hero-visual-icon"><Scissors size={16} aria-hidden="true" /></span>
                 <span className="hero-visual-label"><strong>{t("public.hero.feature2Title")}</strong><small>{t("public.hero.feature2Desc")}</small></span>
               </div>
               <div className="hero-visual-card">
-                <img src="/crops/length/three-quarter-3-4.jpg" alt="" className="hero-visual-thumb" />
+                <span className="hero-visual-icon"><Ruler size={16} aria-hidden="true" /></span>
                 <span className="hero-visual-label"><strong>{t("public.hero.feature3Title")}</strong><small>{t("public.hero.feature3Desc")}</small></span>
               </div>
               <div className="hero-visual-card">
-                <span className="hero-visual-icon"><Truck size={15} aria-hidden="true" /></span>
+                <span className="hero-visual-icon"><Truck size={16} aria-hidden="true" /></span>
                 <span className="hero-visual-label"><strong>{t("public.hero.feature4Title")}</strong><small>{t("public.hero.feature4Desc")}</small></span>
               </div>
             </div>
@@ -193,10 +186,6 @@ export function Home() {
                 </span>
               </div>
               <div className={`home-hero-image ${photo ? "has-photo" : "is-illustration"}`}>
-                <span className="hero-stitching-badge">
-                  <Scissors size={12} aria-hidden="true" />
-                  {t("public.card.customBadge")} • {t("public.hero.fabricPill")}
-                </span>
                 {photo ? (
                   <img src={photo} alt="" fetchPriority="high" />
                 ) : (
@@ -238,11 +227,7 @@ export function Home() {
             const basePrice = site.garmentBasePrices?.[garment];
             return (
               <article className="home-garment-card" key={garment}>
-                <div className="home-garment-art has-garment-photo" aria-hidden="true">
-                  <span className="garment-stitching-tag">
-                    <Scissors size={11} aria-hidden="true" />
-                    {t("Aapka Fabric • Custom Stitching")}
-                  </span>
+                <div className="home-garment-art" aria-hidden="true">
                   {garmentVisualMap[garment] ? (
                     <img
                       src={garmentVisualMap[garment]}
@@ -255,6 +240,10 @@ export function Home() {
                   )}
                 </div>
                 <div className="home-garment-body">
+                  <span className="garment-stitching-pill">
+                    <Scissors size={11} aria-hidden="true" />
+                    {t("Aapka Fabric • Custom Stitching")}
+                  </span>
                   <h3>
                     <Link to={"/catalogue?garment=" + garment}>{t("public.garment." + garment)}</Link>
                   </h3>
@@ -289,24 +278,15 @@ export function Home() {
         <div className="container">
           <div className="public-section-heading"><h2>{t("public.process.title")}</h2></div>
           <ol className="home-process-grid home-process-compact">
-            {process.map((item, index) => {
-              const stepTags = [
-                t("Step 1: Choose Design"),
-                t("Step 2: Custom Styles"),
-                t("Step 3: Exact Fit"),
-                t("Step 4: Doorstep Delivery"),
-              ];
-              return (
-                <li key={index} className="home-process-step-item">
-                  <div className="home-process-step-media">
-                    <img src={processStepMedia[index] || processStepMedia[0]} alt="" loading="lazy" />
-                    <span className="process-step-pill">0{index + 1}</span>
-                  </div>
-                  <span className="process-step-tag">{stepTags[index]}</span>
-                  <h3>{homepageText(item, "title", language)}</h3>
-                </li>
-              );
-            })}
+            {process.map((item, index) => (
+              <li key={index} className="home-process-step-item">
+                <div className="home-process-step-header">
+                  <span className="process-step-number">0{index + 1}</span>
+                  <span className="process-step-indicator" />
+                </div>
+                <h3>{homepageText(item, "title", language)}</h3>
+              </li>
+            ))}
           </ol>
           <ul className="home-commitments" aria-label={t("public.commitments.title")}>
             {[1, 2, 3, 4].map((step) => (

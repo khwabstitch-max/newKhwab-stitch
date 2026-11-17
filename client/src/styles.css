@@ -3756,19 +3756,23 @@ html[lang="hi"] .floating-note small {
   min-width: 0;
 }
 .design-main-photo {
-  height: 600px;
+  height: 560px;
+  max-height: 70vh;
   position: relative;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 120px 120px 10px 10px;
-  background: #f3eadc;
+  border-radius: 20px;
+  background: #faf7f2;
 }
 .design-main-photo.is-wide {
   height: auto;
-  aspect-ratio: 4/3;
-  max-height: 540px;
-  border-radius: 24px 24px 10px 10px;
-  background: #fbf8f1;
+  aspect-ratio: 16/10;
+  max-height: 520px;
+  border-radius: 20px;
+  background: #faf7f2;
+}
+.design-main-photo > .design-photo {
+  background: transparent;
 }
 .design-main-photo > .garment-art {
   height: 100%;
@@ -4080,8 +4084,13 @@ html[lang="hi"] .floating-note small {
   .design-presentation {
     gap: 30px;
   }
-  .design-main-photo {
-    height: 530px;
+  .design-main-photo:not(.is-wide) {
+    height: 500px;
+  }
+  .design-main-photo.is-wide {
+    height: auto;
+    aspect-ratio: 16/10;
+    max-height: 460px;
   }
   .design-specifications dl > div {
     grid-template-columns: 85px minmax(0, 1fr);
@@ -4096,10 +4105,17 @@ html[lang="hi"] .floating-note small {
     grid-template-columns: minmax(0, 1fr);
     gap: 35px;
   }
-  .design-main-photo {
-    height: 540px;
-    max-height: 70vh;
-    border-radius: 70px 70px 8px 8px;
+  .design-main-photo:not(.is-wide) {
+    height: auto;
+    aspect-ratio: 3/4;
+    max-height: 65vh;
+    border-radius: 16px;
+  }
+  .design-main-photo.is-wide {
+    height: auto;
+    aspect-ratio: 16/10;
+    max-height: 50vh;
+    border-radius: 16px;
   }
   .design-presentation .detail-copy h1 {
     font-size: 36px;
@@ -4131,8 +4147,15 @@ html[lang="hi"] .floating-note small {
   }
 }
 @media (max-width: 380px) {
-  .design-main-photo {
-    height: 440px;
+  .design-main-photo:not(.is-wide) {
+    height: auto;
+    aspect-ratio: 3/4;
+    max-height: 380px;
+  }
+  .design-main-photo.is-wide {
+    height: auto;
+    aspect-ratio: 16/10;
+    max-height: 260px;
   }
   .design-specifications dl > div {
     grid-template-columns: 75px minmax(0, 1fr);

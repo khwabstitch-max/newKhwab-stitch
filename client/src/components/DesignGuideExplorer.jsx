@@ -121,7 +121,10 @@ export function DesignGuideExplorer() {
       </div>
 
       <div className="guide-explorer-header">
-        <p className="guide-explorer-desc">{currentTab.intro}</p>
+        <div>
+          <h3>{currentTab.masterTitle}</h3>
+          <p className="guide-explorer-desc">{currentTab.intro}</p>
+        </div>
         <button
           type="button"
           className="guide-banner-btn"
@@ -133,36 +136,27 @@ export function DesignGuideExplorer() {
       </div>
 
       {activeTab === "measurement" ? (
-        <div className="guide-measurement-section">
-          <div className="guide-measurement-banner-head">
-            <h3>{currentTab.masterTitle}</h3>
-            <p>{currentTab.intro}</p>
-          </div>
-          <div className="guide-measurement-grid">
-            {measurementGuideCards.map((guide) => {
-              const title = language === "hi" ? guide.nameHi : guide.name;
-              const desc = language === "hi" ? guide.descriptionHi : guide.description;
-              return (
-                <article key={guide.id} className="guide-measurement-garment-card">
-                  <div
-                    className="measurement-garment-thumb"
-                    onClick={() => setModalItem(guide)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setModalItem(guide); }}
-                    aria-label={`${t("View Full Chart")}: ${title}`}
-                  >
-                    <img src={guide.image} alt={title} loading="lazy" />
-                    <span className="measurement-zoom-overlay">
-                      <Eye size={16} aria-hidden="true" />
-                      {t("View Full Chart")}
-                    </span>
+        <div className="guide-measurement-grid">
+          {measurementGuideCards.map((guide) => {
+            const title = language === "hi" ? guide.nameHi : guide.name;
+            const desc = language === "hi" ? guide.descriptionHi : guide.description;
+            return (
+              <article key={guide.id} className="guide-measurement-garment-card">
+                <div
+                  className="measurement-garment-thumb"
+                  onClick={() => setModalItem(guide)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setModalItem(guide); }}
+                  aria-label={`${t("View Full Chart")}: ${title}`}
+                >
+                  <img src={guide.image} alt={title} loading="lazy" />
+                </div>
+                <div className="measurement-garment-body">
+                  <div className="measurement-garment-head">
+                    <h4 className="measurement-garment-title">{title}</h4>
+                    <span className="measurement-garment-subname">{guide.subname}</span>
                   </div>
-                  <div className="measurement-garment-body">
-                    <div className="measurement-garment-head">
-                      <h4 className="measurement-garment-title">{title}</h4>
-                      <span className="measurement-garment-subname">{guide.subname}</span>
-                    </div>
                     <p className="measurement-garment-desc">{desc}</p>
                     <div className="measurement-points-list" aria-label={t("Exact measurement points")}>
                       {guide.points.map((p) => (
@@ -184,8 +178,7 @@ export function DesignGuideExplorer() {
               );
             })}
           </div>
-        </div>
-      ) : (
+        ) : (
         <div className="guide-explorer-grid">
           {items.map((item) => {
             const title = language === "hi" ? item.nameHi : item.name;
