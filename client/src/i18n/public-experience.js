@@ -107,4 +107,8 @@ export const publicCopy = {
   "View Full Chart": { en: "View Full Chart", hi: "बड़ा चार्ट देखें" },
   "Exact measurement points": { en: "Exact measurement points", hi: "सटीक नाप के बिंदु" },
   "Enlarge measurement guide": { en: "Enlarge measurement guide", hi: "नाप गाइड को बड़ा करके देखें" },
+  "Step 1: Choose Design": { en: "Step 1: Choose Design", hi: "चरण 1: डिज़ाइन चुनें" },
+  "Step 2: Custom Styles": { en: "Step 2: Custom Styles", hi: "चरण 2: मनपसंद कट व स्टाइल" },
+  "Step 3: Exact Fit": { en: "Step 3: Exact Fit", hi: "चरण 3: सटीक नाप" },
+  "Step 4: Doorstep Delivery": { en: "Step 4: Doorstep Delivery", hi: "चरण 4: घर तक डिलीवरी" },
 };
