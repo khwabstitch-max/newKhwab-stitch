@@ -1,3 +1,4 @@
+import { allocateCatalogueCode, prepareCatalogueCodes } from "./catalogue-codes.js";
 import { createHash, randomUUID } from "node:crypto";
 import { TEAL_BOARD } from "./media-storage.js";
 import sharp from "sharp";
@@ -33,7 +34,7 @@ export async function importDesignBoard(
     })),
     status: publish ? "published" : "draft",
   });
-  const existing = await ctx.models.Design.findOne({ code: fields.code });
+  const existing = await ctx.models.Design.findOne({ $or: [{ code: fields.code }, { slug: fields.slug }] });
   if (existing) return { created: false, design: existing };
   const admins = await ctx.models.User.find({
     role: "admin",
@@ -91,6 +92,7 @@ export async function importDesignBoard(
       });
   let created;
   try {
+    await prepareCatalogueCodes(ctx.models);
     created = await ctx.transaction(async (session) => {
       const active = await ctx.models.User.updateOne(
         { _id: owner._id, role: "admin", disabled: false },
@@ -123,7 +125,8 @@ export async function importDesignBoard(
         ],
         { session },
       );
-      const [design] = await ctx.models.Design.create([fields], { session });
+      const code = await allocateCatalogueCode(ctx.models, "design", fields, session);
+      const [design] = await ctx.models.Design.create([{ ...fields, code, codeAliases: fields.code ? [fields.code] : undefined }], { session });
       await ctx.models.AuditEvent.create(
         [
           {
@@ -152,7 +155,7 @@ export async function importDesignBoard(
       );
     }
     if (error.code === 11000) {
-      const record = await ctx.models.Design.findOne({ code: fields.code });
+      const record = await ctx.models.Design.findOne({ $or: [{ code: fields.code }, { slug: fields.slug }] });
       if (record) return { created: false, design: record };
     }
     throw error;

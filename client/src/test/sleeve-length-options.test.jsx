@@ -163,3 +163,11 @@ it("ignores legacy price-label callbacks and always shows zero additional charge
   expect(screen.getByText("No additional charge")).toBeInTheDocument();
   expect(screen.queryByText("Additional ₹125")).not.toBeInTheDocument();
 });
+
+it("keeps individual sleeve-length controls without the duplicate sleeve guide banner", () => {
+ render(<SleeveLengthOptions onSelect={vi.fn()} options={[option("full","full")]} />);
+ expect(screen.queryByText("Official Sleeve Guide")).not.toBeInTheDocument();
+ expect(screen.queryByRole("button",{name:"View Sleeve Length Visual Chart"})).not.toBeInTheDocument();
+ expect(screen.getByRole("radio",{name:/Length full/})).toBeInTheDocument();
+ expect(screen.getByRole("button",{name:"View larger & details"})).toBeInTheDocument();
+});

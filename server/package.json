@@ -28,7 +28,8 @@
     "password:reset": "node scripts/reset-password.js",
     "format": "prettier --write \"src/**/*.js\" \"scripts/**/*.js\" \"tests/**/*.js\" eslint.config.js package.json",
     "format:check": "prettier --check \"src/**/*.js\" \"scripts/**/*.js\" \"tests/**/*.js\" eslint.config.js package.json",
-    "design:import": "node scripts/import-design.js"
+    "design:import": "node scripts/import-design.js",
+    "catalogue:migrate": "node scripts/migrate-production-catalogue.js"
   },
   "dependencies": {
     "@imagekit/nodejs": "^7.14.0",
@@ -41,6 +42,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.4",
     "multer": "^2.5.0",
+    "pdf-lib": "1.17.1",
     "pino": "^10.4.0",
     "sharp": "^0.35.5",
     "zod": "^4.6.7"

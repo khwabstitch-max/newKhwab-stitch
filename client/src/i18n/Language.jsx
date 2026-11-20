@@ -21,8 +21,8 @@ export function LanguageProvider({ children }) {
     document.documentElement.lang = language;
     document.title =
       language === "hi"
-        ? "KhwabStitch — जहाँ कपड़ा बने कला"
-        : "KhwabStitch — Where Fabric Becomes Art";
+        ? "Khwab Stitch — कस्टम सिलाई | जहाँ कपड़ा बने कला"
+        : "Khwab Stitch — On-Demand Custom Stitching";
     document
       .querySelectorAll("input,select,textarea")
       .forEach((input) => input.setCustomValidity?.(""));

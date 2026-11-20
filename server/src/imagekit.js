@@ -24,8 +24,11 @@ export function imageProvider(config, clientOverride) {
       .map((segment) => encodeURIComponent(segment))
       .join("/");
   return {
-    async upload(buffer, { private: privateFile, purpose, owner }) {
+    async upload(buffer, { private: privateFile, purpose, owner, mime = "image/webp" }) {
       ready();
+      const pdf = mime === "application/pdf";
+      if (mime !== "image/webp" && !pdf) fail(400, "INVALID_MEDIA_TYPE", "Unsupported prepared upload type.");
+      if (pdf && (!privateFile || purpose !== "reference")) fail(400, "PDF_REFERENCE_ONLY", "PDF uploads must be private design references.");
       if (privateFile && config.IMAGEKIT_PRIVATE_POLICY_VERIFIED !== "true")
         fail(
           503,
@@ -43,7 +46,7 @@ export function imageProvider(config, clientOverride) {
       try {
         uploaded = await client.files.upload({
           file: buffer.toString("base64"),
-          fileName: randomUUID() + ".webp",
+          fileName: randomUUID() + (pdf ? ".pdf" : ".webp"),
           folder,
           isPrivateFile: privateFile,
           useUniqueFileName: true,
@@ -55,7 +58,7 @@ export function imageProvider(config, clientOverride) {
           typeof checked.filePath !== "string" ||
           !checked.filePath.startsWith(folder + "/") ||
           checked.isPrivateFile !== privateFile ||
-          checked.fileType !== "image"
+          (pdf ? (!["image", "non-image"].includes(checked.fileType) || checked.mime !== "application/pdf" || !checked.filePath.endsWith(".pdf")) : checked.fileType !== "image")
         )
           throw new Error("Unexpected upload metadata");
         return { fileId: checked.fileId, filePath: checked.filePath };

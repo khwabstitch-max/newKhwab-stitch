@@ -38,7 +38,7 @@ export function publicRoutes(app, ctx, auth) {
       ...(q.category ? { category: q.category } : {}),
       ...(q.search
         ? {
-            $or: [...["title", "titleHi", "code", "searchLabels", "searchLabelsHi"].map((field) => ({
+            $or: [...["title", "titleHi", "code", "codeAliases", "searchLabels", "searchLabelsHi"].map((field) => ({
               [field]: { $regex: escaped(q.search), $options: "i" },
             })), ...(matchingCategories.length ? [{ category: { $in: matchingCategories.map(category => category._id) } }] : [])],
           }

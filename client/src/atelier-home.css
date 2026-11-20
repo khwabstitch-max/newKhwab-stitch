@@ -1,0 +1,218 @@
+/* A visual stitching journey, from the customer's fabric to their finished outfit. */
+.public-home.atelier-home { --public-section-space: clamp(38px, 4.7vw, 68px); --color-linen: #f0e8db; }
+.atelier-home .container { max-width: 1280px; padding-inline: 40px; }
+.public-home.atelier-home .home-hero { padding-block: clamp(30px, 4vw, 58px) 24px; background: var(--color-ivory); border-bottom: 0; }
+.public-home.atelier-home .home-hero-grid { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(32px, 4.5vw, 64px); align-items: center; }
+.atelier-home .atelier-hero-copy { min-width: 0; padding-block: 12px; }
+.public-home.atelier-home .home-hero .eyebrow { display: block; border: 0; border-radius: 0; padding: 0; margin-bottom: 20px; background: none; color: var(--color-primary); font-size: 10.5px; line-height: 1.8; letter-spacing: .13em; font-weight: 700; }
+.public-home.atelier-home .home-hero h1 { font-size: clamp(48px, 5vw, 72px); line-height: 1.04; letter-spacing: -.04em; max-width: 13ch; margin-bottom: 22px; color: var(--color-charcoal); text-wrap: balance; }
+.public-home.atelier-home .home-hero-description { font-size: 16px; line-height: 1.75; max-width: 37ch; margin-bottom: 0; color: var(--color-muted); }
+.public-home.atelier-home .home-hero-actions { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 12px; margin: 28px 0 22px; }
+.atelier-home .home-hero-actions .button { padding: 14px 22px; width: auto; font-size: 13px; }
+.atelier-hero-assurance { display: flex; flex-wrap: wrap; gap: 12px 20px; list-style: none; margin: 0; padding: 0; }
+.atelier-hero-assurance li { display: inline-flex; align-items: center; gap: 7px; color: var(--color-muted); font-size: 11.5px; line-height: 1.5; }
+.atelier-hero-assurance svg { color: var(--color-primary); flex-shrink: 0; }
+.public-home.atelier-home .home-hero-figure { min-width: 0; max-width: none; width: 100%; margin: 0; justify-self: stretch; }
+.public-home.atelier-home .home-hero-showcase.stitch-journey { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; position: relative; list-style: none; padding: 0; margin: 0; overflow: visible; border: 0; background: transparent; box-shadow: none; border-radius: 0; }
+.stitch-journey-frame { min-width: 0; margin: 0; padding: 0; overflow: hidden; border: 1px solid #ded1bf; border-radius: 9px; background: var(--color-surface); box-shadow: 0 4px 12px #35251f04; }
+.public-home.atelier-home .stitch-frame-media { position: relative; display: block; aspect-ratio: 1; min-width: 0; overflow: hidden; padding: 0; border-radius: 0; background: var(--color-linen); }
+.public-home.atelier-home .stitch-frame-media img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-height: none; object-fit: cover; object-position: center; }
+.stitch-frame-caption { display: flex; align-items: center; gap: 9px; min-height: 49px; padding: 11px 13px; border-top: 1px solid #e9dfd1; background: #f8f2e8; }
+.stitch-frame-number { flex: 0 0 auto; color: #8a7560; font-family: var(--font-body); font-size: 10px; font-weight: 600; line-height: 1.5; letter-spacing: .04em; }
+.stitch-frame-caption strong { min-width: 0; color: var(--color-charcoal); font-family: var(--font-body); font-size: 13px; font-weight: 600; line-height: 1.5; }
+.stitch-frame-caption > svg { flex-shrink: 0; width: 15px; height: 15px; margin-left: auto; color: #8a7560; }
+.stitch-journey-frame[data-stage="wear"] .stitch-frame-caption > svg { color: var(--color-olive); }
+.public-home.atelier-home figcaption { margin: 12px 0 0; color: var(--color-muted); font-size: 11px; line-height: 1.6; letter-spacing: .015em; text-align: right; }
+.atelier-home .atelier-section-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; max-width: none; margin-bottom: 28px; }
+.atelier-home .public-section-heading h2 { font-size: clamp(32px, 3.1vw, 44px); margin-bottom: 0; }
+.atelier-home .public-section-heading .eyebrow { margin-bottom: 10px; font-size: 10px; letter-spacing: .14em; }
+.atelier-home .atelier-garments { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; padding-top: 32px; }
+.atelier-garment-intro { min-width: 0; max-width: 58ch; }
+.atelier-garment-intro > .eyebrow { font-size: 11px; letter-spacing: .13em; margin-bottom: 12px; }
+.atelier-garment-intro h2 { margin: 0 0 14px; font-size: clamp(30px, 3vw, 42px); line-height: 1.14; max-width: 24ch; }
+.atelier-garment-intro > p:last-child { max-width: 58ch; margin: 0; color: var(--color-muted); font-size: 14px; line-height: 1.7; }
+.atelier-garment-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; min-width: 0; }
+.atelier-garment-tile { display: flex; flex-direction: column; min-width: 0; padding: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); transition: border-color 180ms ease, box-shadow 180ms ease; }
+.atelier-garment-tile:hover { border-color: var(--color-primary); box-shadow: 0 5px 18px #6e363f0a; }
+.atelier-garment-photo { overflow: hidden; aspect-ratio: 4 / 5; margin: 0; border-bottom: 1px solid var(--color-border); background: #f5eee3; }
+.atelier-garment-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.atelier-garment-tile:only-child .atelier-garment-photo { margin-bottom: 0; }
+.atelier-garment-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; padding: 18px; }
+.atelier-garment-copy h3 { margin: 0 0 8px; font-size: clamp(25px, 2.1vw, 30px); line-height: 1.18; }
+.atelier-garment-copy > p { margin: 0 0 18px; min-height: 3.3em; color: var(--color-muted); font-size: 13px; line-height: 1.65; }
+.atelier-garment-action { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--color-border); color: var(--color-primary); font-size: 13px; font-weight: 600; line-height: 1.6; }
+.atelier-garment-action strong { white-space: nowrap; font-weight: 600; }
+.atelier-garment-action > svg { flex: 0 0 auto; }
+.atelier-garment-grid:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+.atelier-garment-tile:only-child { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 1.3fr); align-items: center; max-width: 760px; }
+.atelier-garment-tile:only-child .atelier-garment-photo { border-bottom: 0; border-right: 1px solid var(--color-border); }
+.atelier-garment-tile:only-child .atelier-garment-copy { padding: 24px; }
+.atelier-garment-tile:only-child h3 { font-size: 32px; }
+.atelier-home .atelier-collection { padding-top: 12px; }
+
+.atelier-home .public-collection-header { margin-bottom: 22px; gap: 18px; }
+.atelier-home .public-collection-header > a { flex-shrink: 0; font-size: 13px; }
+.atelier-home .design-grid { gap: 24px; grid-template-columns: repeat(3,minmax(0,1fr)); }
+.atelier-home .design-grid:has(> .public-design-card:only-child) { grid-template-columns: minmax(0, 1fr); }
+.atelier-home .public-design-card:only-child .design-card-main { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
+.atelier-home .public-design-card:only-child .design-image { aspect-ratio: auto; min-height: 340px; border-bottom: 0; border-right: 1px solid var(--color-border); }
+.atelier-home .public-design-card:only-child .design-info { justify-content: center; padding: 36px; }
+.atelier-home .public-design-card:only-child .design-info h3 { max-width: 18ch; font-size: clamp(32px, 3.5vw, 46px); }
+.atelier-home .public-design-card:only-child .design-photo, .atelier-home .public-design-card:only-child .design-image > img { height: 100%; max-height: 480px; }
+.atelier-home .public-design-card { border-radius: 10px; box-shadow: none; }
+.atelier-home .public-design-card .design-image { aspect-ratio: 4/5; }
+.atelier-home .public-design-card .design-image > img { object-fit: contain; }
+.atelier-home .public-design-card .design-info { padding: 20px; }
+.atelier-home .public-design-card .design-code { top: 12px; left: 12px; border: 0; border-radius: 3px; padding: 5px 8px; color: var(--color-primary); }
+.atelier-home .public-design-card .design-info h3 { font-size: 29px; line-height: 1.16; margin-top: 12px; }
+.atelier-home .public-design-card .design-card-meta .design-custom-badge { display: none; }
+.atelier-home .public-design-card .design-info > small { display: none; }
+.atelier-home .public-design-card .design-card-cta { color: var(--color-primary); font-size: 12px; min-height: 44px; }
+.atelier-collection-note { color: var(--color-muted); font-size: 12px; margin: 22px 0 0; }
+.atelier-home .atelier-process { background: #efe6d9; border-block: 1px solid var(--color-border); }
+.atelier-home .home-process-grid { gap: 0; }
+.atelier-home .home-process-grid.home-process-compact li { position: relative; display: block; min-width: 0; padding: 8px 28px 6px; border: 0; border-right: 1px solid #d8c9b7; border-radius: 0; background: transparent; }
+.atelier-home .home-process-grid.home-process-compact li:first-child { padding-left: 0; }
+.atelier-home .home-process-grid.home-process-compact li:last-child { border-right: 0; padding-right: 0; }
+.atelier-process-icon { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 18px; background: var(--color-surface); border: 1px solid #d8c9b7; border-radius: 50%; color: var(--color-primary); }
+.atelier-step-number { position: absolute; right: 28px; top: 14px; color: #847260; font-family: var(--font-heading); font-size: 24px; }
+.atelier-home .home-process-grid h3 { font-family: var(--font-body); font-size: 14px; font-weight: 600; line-height: 1.65; margin: 0; max-width: 21ch; }
+.atelier-process-note { margin: 28px 0 0; color: var(--color-muted); font-size: 12px; }
+.atelier-home .home-help { display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 38px 44px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); text-align: left; }
+.atelier-home .home-help .eyebrow { font-size: 10px; letter-spacing: .12em; margin: 0 0 10px; }
+.atelier-home .home-help h2 { margin: 0 0 10px; font-size: clamp(30px,3vw,42px); }
+.atelier-home .home-help p:not(.eyebrow) { margin: 0; max-width: 54ch; color: var(--color-muted); font-size: 14px; line-height: 1.7; }
+.atelier-home .home-help .button { flex-shrink: 0; font-size: 13px; }
+.atelier-home .public-guides { margin-top: 18px; border: 1px solid var(--color-border); border-radius: 8px; padding: 0 22px; background: transparent; }
+.atelier-home .public-guides > summary { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding-block: 18px; min-height: 56px; color: var(--color-primary); font-size: 13px; font-weight: 600; cursor: pointer; }
+.atelier-home .public-guides[open] > summary { border-bottom: 1px solid var(--color-border); }
+.atelier-home .public-guides[open] > summary svg { transform: rotate(-30deg); }
+.atelier-home .guides-showcase-section { padding-block: 28px; }
+.atelier-home .guides-showcase-section .section-heading { display: none; }
+.atelier-home .home-resume { padding-top: 24px; border: 0; }
+.atelier-home .home-resume h3 { font-size: 25px; }
+.atelier-home .selected-reviews blockquote { margin: 16px 0 0; font-size: 15px; }
+.atelier-home .selected-reviews > .small-print { font-size: 12px; }
+.atelier-home .home-faqs { padding-top: 0; max-width: 900px; }
+.atelier-home .home-faqs details { border: 0; border-bottom: 1px solid var(--color-border); padding: 16px 0; }
+.atelier-home .home-faqs summary { padding-block: 8px; font-size: 14px; line-height: 1.7; }
+.atelier-home .home-faqs details p { font-size: 14px; margin: 14px 0 0; }
+.atelier-home .home-promotion { padding-top: 0; margin-top: 0; }
+html[lang="hi"] .atelier-home .home-hero h1 { font-size: clamp(36px,4vw,56px); line-height: 1.45; letter-spacing: 0; max-width: 15ch; }
+html[lang="hi"] .atelier-home h2 { line-height: 1.5; }
+@media (min-width: 761px) and (max-width: 1100px) {
+  .atelier-home .atelier-garments { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .atelier-garment-intro h2 { max-width: none; }
+  .atelier-garment-intro > p:last-child { max-width: none; }
+  .atelier-garment-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 761px) and (max-width: 1000px) {
+  .atelier-home .container { padding-inline: 28px; }
+  .public-home.atelier-home .home-hero-grid { gap: 25px; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+  .public-home.atelier-home .home-hero h1 { font-size: 46px; }
+  .atelier-home .home-hero-actions .button { padding-inline: 15px; font-size: 12px; }
+  .public-home.atelier-home .home-hero-showcase.stitch-journey { gap: 10px; }
+  .stitch-frame-caption { min-height: 51px; padding: 9px; gap: 7px; }
+  .stitch-frame-caption strong { font-size: 11px; }
+  .stitch-frame-caption > svg { width: 13px; height: 13px; }
+  .atelier-home .home-help { padding: 30px; }
+}
+@media (max-width: 760px) {
+  .atelier-home .container { padding-inline: 22px; }
+  .public-home.atelier-home .home-hero { padding: 27px 0 14px; }
+  .public-home.atelier-home .home-hero-grid { grid-template-columns: minmax(0,1fr); gap: 27px; }
+  .atelier-home .atelier-hero-copy { padding: 0; }
+  .public-home.atelier-home .home-hero .eyebrow { font-size: 9px; margin-bottom: 14px; letter-spacing: .09em; }
+  .public-home.atelier-home .home-hero h1 { font-size: clamp(40px,10.6vw,60px); max-width: 15ch; margin-bottom: 16px; }
+  .public-home.atelier-home .home-hero-description { font-size: 14px; max-width: 39ch; }
+  .public-home.atelier-home .home-hero-actions { display: grid; grid-template-columns: 1fr 1fr; margin-block: 22px 17px; gap: 10px; width: 100%; }
+  .atelier-home .home-hero-actions .button { width: 100%; padding: 13px 8px; font-size: 12.5px; gap: 6px; min-height: 48px; }
+  .atelier-hero-assurance { gap: 10px 15px; }
+  .atelier-hero-assurance li { font-size: 10px; gap: 5px; }
+  .atelier-hero-assurance svg { width: 13px; height: 13px; }
+  .public-home.atelier-home .home-hero-showcase.stitch-journey { gap: 10px; }
+  .stitch-journey-frame { border-radius: 7px; }
+  .stitch-frame-caption { gap: 7px; padding: 10px; min-height: 47px; }
+  .stitch-frame-number { font-size: 9px; }
+  .stitch-frame-caption strong { font-size: 11px; }
+  .stitch-frame-caption > svg { width: 13px; height: 13px; }
+  .public-home.atelier-home figcaption { margin-top: 10px; font-size: 10px; }
+  .atelier-home .atelier-section-heading { display: block; margin-bottom: 22px; }
+  .atelier-home .public-section-heading h2 { font-size: 35px; }
+  .atelier-home .atelier-garments { grid-template-columns: minmax(0, 1fr); gap: 22px; padding-top: 18px; }
+  .atelier-garment-intro h2 { max-width: 16ch; font-size: 34px; }
+  .atelier-garment-intro > p:last-child { max-width: none; font-size: 13px; }
+  .atelier-garment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .atelier-garment-tile { padding: 0; border-radius: 10px; }
+  .atelier-garment-copy { padding: 15px; }
+  .atelier-garment-copy h3 { min-height: 2.36em; }
+  .atelier-garment-copy > p { font-size: 13px; }
+  .atelier-garment-action { gap: 6px; font-size: 13px; }
+  .atelier-home .design-card-views { padding-inline: 8px; gap: 4px; }
+  .atelier-home .design-card-views button { padding-inline: 2px; font-size: 11px; overflow-wrap: anywhere; }
+  .atelier-garment-action strong { white-space: normal; }
+  .atelier-garment-copy h3 { font-size: 25px; }
+  .atelier-garment-tile:only-child { grid-template-columns: minmax(110px, .8fr) minmax(0, 1.2fr); }
+  .atelier-garment-tile:only-child .atelier-garment-copy { padding: 18px; }
+  .atelier-garment-tile:only-child h3 { min-height: 0; }
+  .atelier-garment-tile:only-child h3 { font-size: 28px; }
+  .atelier-home .public-collection-header { display: flex; align-items: end; }
+  .atelier-home .public-collection-header > a { margin: 0; font-size: 11px; }
+  .atelier-home .public-collection-header h2 { font-size: 33px; max-width: 12ch; }
+  .atelier-home .design-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+  .atelier-home .design-grid:has(> .public-design-card:only-child) { grid-template-columns: minmax(0,1fr); max-width: none; }
+  .atelier-home .public-design-card:only-child .design-card-main { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+  .atelier-home .public-design-card:only-child .design-image { min-height: 250px; }
+  .atelier-home .public-design-card:only-child .design-info { padding: 18px; }
+  .atelier-home .public-design-card:only-child .design-info h3 { font-size: 27px; }
+  .atelier-home .public-design-card .design-info { padding: 14px; }
+  .atelier-home .public-design-card .design-info h3 { font-size: 24px; }
+  .atelier-home .public-design-card .design-info p { font-size: 11px; }
+  .atelier-home .public-design-card .design-info p strong { font-size: 13px; }
+  .atelier-home .public-design-card .design-code { font-size: 9px; padding: 4px 6px; top: 8px; left: 8px; }
+  .atelier-home .public-design-card .card-arrow { display: none; }
+  .atelier-home .public-design-card .design-card-cta { font-size: 12px; gap: 5px; flex-wrap: wrap; }
+  .atelier-home .home-process-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px 20px; }
+  .atelier-home .home-process-grid.home-process-compact li { padding: 0; border: 0; }
+  .atelier-step-number { top: 8px; right: 8px; font-size: 22px; }
+  .atelier-process-icon { margin-bottom: 13px; width: 44px; height: 44px; }
+  .atelier-home .home-process-grid h3 { font-size: 12px; max-width: 20ch; }
+  .atelier-process-note { font-size: 11px; line-height: 1.8; }
+  .atelier-home .home-help { display: block; padding: 25px; }
+  .atelier-home .home-help h2 { font-size: 34px; }
+  .atelier-home .home-help p:not(.eyebrow) { font-size: 13px; }
+  .atelier-home .home-help .button { margin-top: 22px; }
+  .atelier-home .public-guides { padding-inline: 14px; }
+  .atelier-home .public-guides > summary { font-size: 12px; }
+  html[lang="hi"] .atelier-home .home-hero h1 { font-size: clamp(33px,8.8vw,45px); max-width: 16ch; }
+}
+@media (min-width: 360px) and (max-width: 760px) {
+  .atelier-home .design-grid > .public-design-card:last-child:nth-child(odd):not(:only-child) { grid-column: 1 / -1; }
+  .atelier-home .design-grid > .public-design-card:last-child:nth-child(odd):not(:only-child) .design-card-main { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+  .atelier-home .design-grid > .public-design-card:last-child:nth-child(odd):not(:only-child) .design-image { position: relative; height: auto; min-height: 240px; aspect-ratio: auto; border-bottom: 0; border-right: 1px solid var(--color-border); }
+  .atelier-home .design-grid > .public-design-card:last-child:nth-child(odd):not(:only-child) .design-image > .design-photo,
+  .atelier-home .design-grid > .public-design-card:last-child:nth-child(odd):not(:only-child) .design-image > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .atelier-home .design-grid > .public-design-card:last-child:nth-child(odd):not(:only-child) .design-info { justify-content: center; }
+}
+@media (max-width: 359px) {
+  .atelier-home .container { padding-inline: 18px; }
+  .public-home.atelier-home .home-hero h1 { font-size: 38px; }
+  .public-home.atelier-home .home-hero-actions { gap: 8px; }
+  .atelier-home .home-hero-actions .button { padding-inline: 6px; font-size: 11px; }
+  .stitch-frame-caption { padding-inline: 8px; gap: 6px; }
+  .stitch-frame-caption > svg { display: none; }
+  .atelier-garment-grid { gap: 10px; }
+  .atelier-garment-tile { padding: 0; }
+  .atelier-garment-copy { padding: 12px; }
+  .atelier-garment-copy h3 { font-size: 23px; }
+  .atelier-garment-tile:only-child { grid-template-columns: minmax(0, 1fr); }
+  .atelier-garment-tile:only-child .atelier-garment-photo { border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .atelier-home .public-design-card:only-child .design-card-main { grid-template-columns: minmax(0, 1fr); }
+  .atelier-home .public-design-card:only-child .design-image { min-height: 300px; border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .atelier-home .public-design-card:only-child .design-info { padding: 20px; }
+  .atelier-home .design-grid { grid-template-columns: minmax(0,1fr); }
+  .atelier-home .public-collection-header { align-items: start; flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .atelier-garment-tile { transition: none; }
+}

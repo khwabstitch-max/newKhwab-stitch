@@ -1,3 +1,4 @@
+import { allocateCatalogueCode, prepareCatalogueCodes } from "./catalogue-codes.js";
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import mongoose from "mongoose";
@@ -92,6 +93,7 @@ export function visualCatalogueRoutes(app, ctx, auth) {
   app.post("/api/admin/options/import", ...admin, async(req,res)=>{
     const items=z.object({items:z.array(z.object({importKey:z.string().min(8).max(180),option:z.unknown()}).strict()).min(1).max(50)}).strict().parse(req.body).items;
     const results=[];
+    await prepareCatalogueCodes(ctx.models);
     for(const item of items){
       const body=optionInput.parse({...item.option,importKey:item.importKey}), digest=requestHash(body), id=new mongoose.Types.ObjectId(createHash("sha256").update("visual-option:"+item.importKey).digest("hex").slice(0,24));
       const result=await ctx.transaction(async session=>{
@@ -99,7 +101,7 @@ export function visualCatalogueRoutes(app, ctx, auth) {
         if(old){if(old.importKey!==item.importKey||old.importDigest!==digest)fail(409,"IMPORT_CONFLICT","This import key already represents different source data.");return {created:false,id:String(id)};}
         await fenceNewReferences(ctx, { optionIds: body.incompatibleOptionIds || [] }, {}, session);
         await pinMedia(ctx,imageIds(body),session,{private:false,purposes:["catalogue"]});
-        await ctx.models.DesignOption.create([{...body,_id:id,importDigest:digest}],{session});
+        await ctx.models.DesignOption.create([{...body,code:await allocateCatalogueCode(ctx.models,"option",body,session),_id:id,importDigest:digest}],{session});
         await audit(ctx,req,"options.imported","options",id,session,{importKey:item.importKey});return {created:true,id:String(id)};
       });results.push(result);
     }res.status(201).json({data:results});

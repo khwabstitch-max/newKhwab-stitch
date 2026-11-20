@@ -35,8 +35,8 @@ test("measurement guide snapshots retain original instructions and image metadat
 
 test("public pins are unique within each category while a shared option/guide image remains pinned twice", () => {
   const pins = orderPublicMediaPins({ publicMediaPins: { optionImages: [optionId, optionId], guideImages: [optionId, guideId, guideId] } });
-  assert.deepEqual(pins, { optionImages: [optionId], guideImages: [optionId, guideId] });
+  assert.deepEqual(pins, { designImages: [], optionImages: [optionId], guideImages: [optionId, guideId] });
   assert.equal([...pins.optionImages, ...pins.guideImages].filter(id => id === optionId).length, 2);
   const fallback = orderPublicMediaPins({ estimate: { components: { neck: { imageMediaIds: [optionId] }, back: { imageMediaIds: [optionId] } }, addons: [] }, guideSnapshots: [{ imageMediaIds: [guideId] }] });
-  assert.deepEqual(fallback, { optionImages: [optionId], guideImages: [guideId] });
+  assert.deepEqual(fallback, { designImages: [], optionImages: [optionId], guideImages: [guideId] });
 });

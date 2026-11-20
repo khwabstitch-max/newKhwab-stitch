@@ -14,7 +14,7 @@ export const estimateInput = z
     logistics: logisticsInput.optional(),
   })
   .strict();
-export const PRICING_VERSION = "2026-11-free-sleeve-length-v3";
+export const PRICING_VERSION = "2026-11-production-review-v4";
 const componentNames = {
   sleeve: "Sleeve design",
   sleeveLength: "Sleeve length",
@@ -53,6 +53,20 @@ const snapshotFields = (option) => ({
   materialNotes: option.materialNotes || "",
   serviceType: option.serviceType || "stitching",
 });
+// Legacy or incomplete service-area records never become a zero transport quote.
+export function matchingServiceArea(serviceAreas, pin) {
+  if (!Array.isArray(serviceAreas) || typeof pin !== "string" || !/^[1-9]\d{5}$/.test(pin)) return null;
+  let best = null;
+  let specificity = 0;
+  for (const area of serviceAreas) {
+    if (!area?.enabled || !Array.isArray(area.pinPrefixes)) continue;
+    const score = Math.max(0, ...area.pinPrefixes.filter(prefix =>
+      typeof prefix === "string" && /^[1-9]\d{0,5}$/.test(prefix) && pin.startsWith(prefix),
+    ).map(prefix => prefix.length));
+    if (score > specificity) { best = area; specificity = score; }
+  }
+  return best;
+}
 export function calculateEstimate(
   input,
   { design = null, options = [], settings = {} } = {},
@@ -67,7 +81,7 @@ export function calculateEstimate(
       return pendingItems.push({
         code,
         label,
-        reason: "Price needs admin configuration.",
+        reason: "This charge will be confirmed after tailor review.",
       });
     const units = scope === "garment" ? quantity : 1;
     lineItems.push({
@@ -80,8 +94,8 @@ export function calculateEstimate(
       ...extra,
     });
   };
-  const pending = (code, label, reason) =>
-    pendingItems.push({ code, label, reason });
+  const pending = (code, label, reason, details = {}) =>
+    pendingItems.push({ code, label, reason, ...details });
   const byId = new Map(options.map((option) => [String(option._id), option]));
   const config = input.configuration;
   if (config?.source === "catalogue" && !design)
@@ -94,15 +108,28 @@ export function calculateEstimate(
     );
   const base =
     design?.startingPricePaise ?? settings.garmentBasePrices?.[input.garment];
-  if (base === undefined)
+  const uploadedDesign = config?.source === "reference";
+  if (uploadedDesign)
+    pending(
+      "stitching",
+      "Custom design stitching",
+      "Your uploaded design will be reviewed before we confirm stitching and customization prices.",
+    );
+  else if (base === undefined)
     pending(
       "stitching",
       "Base stitching",
       "Stitching price after tailor review.",
     );
   else add("stitching", `Base stitching · ${design?.title || input.garment}`, base);
+  if (input.garment === "alteration")
+    pending(
+      "alteration:assessment",
+      "Garment assessment",
+      "Alteration work and the final price are confirmed after we review the garment.",
+    );
   const usedOptions = new Set();
-  const includedAddons = new Set((design?.includedAddonIds || []).map(String));
+  const includedAddons = new Set((config?.source === "catalogue" ? design?.includedAddonIds || [] : []).map(String));
   const chargeOption = (kind, id, isAddon = false, included = false) => {
     const option = byId.get(String(id));
     if (
@@ -128,6 +155,14 @@ export function calculateEstimate(
     else addons.push(snapshot);
     const label = isAddon ? option.name : `${componentNames[kind]} adjustment · ${option.name}`;
     const details = isAddon ? { materialCoverage: snapshot.materialCoverage, materialNotes: snapshot.materialNotes } : {};
+    if (uploadedDesign && kind !== "sleeveLength") {
+      pending(
+        `${kind}:${id}`,
+        label,
+        "The selected detail will be priced after we review your uploaded design.",
+      );
+      return;
+    }
     if (kind === "sleeveLength")
       add(`${kind}:${id}`, "Sleeve length — no additional charge", 0, "garment", { included: true });
     else if (included || option.priceMode === "included")
@@ -172,17 +207,22 @@ export function calculateEstimate(
         name:
           design?.designDetails?.[kind] ||
           "Original design details awaiting confirmation",
+        nameHi: design?.designDetails?.[`${kind}Hi`] || "",
         needsReview: true,
       };
       pending(
         `${kind}:original`,
         componentNames[kind],
-        "Original catalogue component needs admin confirmation; no selection has been invented.",
+        "We will confirm the original design details and any additional work before stitching.",
       );
     }
   };
   if (config) {
-    for (const kind of ["sleeveLength", "sleeve", "neck", "back", "fit"]) {
+    const applicableKinds = input.garment === "alteration" ? ["fit"] : ["sleeveLength", "sleeve", "neck", "back", "fit"];
+    if (input.garment === "alteration" && config.mode !== "exact" &&
+        Object.entries(config.components).some(([kind, choice]) => !applicableKinds.includes(kind) && choice?.source !== "original"))
+      fail(409, "INAPPLICABLE_CUSTOMIZATION", "These design customizations are not available for an alteration request.");
+    for (const kind of applicableKinds) {
       if (kind === "sleeve" && components.sleeveLength?.lengthStyle === "sleeveless") {
         components.sleeve = { source: "original", name: "Sleeveless", suppressed: true, sleeveStyle: "sleeveless", measurementFields: [] };
         continue;
@@ -251,7 +291,7 @@ export function calculateEstimate(
       pending(
         `transport:${direction}`,
         `${direction} transport`,
-        "Transport arrangement needs confirmation.",
+        "Choose how you will send and receive your garment.",
       );
       continue;
     }
@@ -263,36 +303,19 @@ export function calculateEstimate(
           : `${direction}: ${transport.method}`,
         0,
         "shipment",
+        { direction, method: transport.method },
       );
       continue;
     }
     const pin = transport.address?.pin;
-    const areas = (settings.serviceAreas || []).filter(
-      (area) =>
-        area.enabled &&
-        pin &&
-        area.pinPrefixes?.some((prefix) => pin.startsWith(prefix)),
-    );
-    // More specific configured PIN prefixes win. A missing rate always remains pending.
-    const area = areas.sort(
-      (a, b) =>
-        Math.max(
-          ...b.pinPrefixes
-            .filter((p) => pin.startsWith(p))
-            .map((p) => p.length),
-        ) -
-        Math.max(
-          ...a.pinPrefixes
-            .filter((p) => pin.startsWith(p))
-            .map((p) => p.length),
-        ),
-    )[0];
+    const area = matchingServiceArea(settings.serviceAreas, pin);
     const rate = area?.[`${direction}Paise`];
     if (!area || rate === null || rate === undefined)
       pending(
         `transport:${direction}`,
         `${direction} transport`,
-        "Transport quote pending. Serviceability and availability require confirmation.",
+        "Pickup or delivery charges will be confirmed for your PIN code after review.",
+        { direction, method: "business", postalCode: pin || "" },
       );
     else
       add(
@@ -300,6 +323,7 @@ export function calculateEstimate(
         `${direction} transport · ${area.name}`,
         rate,
         "shipment",
+        { direction, method: "business", postalCode: pin, serviceAreaName: area.name, serviceAreaNameHi: area.nameHi || "" },
       );
   }
   const knownSubtotalPaise = lineItems.reduce(
@@ -342,6 +366,9 @@ export function calculateEstimate(
     lineItems,
     pendingItems,
     knownSubtotalPaise,
+    knownGarmentSubtotalPaise: lineItems.filter(line => line.scope === "garment").reduce((total, line) => total + line.amountPaise, 0),
+    knownTransportSubtotalPaise: lineItems.filter(line => line.scope === "shipment").reduce((total, line) => total + line.amountPaise, 0),
+    uploadedDesignReviewRequired: uploadedDesign,
     estimatedTotalPaise: pendingItems.length ? null : knownSubtotalPaise,
     hasPending: pendingItems.length > 0,
     components,

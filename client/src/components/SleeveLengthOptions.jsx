@@ -1,9 +1,8 @@
 import { useId, useState } from "react";
-import { Check, Sparkles, BookOpen } from "lucide-react";
+import { Check } from "lucide-react";
 import { localize, t } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
 import { OptionPreview } from "./VisualOptions";
-import { GuideModal } from "./GuideModal";
 import { findLengthGuide } from "../data/tailoringDesignGuide";
 import "./sleeve-length-options.css";
 
@@ -107,7 +106,6 @@ export function SleeveLengthOptions({
   const { language } = useLanguage();
   const [preview, setPreview] = useState(null);
   const [returnFocus, setReturnFocus] = useState(null);
-  const [showGuideModal, setShowGuideModal] = useState(false);
   const radioName = useId();
   const descriptionId = useId();
 
@@ -137,30 +135,6 @@ export function SleeveLengthOptions({
           "Choose a style preference. Enter the exact sleeve length in inches or centimetres during measurements.",
         )}
       </p>
-
-      <div className="guide-banner-card">
-        <div className="guide-banner-info">
-          <span className="guide-banner-tag">
-            <Sparkles size={13} aria-hidden="true" />
-            {t("Official Sleeve Guide")}
-          </span>
-          <strong>{t("Sleeve Length Options")}</strong>
-          <p>
-            {t("Choose sleeve length as per your style")} •{" "}
-            {t(
-              "Front & side view references with recommended length ranges.",
-            )}
-          </p>
-        </div>
-        <button
-          type="button"
-          className="guide-banner-btn"
-          onClick={() => setShowGuideModal(true)}
-        >
-          <BookOpen size={16} aria-hidden="true" />
-          {t("View Sleeve Length Visual Chart")}
-        </button>
-      </div>
 
       {onReset && (
         <button
@@ -297,17 +271,6 @@ export function SleeveLengthOptions({
         />
       )}
 
-      {showGuideModal && (
-        <GuideModal
-          title={t("Sleeve Length Options")}
-          subtitle={t("Choose sleeve length as per your style")}
-          imageUrl="/guides/sleeve-length-guide.jpg"
-          onClose={() => setShowGuideModal(false)}
-          footerNote={t(
-            "Choose a compatible sleeve design and length. Enter your exact sleeve measurement in the measurement step.",
-          )}
-        />
-      )}
     </section>
   );
 }

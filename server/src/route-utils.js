@@ -1,3 +1,5 @@
+import { mediaMetadata } from "./media-metadata.js";
+import { publicProductionDesign } from "./catalogue-production.js";
 import { mediaUrl } from "./media-storage.js";
 import { z } from "zod";
 import { objectId, paginationInput } from "./domain.js";
@@ -98,6 +100,7 @@ export async function changeCategory(ctx, oldId, newId, session) {
     );
 }
 function formatPublicDesign(ctx, d, byId) {
+  d = publicProductionDesign(d);
   const images = (d.mediaIds || [])
     .map((id) => byId.get(String(id)))
     .filter(Boolean)
@@ -180,10 +183,6 @@ export function safeMedia(document) {
     purpose,
     storage,
     private: privateFile,
-    mime,
-    bytes,
-    width,
-    height,
     createdAt,
     references,
     deletingAt,
@@ -193,10 +192,7 @@ export function safeMedia(document) {
     purpose,
     storage,
     private: privateFile,
-    mime,
-    bytes,
-    width,
-    height,
+    ...mediaMetadata(plain(document)),
     createdAt,
     references,
     deleting: !!deletingAt,

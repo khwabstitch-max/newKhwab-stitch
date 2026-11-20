@@ -1,5 +1,8 @@
 import { api, ApiError } from "./api";
 
+export const REFERENCE_FILE_LIMIT = 5;
+export const REFERENCE_PDF_LIMIT = 3 * 1024 * 1024;
+export const REFERENCE_ACCEPT = ".pdf,.jpg,.jpeg,.png,image/jpeg,image/png,application/pdf";
 export const SOURCE_IMAGE_LIMIT = 5 * 1024 * 1024;
 export const UPLOAD_IMAGE_LIMIT = 3 * 1024 * 1024;
 export const IMAGE_PIXEL_LIMIT = 24_000_000;
@@ -126,9 +129,23 @@ export async function prepareMediaFile(file, { signal } = {}) {
   }
 }
 
+export async function prepareReferenceFile(file, { signal } = {}) {
+  cancelled(signal);
+  if (!file || !Number.isFinite(file.size) || file.size <= 0) throw imageError("Choose a reference image or PDF.", "INVALID_REFERENCE_FILE");
+  const header = await readBytes(file.slice(0, 8));
+  const isPdf = String.fromCharCode(...header.subarray(0, 5)) === "%PDF-";
+  const claimsPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
+  if (isPdf) {
+    if (file.size > REFERENCE_PDF_LIMIT) throw imageError("Choose a PDF up to 3 MiB.", "REFERENCE_PDF_TOO_LARGE");
+    return file;
+  }
+  if (claimsPdf) throw imageError("This PDF could not be read. Please choose a valid PDF.", "INVALID_REFERENCE_PDF");
+  return prepareMediaFile(file, { signal });
+}
+
 export async function uploadMedia(file, purpose, { signal, timeout } = {}) {
   if (!["reference", "measurement", "catalogue", "banner"].includes(purpose)) throw imageError("Choose a valid image purpose.");
-  const prepared = await prepareMediaFile(file, { signal });
+  const prepared = await (purpose === "reference" ? prepareReferenceFile(file, { signal }) : prepareMediaFile(file, { signal }));
   cancelled(signal);
   const body = new FormData();
   body.append("purpose", purpose);

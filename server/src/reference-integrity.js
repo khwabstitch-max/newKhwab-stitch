@@ -46,10 +46,12 @@ export function snapshotMeasurementGuide(guide, images = []) {
 export function orderPublicMediaPins(order) {
   const unique = ids => [...new Set(ids.filter(Boolean).map(String))];
   if (order.publicMediaPins) return {
+    designImages: unique(order.publicMediaPins.designImages || []),
     optionImages: unique(order.publicMediaPins.optionImages || []),
     guideImages: unique(order.publicMediaPins.guideImages || []),
   };
   return {
+    designImages: [],
     optionImages: unique([...Object.values(order.estimate?.components || {}), ...(order.estimate?.addons || [])].flatMap(component => component.imageMediaIds || [])),
     guideImages: unique((order.guideSnapshots || []).flatMap(guide => guide.imageMediaIds || [])),
   };

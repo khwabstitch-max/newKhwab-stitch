@@ -93,6 +93,7 @@ export const logisticsInput = z
 export const serviceAreaInput = z
   .object({
     name: z.string().trim().min(2).max(100),
+    nameHi: z.string().trim().max(100).optional(),
     pinPrefixes: z
       .array(z.string().regex(/^[1-9]\d{0,5}$/))
       .min(1)
@@ -127,3 +128,7 @@ export const supportSettingsInput = z
     (value) => value.endHour > value.startHour,
     "Support closing time must follow opening time.",
   );
+
+// Physical sample garments and online assistance are measured during atelier review.
+export const needsEnteredMeasurements = (measurements = {}) =>
+  measurements.method !== "assistance" && !["assistance", "sample"].includes(measurements.takenBy);

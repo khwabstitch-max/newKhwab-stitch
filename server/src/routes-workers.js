@@ -1,3 +1,4 @@
+import { mediaMetadata } from "./media-metadata.js";
 import { z } from "zod";
 import { rateLimitFor } from "./rate-limits.js";
 import { objectId, revisionSchema, GARMENTS, phoneSchema } from "./domain.js";
@@ -732,8 +733,8 @@ export function workerRoutes(app, ctx, auth) {
           deletingAt: null,
         }),
       );
-      res.json({
-        data: { url: mediaUrl(ctx.images, media, 300), expiresIn: 300 },
+      res.set("Cache-Control", "private, no-store").json({
+        data: { url: mediaUrl(ctx.images, media, 300), ...mediaMetadata(media), expiresIn: 300, expiresAt: new Date(Date.now() + 300000).toISOString() },
       });
     },
   );

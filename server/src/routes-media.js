@@ -1,3 +1,5 @@
+import { isPdfBuffer, prepareReferencePdf } from "./reference-pdf.js";
+import { mediaMetadata, referenceFilename } from "./media-metadata.js";
 import {
   bundledBoardFields,
   mediaUrl,
@@ -131,8 +133,12 @@ export function mediaRoutes(app, ctx, auth, uploadLimit) {
       if (!privateFile && req.user.role !== "admin")
         fail(403, "FORBIDDEN", "Only administrators may upload public images.");
       if (!req.file) fail(400, "IMAGE_REQUIRED", "Choose an image to upload.");
-      let buffer, info;
-      try {
+      let buffer, info, mime = "image/webp";
+      if (isPdfBuffer(req.file.buffer)) {
+        if (body.purpose !== "reference") fail(400, "PDF_REFERENCE_ONLY", "PDF files may be uploaded only as design references. Use an image for this upload.");
+        const prepared = await prepareReferencePdf(req.file.buffer);
+        buffer = prepared.buffer; info = { pageCount: prepared.pageCount }; mime = "application/pdf";
+      } else try {
         const input = sharp(req.file.buffer, {
           limitInputPixels: 24_000_000,
           animated: false,
@@ -186,6 +192,7 @@ export function mediaRoutes(app, ctx, auth, uploadLimit) {
         private: privateFile,
         purpose: body.purpose,
         owner: String(req.user._id),
+        ...(mime === "application/pdf" ? { mime } : {}),
       });
       let asset;
       try {
@@ -204,7 +211,9 @@ export function mediaRoutes(app, ctx, auth, uploadLimit) {
                 ...stored,
                 purpose: body.purpose,
                 private: privateFile,
-                mime: "image/webp",
+                mime,
+                filename: referenceFilename(req.file.originalname, mime),
+                ...(info.pageCount ? { pageCount: info.pageCount } : {}),
                 bytes: buffer.length,
                 width: info.width,
                 height: info.height,
@@ -251,8 +260,7 @@ export function mediaRoutes(app, ctx, auth, uploadLimit) {
     res.json({
       data: {
         url: mediaUrl(ctx.images, asset, 300),
-        width: asset.width,
-        height: asset.height,
+        ...mediaMetadata(asset),
         expiresAt: new Date(Date.now() + 300000).toISOString(),
       },
     });

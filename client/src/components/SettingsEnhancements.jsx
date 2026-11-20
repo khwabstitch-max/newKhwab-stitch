@@ -82,6 +82,7 @@ export function SettingsEnhancements({ draft, patch }) {
                 )
               }
             />
+            <Field label={t("Hindi area name (optional)")} name={`area-name-hi-${i}`} lang="hi" maxLength={120} value={area.nameHi || ""} onChange={event => patch("serviceAreas", draft.serviceAreas.map((value, position) => position === i ? { ...value, nameHi: event.target.value } : value))} />
             <TokenListEditor label="admin.delivery.pinAreas" name={`area-pin-${i}`} value={area.pinPrefixes} max={30} hint="admin.delivery.pinHelp" onChange={values => patch("serviceAreas", draft.serviceAreas.map((value, position) => position === i ? { ...value, pinPrefixes: values } : value))} />
             {["inboundPaise", "outboundPaise"].map((k) => (
               <Field

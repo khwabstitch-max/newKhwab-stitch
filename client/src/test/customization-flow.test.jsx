@@ -184,7 +184,7 @@ it("can remove a saved addition that is no longer available without clearing unr
   await user.click(
     await screen.findByRole("button", { name: "Remove Saved addition 1" }),
   );
-  await screen.findByRole("heading", { name: "₹650" });
+  expect(screen.queryByRole("heading", { name: "₹650" })).not.toBeInTheDocument();
   await waitFor(() =>
     expect(loadDraft(draft.id).configuration.addonIds).toEqual([]),
   );
@@ -216,8 +216,10 @@ it("sleeveless removes sleeve fees and fields, then restores the saved design an
   await screen.findAllByRole("heading", { name: "₹910" });
   await user.click(screen.getByRole("button", { name: "Edit Sleeve length" }));
   await user.click(await screen.findByRole("radio", { name: /Sleeveless/ }));
-  await screen.findByRole("heading", { name: "₹790" });
+  await waitFor(() => expect(loadDraft(draft.id).configuration.components.sleeveLength.optionId).toBe(id(4)));
+  expect(screen.queryByRole("heading", { name: "₹790" })).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Save changes" }));
+  await screen.findByRole("heading", { name: "₹790" });
   expect(
     screen.getByText(
       "Not applicable with Sleeveless. Your previous sleeve selection is saved.",
@@ -230,8 +232,10 @@ it("sleeveless removes sleeve fees and fields, then restores the saved design an
   await user.click(screen.getByRole("button", { name: "Cancel changes" }));
   await user.click(screen.getByRole("button", { name: "Edit Sleeve length" }));
   await user.click(await screen.findByRole("radio", { name: /Full length/ }));
-  await screen.findAllByRole("heading", { name: "₹910" });
+  await waitFor(() => expect(loadDraft(draft.id).configuration.components.sleeveLength.optionId).toBe(id(3)));
+  expect(screen.queryByRole("heading", { name: "₹910" })).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Save changes" }));
+  await screen.findByRole("heading", { name: "₹910" });
   await waitFor(() =>
     expect(
       loadDraft(draft.id).configuration.components.sleeveLength.optionId,
@@ -294,12 +298,13 @@ it("adds and removes individual finishing details, preserves included prices and
     screen.queryByRole("checkbox", { name: /Future embroidery/ }),
   ).not.toBeInTheDocument();
   await user.click(lining);
-  await screen.findByRole("heading", { name: "₹850" });
+  await waitFor(() => expect(loadDraft(draft.id).configuration.addonIds).toEqual([id(10)]));
+  expect(screen.queryByRole("heading", { name: "₹850" })).not.toBeInTheDocument();
   await user.click(screen.getByRole("checkbox", { name: /Pocket/ }));
   await waitFor(() =>
     expect(loadDraft(draft.id).configuration.addonIds).toEqual([]),
   );
-  expect(screen.getByRole("heading", { name: "₹850" })).toBeInTheDocument();
+  await waitFor(() => expect(boundary.api.mock.calls.some(([path, request]) => path === "/pricing/estimate" && request.body.configuration.addonIds.length === 0)).toBe(true));
   await user.click(screen.getByRole("checkbox", { name: /Pocket/ }));
   await waitFor(() =>
     expect(loadDraft(draft.id).configuration.addonIds).toEqual([id(10)]),
@@ -425,7 +430,9 @@ it("parks an unchecked customization without erasing its values and replaces a s
   await screen.findByRole("heading", { name: "Sleeve length", level: 2 });
   await user.click(screen.getByRole("button", { name: "Continue" }));
   await user.click(await screen.findByRole("radio", { name: /Plain sleeve/ }));
-  await screen.findByRole("heading", { name: "₹790" });
+  await waitFor(() => expect(loadDraft(draft.id).configuration.components.sleeve.optionId).toBe(id(1)));
+  await waitFor(() => expect(boundary.api.mock.calls.some(([path, request]) => path === "/pricing/estimate" && request.body.configuration.components.sleeve?.optionId === id(1))).toBe(true));
+  expect(screen.queryByRole("heading", { name: "₹790" })).not.toBeInTheDocument();
   expect(screen.getByRole("radio", { name: /Plain sleeve/ })).toBeChecked();
   expect(screen.getByRole("radio", { name: /Puff sleeve/ })).not.toBeChecked();
 });

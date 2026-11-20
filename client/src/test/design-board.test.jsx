@@ -79,12 +79,19 @@ afterEach(() => {
   act(() => setLanguage("en"));
   vi.restoreAllMocks();
 });
-it("shows all source-board details without the stitching rate table or bottom request disclaimer", () => {
+it("makes design selection immediate while keeping optional details collapsed", async () => {
+  const user = userEvent.setup();
   mount(<DesignPresentation design={fixture()} />);
   expect(
     screen.getByRole("heading", { level: 1, name: template.design.title }),
   ).toBeInTheDocument();
-  expect(screen.getByText("Keyhole with tie & tassel")).toBeInTheDocument();
+  const details = screen.getByText("Design details", { selector: "summary" }).closest("details");
+  expect(details).not.toHaveAttribute("open");
+  expect(screen.getByText("Keyhole with tie & tassel")).not.toBeVisible();
+  expect(screen.getByText(template.design.description)).not.toBeVisible();
+  expect(screen.getByText("Embroidery and extra work are quoted separately.")).toBeVisible();
+  await user.click(within(details).getByText("Design details", { selector: "summary" }));
+  expect(screen.getByText("Keyhole with tie & tassel")).toBeVisible();
   expect(
     screen.getByText("Cotton / linen / cambric — customer’s fabric"),
   ).toBeInTheDocument();
@@ -97,7 +104,7 @@ it("shows all source-board details without the stitching rate table or bottom re
     "₹300 basic rate does not include",
   );
   expect(
-    screen.getByRole("link", { name: /Customize & stitch this design/ }),
+    screen.getByRole("link", { name: "Make this design yours" }),
   ).toHaveAttribute(
     "href",
     "/request?design=bbbbbbbbbbbbbbbbbbbbbbbb&garment=kurti",
@@ -131,7 +138,8 @@ it("switches front/side/back previews, uses the source crop and opens/closes a m
     screen.getByRole("button", { name: "Back view", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
 });
-it("renders translated gallery labels, facts and service notes in Hindi", () => {
+it("renders the selection action and expandable design details in Hindi", async () => {
+  const user = userEvent.setup();
   setLanguage("hi");
   mount(<DesignPresentation design={fixture()} />);
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
@@ -140,6 +148,9 @@ it("renders translated gallery labels, facts and service notes in Hindi", () => 
   expect(
     screen.getByRole("button", { name: "सामने से", exact: true }),
   ).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "इस डिज़ाइन को अपना बनाएँ" })).toHaveAttribute("href", "/request?design=bbbbbbbbbbbbbbbbbbbbbbbb&garment=kurti");
+  expect(screen.getByText(t("public.design.extraWork"))).toBeVisible();
+  await user.click(screen.getByText(t("Design details"), { selector: "summary" }));
   expect(
     screen.getByText(template.design.designDetails.backHi),
   ).toBeInTheDocument();
@@ -157,6 +168,9 @@ it("prefills the editable board and saves seven previews against one included im
   expect(screen.getByLabelText(/^Design title/)).toHaveValue(
     template.design.title,
   );
+  expect(screen.getByRole("textbox", { name: "Design code" })).toHaveValue("");
+  expect(screen.getByRole("textbox", { name: "Design code" })).toHaveAttribute("readonly");
+  expect(screen.getByLabelText("Garment")).not.toBeDisabled();
   expect(
     screen.getByLabelText("Neck design", { selector: "input" }),
   ).toHaveValue("Notched V neck with embroidery");
@@ -180,6 +194,7 @@ it("prefills the editable board and saves seven previews against one included im
     ([path, options]) =>
       path === "/admin/designs" && options?.method === "POST",
   )[1].body;
+  expect(body).not.toHaveProperty("code");
   expect(body.mediaIds).toEqual([mediaId]);
   expect(body.coverMediaId).toBe(mediaId);
   expect(body.imageViews).toHaveLength(7);

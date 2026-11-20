@@ -231,7 +231,7 @@ export function AdminDesigns() {
     setEditing({
       ...newDesign,
       ...d,
-      code: d.code || "KS-" + crypto.randomUUID().slice(0, 8).toUpperCase(),
+      code: d._id ? d.code || "" : "",
       category: idOf(d.category) || "",
       mediaIds: (d.mediaIds || []).map(idOf),
       coverMediaId: idOf(d.coverMediaId) || null,
@@ -306,7 +306,7 @@ export function AdminDesigns() {
         descriptionHi: editing.descriptionHi || "",
         searchLabels: editing.searchLabels || [],
         searchLabelsHi: editing.searchLabelsHi || [],
-        code: editing.code,
+        ...(editing.code?.trim() ? { code: editing.code.trim() } : {}),
         slug: editing.slug,
         garment: editing.garment,
         description: editing.description,
@@ -463,10 +463,11 @@ export function AdminDesigns() {
               <Field
                 label={t("Design code")}
                 name="code"
-                required
+                readOnly
                 maxLength="30"
                 value={editing.code}
-                onChange={(e) => patch("code", e.target.value)}
+                placeholder={t("admin.codes.assigned")}
+                hint={t("admin.codes.hint")}
               />
               <Field
                 label={t("URL slug")}
@@ -476,9 +477,10 @@ export function AdminDesigns() {
                 value={editing.slug}
                 onChange={(e) => patch("slug", e.target.value)}
               />
-              <Field label={t("Garment")} name="designGarment">
+              <Field label={t("Garment")} name="designGarment" hint={editing._id ? t("admin.codes.designType") : undefined}>
                 <select
                   id="designGarment"
+                  disabled={Boolean(editing._id)}
                   value={editing.garment}
                   onChange={(e) => patch("garment", e.target.value)}
                 >
@@ -881,7 +883,7 @@ export function AdminTaxonomy({ options = false }) {
               const body = options
                 ? {
                     name: editing.name,
-                    ...(editing.code ? { code: editing.code } : {}),
+                    ...(editing.code?.trim() ? { code: editing.code.trim() } : {}),
                     nameHi: editing.nameHi || "",
                     kind: editing.kind,
                     garments: editing.garments,
@@ -985,10 +987,10 @@ export function AdminTaxonomy({ options = false }) {
           />
           {options ? (
             <>
-              <Field label={t("Option type")} name="optionKind">
+              <Field label={t("Option type")} name="optionKind" hint={editing._id ? t("admin.codes.optionType") : undefined}>
                 <select
                   id="optionKind"
-                  disabled={Boolean(selectedKind)}
+                  disabled={Boolean(selectedKind || editing._id)}
                   value={editing.kind}
                   onChange={(e) =>
                     setEditing({
@@ -1025,7 +1027,7 @@ export function AdminTaxonomy({ options = false }) {
                   }
                 />
               </Field>
-              <Field label={t("Stable option code")} name="option-code" value={editing.code || ""} onChange={event=>setEditing({...editing,code:event.target.value.toUpperCase()})}/>
+              <Field label={t("Stable option code")} name="option-code" readOnly value={editing.code || ""} placeholder={t("admin.codes.assigned")} hint={t("admin.codes.hint")}/>
               <CatalogueImages scope={`${kind}:${editing._id || selectedKind || "new"}`} onBusyChange={setPhotoBusy} ids={editing.imageMediaIds?.length ? editing.imageMediaIds : editing.imageMediaId ? [editing.imageMediaId] : []} onChange={ids=>setEditing(current=>current ? {...current,imageMediaIds:ids,imageMediaId:ids[0]||null} : current)}/>
               {editing.sourceCrops?.length>0 && <details><summary>{t("Source and crop provenance")}</summary><pre>{JSON.stringify(editing.sourceCrops,null,2)}</pre></details>}
               <fieldset>

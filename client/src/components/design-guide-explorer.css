@@ -305,7 +305,7 @@
 }
 
 .measurement-garment-thumb:hover img {
-  transform: scale(1.02);
+  transform: none;
 }
 
 .measurement-garment-body {

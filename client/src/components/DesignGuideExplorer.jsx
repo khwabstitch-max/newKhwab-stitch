@@ -74,7 +74,7 @@ export function DesignGuideExplorer() {
       id: "measurement",
       label: language === "hi" ? "नाप लेने की गाइड" : "Measurement Guide",
       icon: BookOpen,
-      masterImg: "/guides/measurement-guide.jpg",
+      masterImg: "/guides/measurement/measurement-master-top-v3.webp",
       masterTitle:
         language === "hi"
           ? "पूरी नाप लेने की गाइड"

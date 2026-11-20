@@ -683,7 +683,7 @@ export const measurementGuideCards = [
     name: "Kurti Measurement Guide",
     nameHi: "कुर्ती नाप गाइड",
     subname: "Kurti Naap Guide",
-    image: "/guides/measurement/kurti-measurement-guide.jpg",
+    image: "/guides/measurement/kurti-measurement-guide-clean-v2.webp",
     description: "Numbered measurement points for Kurtis — shoulder, neck depth, bust, waist, hip, and kurti length.",
     descriptionHi: "कुर्ती के लिए नंबर वाली नाप गाइड — कंधे, गले की गहराई, सीना, कमर, कूल्हे और कुर्ती की लंबाई।",
     points: [
@@ -701,7 +701,7 @@ export const measurementGuideCards = [
     name: "Blouse Measurement Guide",
     nameHi: "ब्लाउज नाप गाइड",
     subname: "Blouse Naap Guide",
-    image: "/guides/measurement/blouse-measurement-guide.jpg",
+    image: "/guides/measurement/blouse-measurement-guide-clean-v3.webp",
     description: "Numbered measurement points for Saree Blouses — shoulder, neck depth, bust, waist, blouse length, and sleeve length.",
     descriptionHi: "साड़ी ब्लाउज के लिए नंबर वाली नाप गाइड — कंधे, गले की गहराई, सीना, कमर, ब्लाउज की लंबाई और बाजू की लंबाई।",
     points: [
@@ -719,7 +719,7 @@ export const measurementGuideCards = [
     name: "Suit / Kameez Measurement Guide",
     nameHi: "सूट / कमीज़ नाप गाइड",
     subname: "Suit & Kameez Naap Guide",
-    image: "/guides/measurement/suit-measurement-guide.jpg",
+    image: "/guides/measurement/suit-measurement-guide-clean-v2.webp",
     description: "Numbered measurement points for Salwar Suits & Kameez — shoulder, neck depth, bust, waist, hip, suit length, and sleeve arm.",
     descriptionHi: "सलवार सूट और कमीज़ के लिए नंबर वाली नाप गाइड — कंधे, गले की गहराई, सीना, कमर, कूल्हे, सूट की लंबाई और बाजू छोर।",
     points: [

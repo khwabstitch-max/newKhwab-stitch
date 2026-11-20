@@ -78,6 +78,7 @@ export async function executeAccountDeletion(ctx, user) {
     for (const order of orders) {
       const publicPins = orderPublicMediaPins(order);
       // An asset used by an option and a guide was pinned once for each category.
+      await releaseMedia(ctx, publicPins.designImages, session);
       await releaseMedia(ctx, publicPins.optionImages, session);
       await releaseMedia(ctx, publicPins.guideImages, session);
       for (const id of order.referenceMediaIds)
@@ -130,6 +131,7 @@ export async function executeAccountDeletion(ctx, user) {
               ? { ...order.estimate, components: {} }
               : undefined,
             referenceMediaIds: [],
+            referenceSnapshots: [],
             notes: "",
             fabricDetails: "",
             quotes,
@@ -137,7 +139,7 @@ export async function executeAccountDeletion(ctx, user) {
             timeline,
             anonymizedAt: new Date(),
           },
-          $unset: { preferredDate: 1, draftId: 1, guideSnapshots: 1, publicMediaPins: 1 },
+          $unset: { preferredDate: 1, preferredDateReason: 1, draftId: 1, guideSnapshots: 1, publicMediaPins: 1 },
         },
         { session },
       );

@@ -6,9 +6,11 @@ export default defineConfig({
   plugins: [react()],
   build: { rollupOptions: { output: { manualChunks: { framework: ['react', 'react-dom', 'react-router-dom'], icons: ['lucide-react'] } } } },
   server: {
+    strictPort: true,
+    // The API binds IPv4; localhost may reach another service on IPv6.
     proxy: {
-      '/api': 'http://localhost:3000',
-      '/health': 'http://localhost:3000',
+      '/api': 'http://127.0.0.1:3000',
+      '/health': 'http://127.0.0.1:3000',
     },
   },
   test: {

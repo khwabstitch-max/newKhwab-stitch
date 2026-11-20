@@ -10,13 +10,15 @@ const SENSITIVE = [
   "notes",
   "fabricDetails",
   "assistanceRequests",
+  "preferredDate",
+  "preferredDateReason",
 ];
 const PARTS = ["sleeveLength", "sleeve", "neck", "back", "fit", "extra"];
 const BASE_FIELDS = {
   kurti: ["bust", "waist", "hip", "shoulder", "length"],
   suit: ["bust", "waist", "hip", "shoulder", "length"],
   blouse: ["bust", "underbust", "waist", "shoulder", "length"],
-  alteration: ["bust", "waist", "hip", "shoulder", "length"],
+  alteration: [],
 };
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const safeId = (id) =>
@@ -73,7 +75,7 @@ export function createDraft(
   if (!Array.isArray(previousConfig.changedParts)) {
     draft.configuration.changedParts =
       previousConfig.source === "reference"
-        ? ["sleeve", "neck", "back"]
+        ? Object.keys(previousConfig.components || {}).filter(kind => PARTS.includes(kind))
         : Object.keys(previousConfig.components || {}).filter((kind) =>
             PARTS.includes(kind),
           );
@@ -98,6 +100,9 @@ export function createDraft(
     values: { ...draft.measurements?.values },
   };
   draft.measurements.takenBy ||= draft.measurements.method === "assistance" ? "assistance" : "self";
+  if (draft.garment === "alteration") {
+    draft.configuration = { ...draft.configuration, mode: draft.configuration.source === "catalogue" ? "exact" : "custom", changedParts: [], components: {}, addonIds: [] };
+  }
   draft.customer = { name: "", phone: "", ...draft.customer };
   draft.address = {
     line1: "",
@@ -264,6 +269,7 @@ export function resolveMeasurementFields(
   configuration = {},
   options = [],
 ) {
+  if (garment === "alteration") return [];
   const fields = new Set(BASE_FIELDS[garment] || []);
   const sleeve = configuration.components?.sleeve;
   const selected = options.find(

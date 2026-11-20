@@ -76,13 +76,14 @@ export function effectiveLengthStyle(
 
 export function optionCompatibility(
   option,
-  { lengthStyle, oppositeOptionId, oppositeOption } = {},
+  { lengthStyle, oppositeOptionId, oppositeOption, garment } = {},
 ) {
   if (!available(option))
     return {
       compatible: false,
       reason: t("This design is not currently published or available."),
     };
+  if (garment && option.garments?.length && !option.garments.includes(garment)) return { compatible: false, reason: t("This option is not available for the selected garment.") };
   if (option.kind === "sleeve" && lengthStyle === "sleeveless")
     return {
       compatible: false,

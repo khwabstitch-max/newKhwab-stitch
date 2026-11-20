@@ -110,3 +110,21 @@ it("uses authenticated existing media API with the requested purpose and a bound
   expect(options.body.get("file").size).toBeLessThanOrEqual(UPLOAD_IMAGE_LIMIT);
   expect(options).not.toHaveProperty("headers");
 });
+
+it("uploads a reference PDF without decoding or recompressing it", async () => {
+ const file=new File(["%PDF-1.7\nreference board\n%%EOF"],"views.pdf",{type:"application/pdf"});
+ boundary.api.mockResolvedValue({data:{_id:"pdf-media"}});
+ await uploadMedia(file,"reference");
+ const request=boundary.api.mock.calls[0][1],sent=request.body.get("file");
+ expect(sent.name).toBe("views.pdf");expect(sent.type).toBe("application/pdf");expect(sent.size).toBe(file.size);
+ expect(createImageBitmap).not.toHaveBeenCalled();expect(canvases).toHaveLength(0);
+});
+it("rejects oversized or disguised PDFs and keeps other upload purposes image-only", async () => {
+ const large=new File(["%PDF-1.7",new Uint8Array(3*1024*1024)],"large.pdf",{type:"application/pdf"});
+ await expect(uploadMedia(large,"reference")).rejects.toMatchObject({code:"REFERENCE_PDF_TOO_LARGE"});
+ await expect(uploadMedia(new File(["not a PDF"],"disguised.pdf",{type:"application/octet-stream"}),"reference")).rejects.toMatchObject({code:"INVALID_REFERENCE_PDF"});
+ const pdf=new File(["%PDF-1.7\nreference\n%%EOF"],"views.pdf",{type:"application/pdf"});
+ await expect(uploadMedia(pdf,"catalogue")).rejects.toMatchObject({code:"INVALID_IMAGE"});
+ await expect(uploadMedia(pdf,"measurement")).rejects.toMatchObject({code:"INVALID_IMAGE"});
+ expect(boundary.api).not.toHaveBeenCalled();
+});

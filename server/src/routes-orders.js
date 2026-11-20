@@ -1,6 +1,9 @@
+import { mediaMetadata } from "./media-metadata.js";
+import { mediaUrl } from "./media-storage.js";
 import { z } from "zod";
 import {
   orderInput,
+  objectId,
   requestHash,
   orderNumber,
   quoteResponseInput,
@@ -12,7 +15,8 @@ import { loadEstimate, submittedConfiguration } from "./pricing.js";
 import { draftMediaIds } from "./routes-drafts.js";
 import { assertOrderServiceEnabled } from "./routes-services.js";
 import { commitOrderBenefits, releaseCommittedBenefits } from "./commerce-service.js";
-import { snapshotMeasurementGuide } from "./reference-integrity.js";
+import { snapshotMeasurementGuide, orderPublicMediaPins } from "./reference-integrity.js";
+import { needsEnteredMeasurements } from "./workflow-input.js";
 import {
   pageQuery,
   pageResult,
@@ -41,6 +45,23 @@ export function orderRoutes(app, ctx, auth, orderLimit) {
       models.Order.countDocuments(filter),
     ]);
     res.json(pageResult(items.map(safeOrder), total, q));
+  });
+  app.get("/api/orders/:id/media/:mediaId", auth, async (req, res) => {
+    z.object({}).strict().parse(req.query);
+    const order = await ownedOrder(ctx, req);
+    const mediaId = objectId.parse(req.params.mediaId).toLowerCase();
+    const privateReference = (order.referenceMediaIds || []).some(id => String(id) === mediaId);
+    const pins = orderPublicMediaPins(order);
+    const publicSelection = [...pins.designImages, ...pins.optionImages, ...pins.guideImages].includes(mediaId);
+    if (!privateReference && !publicSelection) fail(404, "NOT_FOUND", "Reference not found.");
+    const asset = requireFound(await models.MediaAsset.findOne({
+      _id: mediaId, deletingAt: null,
+      ...(privateReference ? { owner: order.owner, private: true } : { private: false, purpose: "catalogue" }),
+    }), "Reference not found.");
+    res.set("Cache-Control", "private, no-store").json({ data: {
+      url: mediaUrl(ctx.images, asset, 300), ...mediaMetadata(asset),
+      expiresAt: new Date(Date.now() + 300000).toISOString(), expiresIn: 300,
+    } });
   });
   app.post("/api/orders", auth, orderLimit, async (req, res) => {
     const body = orderInput.parse(req.body);
@@ -112,6 +133,12 @@ export function orderRoutes(app, ctx, auth, orderLimit) {
           private: true,
           purposes: ["reference", "measurement"],
         });
+        const referenceAssets = await models.MediaAsset.find({ _id: { $in: body.referenceMediaIds }, owner: req.user._id, private: true, deletingAt: null }).session(session).lean();
+        const referencesById = new Map(referenceAssets.map(asset => [String(asset._id), asset]));
+        const referenceSnapshots = body.referenceMediaIds.map(id => ({ mediaId: id.toLowerCase(), ...mediaMetadata(referencesById.get(id.toLowerCase())) }));
+        const designImageIds = [...new Set((design?.mediaIds || []).map(String))];
+        await pinMedia(ctx, designImageIds, session, { private: false, purposes: ["catalogue"] });
+        const designAssets = designImageIds.length ? await models.MediaAsset.find({ _id: { $in: designImageIds }, private: false, deletingAt: null }).session(session).lean() : [];
         const estimate = await loadEstimate(ctx, body, session);
         const effectiveOptionIds = [...Object.values(estimate.components), ...(estimate.addons || [])].map(component=>component.optionId).filter(Boolean);
         await models.DesignOption.updateMany({_id:{$in:effectiveOptionIds}},{$inc:{usedCount:1}},{session});
@@ -141,7 +168,7 @@ export function orderRoutes(app, ctx, auth, orderLimit) {
             "ESTIMATE_CHANGED",
             "Prices or available options changed. Review the updated estimate before submitting.",
           );
-        if (body.configuration && body.measurements.method !== "assistance" && body.measurements.takenBy !== "assistance")
+        if (body.configuration && needsEnteredMeasurements(body.measurements))
           for (const field of estimate.measurementFields)
             if (body.measurements.values[field] === undefined)
               fail(
@@ -200,12 +227,19 @@ export function orderRoutes(app, ctx, auth, orderLimit) {
               requestHash: hash,
               preferenceLabelsHi,
               estimate,
-              publicMediaPins: { optionImages: selectedImageIds, guideImages: guideImageIds },
+              publicMediaPins: { designImages: designImageIds, optionImages: selectedImageIds, guideImages: guideImageIds },
+              referenceSnapshots,
               ...(guideSnapshots.length ? { guideSnapshots } : {}),
               orderNumber: orderNumber(),
               status: "request_received",
               designSnapshot: design
                 ? {
+                    _id: String(design._id),
+                    imageMediaIds: designImageIds,
+                    mediaIds: designImageIds,
+                    coverMediaId: design.coverMediaId ? String(design.coverMediaId) : null,
+                    imageViews: (design.imageViews || []).map(view => ({ mediaId: String(view.mediaId), label: view.label, labelHi: view.labelHi || "", crop: view.crop || null })),
+                    images: designAssets.map(asset => ({ mediaId: String(asset._id), ...mediaMetadata(asset) })),
                     title: design.title,
                     titleHi: design.titleHi || "",
                     code: design.code,

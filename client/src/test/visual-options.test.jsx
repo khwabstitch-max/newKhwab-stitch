@@ -329,3 +329,14 @@ it("keeps loading, failed and genuinely empty option results distinct", () => {
   rerender(<VisualOptions kind="sleeve" options={[]} onSelect={vi.fn()} />);
   expect(screen.getByText(/No compatible options/)).toBeInTheDocument();
 });
+
+it("shows individual neck, back and sleeve choices without the redundant full style guide", () => {
+ for (const kind of ["neck", "back", "sleeve"]) {
+ const view = render(<VisualOptions kind={kind} garment="kurti" options={[{_id:"selected-"+kind,name:"Chosen "+kind,kind,garments:["kurti"],active:true,priceMode:"included"}]} onSelect={vi.fn()} />);
+ expect(screen.queryByText("Official Style Guide")).not.toBeInTheDocument();
+ expect(screen.queryByRole("button",{name:/View .* Design Chart/})).not.toBeInTheDocument();
+ expect(screen.getByRole("radio")).toBeInTheDocument();
+ expect(screen.getByRole("button",{name:/Preview Chosen/})).toBeInTheDocument();
+ view.unmount();
+ }
+});

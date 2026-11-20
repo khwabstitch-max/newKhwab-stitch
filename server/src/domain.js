@@ -98,7 +98,8 @@ export const orderInput = z
       .object({
         unit: z.enum(["in", "cm"]),
         method: z.enum(["body", "garment", "assistance"]),
-        takenBy: z.enum(["self", "tailor", "assistance"]).optional(),
+        takenBy: z.enum(["self", "tailor", "assistance", "sample"]).optional(),
+        sampleGarmentIncluded: z.boolean().optional(),
         guideIds: z.array(objectId).max(5).optional(),
         values: z.record(z.string(), z.number().finite()).default({}),
         notes: z.string().trim().max(1000).default(""),
@@ -120,6 +121,7 @@ export const orderInput = z
       .strict()
       .optional(),
     preferredDate: dateOnly.optional(),
+    preferredDateReason: z.string().trim().max(1000).optional(),
     notes: z.string().trim().max(2000).default(""),
     fabricDetails: z.string().trim().max(1000).optional(),
     fabricAcknowledged: z.literal(true),
@@ -172,7 +174,7 @@ export const orderInput = z
           message: `Enter between ${v.measurements.unit === "cm" ? (min * 2.54).toFixed(1) : min} and ${v.measurements.unit === "cm" ? (max * 2.54).toFixed(1) : max} ${v.measurements.unit}.`,
         });
     }
-    if (v.measurements.method !== "assistance" && v.measurements.takenBy !== "assistance" && v.garment !== "alteration")
+    if (v.measurements.method !== "assistance" && !["assistance", "sample"].includes(v.measurements.takenBy) && v.garment !== "alteration")
       for (const key of MEASUREMENT_FIELDS[v.garment].filter(
         (k) => k !== "sleeveLength",
       ))
@@ -182,6 +184,12 @@ export const orderInput = z
             path: ["measurements", "values", key],
             message: "Measurement is required, or choose assistance.",
           });
+    if (v.measurements.takenBy === "sample") {
+      if (v.measurements.method !== "garment" || v.measurements.sampleGarmentIncluded !== true)
+        ctx.addIssue({ code: "custom", path: ["measurements"], message: "Confirm that you will send a well-fitting stitched garment with your fabric." });
+      if (Object.keys(v.measurements.values).length)
+        ctx.addIssue({ code: "custom", path: ["measurements", "values"], message: "Choose either numeric measurements or a stitched sample garment." });
+    }
     if (v.garment === "alteration" && !v.measurements.notes.trim())
       ctx.addIssue({
         code: "custom",
@@ -222,7 +230,7 @@ export const orderInput = z
         });
     }
     if (
-      v.measurements.method !== "assistance" && v.measurements.takenBy !== "assistance" &&
+      v.measurements.method !== "assistance" && !["assistance", "sample"].includes(v.measurements.takenBy) &&
       v.measurements.reconfirmFields?.length
     )
       ctx.addIssue({
@@ -275,6 +283,7 @@ export const designDetailsInput = z
         "fabricRequirementHi",
         "turnaround",
         "turnaroundHi",
+                "scope", "scopeHi", "preparation", "preparationHi", "fitting", "fittingHi", "limitations", "limitationsHi",
       ].map((key) => [key, z.string().trim().max(300).optional()]),
     ),
   )
@@ -286,10 +295,8 @@ export const designInput = z
     descriptionHi: z.string().trim().max(4000).optional(),
     searchLabels: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
     searchLabelsHi: z.array(z.string().trim().min(1).max(60)).max(20).optional(),
-    code: z
-      .string()
-      .trim()
-      .regex(/^[A-Za-z0-9-]{2,30}$/),
+    code: z.preprocess(value => typeof value === "string" && !value.trim() ? undefined : value,
+      z.string().trim().regex(/^[A-Za-z0-9-]{2,30}$/).optional()),
     slug: z
       .string()
       .trim()
@@ -392,7 +399,7 @@ export const categoryInput = z
 export const sourceCropsInput = z.array(z.object({ sourceFilename: z.string().max(250), sourceSha256: z.string().regex(/^[a-f0-9]{64}$/), crop: z.object({ left: z.number().int().min(0), top: z.number().int().min(0), width: z.number().int().positive(), height: z.number().int().positive() }).strict(), notes: z.string().max(1000).optional() }).strict()).max(20).optional();
 export const optionInput = z
   .object({
-    code: z.string().trim().regex(/^[A-Z0-9][A-Z0-9_-]{1,49}$/).optional(),
+    code: z.preprocess(value => typeof value === "string" && !value.trim() ? undefined : value, z.string().trim().regex(/^[A-Z0-9][A-Z0-9_-]{1,49}$/).optional()),
     name: z.string().trim().min(2).max(80),
     nameHi: z.string().trim().max(80).optional(),
     kind: z.enum(OPTION_KINDS),

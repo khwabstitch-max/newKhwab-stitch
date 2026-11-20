@@ -287,10 +287,10 @@ describe("English and Hindi language behaviour", () => {
       2,
     );
     await user.click(screen.getByRole("button", { name: t("Continue") }));
+    await user.click(screen.getByRole("radio", { name: t("request.measurement.self") }));
     const method = screen.getByLabelText(
       t("What is being measured?"),
     );
-    fireEvent.change(screen.getByLabelText(t("Who will take the measurements?")), { target: { value: "self" } });
     fireEvent.change(method, { target: { value: "body" } });
     expect(method).toHaveValue("body");
     expect(
@@ -335,7 +335,7 @@ describe("English and Hindi language behaviour", () => {
       screen.getByLabelText("Hindi description (optional)"),
       "आपकी पसंद की कढ़ाई।",
     );
-    await user.type(screen.getByLabelText(/Design code/), "K-TEST");
+    expect(screen.getByRole("textbox", { name: "Design code" })).toHaveAttribute("readonly");
     await user.type(
       document.getElementById("description"),
       "A custom stitching reference.",

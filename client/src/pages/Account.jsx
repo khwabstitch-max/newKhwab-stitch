@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useSearchParams } from "react-router-dom";
-import { ArrowRight, MessageCircle, Plus, Ruler, Scissors } from "lucide-react";
+import { Link, NavLink, Outlet, useLocation, useSearchParams } from "react-router-dom";
+import { ArrowRight, ChevronDown, MessageCircle, Plus, Ruler, Scissors } from "lucide-react";
 import { api, dateTime as date, readable } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { uploadMedia } from "../lib/media";
@@ -52,12 +52,38 @@ function usePageParam(name = "page") {
 }
 export function AccountLayout() {
   useLanguage();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname } = useLocation();
+  const currentSection = sections.find(([path]) =>
+    pathname === `/account${path ? `/${path}` : ""}`,
+  );
   return (
     <div className="container page account-shell">
       <aside className="account-navigation">
         <p className="eyebrow">{t("YOUR KHWAB STITCH")}</p>
         <h2>{t("Made around you.")}</h2>
-        <nav aria-label={t("Account navigation")}>
+        <button
+          type="button"
+          className="account-menu-toggle"
+          aria-expanded={menuOpen}
+          aria-controls="account-navigation-links"
+          onClick={() => setMenuOpen((value) => !value)}
+        >
+          <span><small>{t("My account")}</small><strong>{t(currentSection?.[1] || "Account navigation")}</strong></span>
+          <ChevronDown size={20} aria-hidden="true" />
+        </button>
+        <nav
+          id="account-navigation-links"
+          className={menuOpen ? "account-links is-open" : "account-links"}
+          aria-label={t("Account navigation")}
+          onClick={(event) => { if (event.target.closest("a")) setMenuOpen(false); }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setMenuOpen(false);
+              event.currentTarget.previousElementSibling?.focus();
+            }
+          }}
+        >
           {sections.map(([path, label]) => (
             <NavLink
               end={!path}

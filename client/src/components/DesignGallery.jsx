@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
-  Check,
   ChevronLeft,
   ChevronRight,
   Expand,
@@ -10,6 +9,8 @@ import {
   Scissors,
 } from "lucide-react";
 import { useLanguage } from "../i18n/Language";
+import { withDesignPhotography } from "../lib/design-photography";
+import { withProductionDesignDetails } from "../lib/design-presentation";
 import { localize, t } from "../i18n/core";
 import { money, readable } from "../lib/api";
 import { GarmentArt } from "./ui";
@@ -76,6 +77,7 @@ export function DesignImage({
 }
 export function DesignGallery({ design }) {
   useLanguage();
+  design = withDesignPhotography(design);
   const [selected, setSelected] = useState(0);
   const zoom = useRef(null);
   const [zoomed, setZoomed] = useState(false);
@@ -94,11 +96,10 @@ export function DesignGallery({ design }) {
     (design.coverImageUrl ? { url: design.coverImageUrl } : null);
   const label = localize(image, "label");
   const alt = localize(design, "title") + (label ? " — " + label : "");
-  const isWide = Boolean(
-    image &&
-    (!image.crop ||
-      (image.crop.width || 0) > (image.crop.height || 0) * 1.15),
-  );
+  const imageAspect = image?.crop
+    ? (image.crop.width * (image.width || 1536)) / (image.crop.height * (image.height || 1024))
+    : image?.width && image?.height ? image.width / image.height : 1;
+  const isWide = imageAspect > 1.15;
   function enlarge(index = active) {
     setSelected(index);
     setZoomed(true);
@@ -173,7 +174,7 @@ export function DesignGallery({ design }) {
       )}
       <p className="small-print gallery-reference">
         {t(
-          "Images are design references. Your fabric, colour and final fit may vary.",
+          design.garment === "alteration" ? "public.design.alterationReference" : "Images are design references. Your fabric, colour and final fit may vary.",
         )}
       </p>
       {views.length > 3 && (
@@ -181,7 +182,7 @@ export function DesignGallery({ design }) {
           <h2>{t("A closer look")}</h2>
           <div>
             {views
-              .filter((view) => view.crop && view.crop.height < 70)
+              .filter((view) => view.kind === "detail" || (!view.kind && view.crop && view.crop.height < 70))
               .map((view) => {
                 const index = views.indexOf(view);
                 return (
@@ -224,7 +225,7 @@ export function DesignGallery({ design }) {
               </button>
             </div>
             <DesignImage image={image} alt={alt} />
-            <p>{t("Fabric provided by customer.")}</p>
+            <p>{t(design.garment === "alteration" ? "public.design.alterationBring" : "Fabric provided by customer.")}</p>
           </div>
         )}
       </dialog>
@@ -240,16 +241,23 @@ const specifications = [
   ["fabricRequirement", "Fabric required"],
   ["turnaround", "Delivery estimate"],
 ];
+const alterationSpecifications = [
+  ["scope", "public.design.alterationScope"],
+  ["preparation", "public.design.alterationPreparation"],
+  ["fitting", "public.design.alterationFitting"],
+  ["limitations", "public.design.alterationLimits"],
+  ["turnaround", "Delivery estimate"],
+];
 export function DesignSpecifications({ design }) {
   useLanguage();
-  const rows = specifications.filter(([key]) =>
+  design = withProductionDesignDetails(design);
+  const rows = (design.garment === "alteration" ? alterationSpecifications : specifications).filter(([key]) =>
     localize(design.designDetails, key),
   );
   return (
     <>
       {rows.length > 0 && (
-        <section className="design-specifications">
-          <h2>{t("Design details")}</h2>
+        <section className="design-specifications" aria-label={t(design.garment === "alteration" ? "public.design.serviceDetails" : "Design details")}>
           <dl>
             {rows.map(([key, label]) => (
               <div key={key}>
@@ -271,52 +279,43 @@ export function DesignSpecifications({ design }) {
 }
 export function DesignPresentation({ design, preview = false }) {
   useLanguage();
+  design = withProductionDesignDetails(withDesignPhotography(design));
+  const isAlteration = design.garment === "alteration";
+  const hasPrice = Number.isSafeInteger(design.startingPricePaise) && design.startingPricePaise >= 0;
   const Heading = preview ? "h2" : "h1";
   return (
     <div className="detail-grid design-presentation">
-      <DesignGallery key={design._id || design.slug} design={design} />
-      <div className="detail-copy">
-        <p className="eyebrow">
-          {design.code} · {readable(design.garment)}
+      <div className="detail-copy design-summary">
+        <p className="eyebrow design-reference">
+          <span className="design-reference-code" aria-label={t(isAlteration ? "public.design.serviceCode" : "public.design.designCode")}>{design.code}</span>
+          <span>{readable(design.garment)}</span>
         </p>
         <Heading>{localize(design, "title")}</Heading>
         <p className="detail-price">
-          {t("Stitching starting from")}{" "}
-          <strong>{money(design.startingPricePaise)}</strong>
+          {hasPrice && <span>{t(isAlteration ? "public.design.alterationPrice" : "Stitching starting from")}</span>}
+          <strong>{hasPrice ? money(design.startingPricePaise) : t("public.design.pricePending")}</strong>
         </p>
-        <p className="muted">{localize(design, "description")}</p>
-        <div className="fabric-promise">
-          <Scissors size={22} />
-          <div>
-            <strong>{t("Fabric provided by customer.")}</strong>
-            <span>
-              {t(
-                "For customers who want their own fabric stitched to their measurements.",
-              )}
-            </span>
-          </div>
-        </div>
-        <DesignSpecifications design={design} />
-        <ul className="check-list">
-          <li>
-            <Check size={17} />
-            {t("Made to your measurements and preferences")}
-          </li>
-          <li>
-            <Check size={17} />
-            {t("Final quote and delivery date after review")}
-          </li>
-        </ul>
         {!preview && (
           <Link
-            className="button"
-            to={`/request?design=${design._id}&garment=${design.garment}`}
+            className="button design-select-button"
+            to={"/request?design=" + design._id + "&garment=" + design.garment}
           >
-            {t("Customize & stitch this design")}
-            <ArrowRight size={18} />
+            {t(isAlteration ? "public.design.alterationCta" : "public.design.makeYours")}
+            <ArrowRight size={18} aria-hidden="true" />
           </Link>
         )}
+        <ul className="design-essential-notes">
+          <li><Scissors size={16} aria-hidden="true" /><span>{t(isAlteration ? "public.design.alterationBring" : "Fabric provided by customer.")}</span></li>
+          <li>{t(isAlteration ? "public.design.alterationExtra" : "public.design.extraWork")}</li>
+          <li>{t("Final quote and delivery date after review")}</li>
+        </ul>
       </div>
+      <DesignGallery key={design._id || design.slug} design={design} />
+      <details className="design-more-details" open={isAlteration || undefined}>
+        <summary>{t(isAlteration ? "public.design.serviceDetails" : "Design details")}</summary>
+        {localize(design, "description") && <p className="design-description">{localize(design, "description")}</p>}
+        <DesignSpecifications design={design} />
+      </details>
     </div>
   );
 }

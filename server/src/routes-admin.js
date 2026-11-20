@@ -1,3 +1,4 @@
+import { allocateCatalogueCode, assertCatalogueIdentity, prepareCatalogueCodes } from "./catalogue-codes.js";
 import { z } from "zod";
 import { releaseCommittedBenefits, completeCommerceOrder } from "./commerce-service.js";
 import {
@@ -147,7 +148,7 @@ export function adminRoutes(app, ctx, auth, admin) {
       ...(q.attention === "missing_price" ? { startingPricePaise: { $lte: 0 } } : {}),
       ...(q.search
         ? {
-            $or: ["title", "titleHi", "code", "slug", "searchLabels", "searchLabelsHi"].map((field) => ({
+            $or: ["title", "titleHi", "code", "codeAliases", "slug", "searchLabels", "searchLabelsHi"].map((field) => ({
               [field]: { $regex: escaped(q.search), $options: "i" },
             })),
           }
@@ -170,6 +171,7 @@ export function adminRoutes(app, ctx, auth, admin) {
   );
   app.post(base + "/designs", async (req, res) => {
     const body = designInput.parse(req.body);
+    await prepareCatalogueCodes(models);
     const design = await ctx.transaction(async (session) => {
       await validateDefaults(ctx, body, session);
       await changeCategory(ctx, null, body.category, session);
@@ -177,7 +179,8 @@ export function adminRoutes(app, ctx, auth, admin) {
         private: false,
         purposes: ["catalogue"],
       });
-      const [created] = await models.Design.create([body], { session });
+      const code = await allocateCatalogueCode(models, "design", body, session);
+      const [created] = await models.Design.create([{ ...body, code }], { session });
       await audit(ctx, req, "design.created", "design", created._id, session, {
         status: created.status,
       });
@@ -192,6 +195,7 @@ export function adminRoutes(app, ctx, auth, admin) {
         await models.Design.findById(idOf(req)).session(session),
       );
       checkRevision(current, revision);
+      assertCatalogueIdentity(current, fields, "design");
       await validateDefaults(ctx, fields, session, current);
       await changeCategory(ctx, current.category, fields.category, session);
       await pinMedia(
@@ -256,7 +260,7 @@ export function adminRoutes(app, ctx, auth, admin) {
     app.get(base + "/" + name, async (req, res) => {
       const q = pageQuery(req.query, { search: searchField, ...(name === "options" ? { kind: z.enum(OPTION_KINDS).optional(), status: z.enum(["draft", "published", "archived"]).optional(), active: z.enum(["true", "false"]).optional() } : {}) });
       const filter = {
-        ...(q.search ? { $or: ["name", "nameHi", ...(name === "options" ? ["code"] : ["slug"])].map(field => ({ [field]: { $regex: escaped(q.search), $options: "i" } })) } : {}),
+        ...(q.search ? { $or: ["name", "nameHi", ...(name === "options" ? ["code", "codeAliases"] : ["slug"])].map(field => ({ [field]: { $regex: escaped(q.search), $options: "i" } })) } : {}),
         ...(q.kind ? { kind: q.kind } : {}),
         ...(q.status ? { status: q.status } : {}),
         ...(q.active ? { active: q.active === "true" } : {}),
@@ -277,6 +281,7 @@ export function adminRoutes(app, ctx, auth, admin) {
     });
     app.post(base + "/" + name, async (req, res) => {
       const body = schema.parse(req.body);
+      if (name === "options") await prepareCatalogueCodes(models);
       const record = await ctx.transaction(async (session) => {
         if (name === "options") await fenceNewReferences(ctx, { optionIds: body.incompatibleOptionIds || [] }, {}, session);
         if (name === "options" && imageIds(body).length)
@@ -284,7 +289,8 @@ export function adminRoutes(app, ctx, auth, admin) {
             private: false,
             purposes: ["catalogue"],
           });
-        const [created] = await Model.create([body], { session });
+        const fields = name === "options" ? { ...body, code: await allocateCatalogueCode(models, "option", body, session) } : body;
+        const [created] = await Model.create([fields], { session });
         await audit(ctx, req, name + ".created", name, created._id, session);
         return created;
       });
@@ -297,6 +303,7 @@ export function adminRoutes(app, ctx, auth, admin) {
           await Model.findById(idOf(req)).session(session),
         );
         checkRevision(current, revision);
+        if (name === "options") assertCatalogueIdentity(current, fields, "option");
         if (name === "options") await fenceNewReferences(ctx, { optionIds: fields.incompatibleOptionIds || [] }, { optionIds: current.incompatibleOptionIds || [] }, session);
         if (
           name === "options" &&

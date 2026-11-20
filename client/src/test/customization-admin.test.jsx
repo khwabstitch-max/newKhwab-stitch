@@ -10,7 +10,7 @@ vi.mock("../lib/api", async (original) => ({
 }));
 import { AdminTaxonomy } from "../pages/Admin";
 import { DesignEditorExtras } from "../components/DesignEditorExtras";
-import { setLanguage } from "../i18n/core";
+import { setLanguage, t } from "../i18n/core";
 
 const sleeveId = "a".repeat(24),
   backId = "b".repeat(24),
@@ -88,17 +88,21 @@ it("creates a free length preference without editable surcharge controls", async
       displayOrder: 3,
     }),
   );
+  expect(savedBody()).not.toHaveProperty("code");
   expect(savedBody()).not.toHaveProperty("measurements");
 });
 
 it("edits compatibility without unpublishing a sleeve or enabling length-dependent prices", async () => {
-  mockOptions([option({ compatibleLengthStyles: ["short"] })]);
+  mockOptions([option({ code: "SD-3", compatibleLengthStyles: ["short"] })]);
   mount();
   const user = userEvent.setup();
   await user.click(
     await screen.findByRole("button", { name: "Edit", exact: true }),
   );
   expect(screen.getByLabelText("Option publication")).toHaveValue("published");
+  expect(screen.getByLabelText("Stable option code")).toHaveValue("SD-3");
+  expect(screen.getByLabelText("Stable option code")).toHaveAttribute("readonly");
+  expect(screen.getByLabelText("Option type")).toBeDisabled();
   await user.click(
     screen.getByRole("checkbox", { name: "Full length", exact: true }),
   );
@@ -108,6 +112,7 @@ it("edits compatibility without unpublishing a sleeve or enabling length-depende
     expect(savedBody()).toMatchObject({
       status: "published",
       revision: 4,
+      code: "SD-3",
       sleeveStyle: "full",
       compatibleLengthStyles: ["short", "full"],
       sleevePricingMode: "separate",
@@ -187,9 +192,9 @@ it("requires explicit add-on supply coverage and retains the configured material
   );
 });
 
-function DefaultHarness() {
+function DefaultHarness({ garment = "kurti" } = {}) {
   const [editing, setEditing] = useState({
-    garment: "kurti",
+    garment,
     mediaIds: [],
     imageViews: [],
     defaultComponents: { fit: fitId },
@@ -301,4 +306,31 @@ it("shows option thumbnails, loads up to 50 catalogue photos, previews selected 
       imageMediaIds: [imgB],
     }),
   );
+});
+
+it("edits bilingual alteration service details without garment component defaults or stitching option requests", async () => {
+  mockOptions([]);
+  mount(<DefaultHarness garment="alteration" />);
+  const user = userEvent.setup();
+  expect(screen.getByRole("heading", { name: "Service details" })).toBeInTheDocument();
+  expect(screen.queryByRole("group", { name: "Included catalogue components" })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Neck design", { selector: "input" })).not.toBeInTheDocument();
+  await user.type(screen.getByLabelText("Alteration work"), "Waist and hem adjustments");
+  await user.type(screen.getByLabelText("What to bring"), "Bring a clean existing garment");
+  await user.type(screen.getByLabelText("Fitting and review"), "Check seam allowance");
+  await user.type(screen.getByLabelText("What affects the work"), "Review delicate fabric first");
+  await user.type(document.getElementById("detail-scope-hi"), "कमर और घेरे की फिटिंग");
+  expect(JSON.parse(screen.getByTestId("edited-design").textContent)).toMatchObject({
+    garment: "alteration", startingPricePaise: 65000, serviceNotes: "Keep fabric instruction",
+    designDetails: { scope: "Waist and hem adjustments", scopeHi: "कमर और घेरे की फिटिंग", preparation: "Bring a clean existing garment", fitting: "Check seam allowance", limitations: "Review delicate fabric first", style: "Preserve original style" },
+  });
+  expect(boundary.api.mock.calls.some(([path]) => path.startsWith("/admin/options?"))).toBe(false);
+});
+it("uses Hindi alteration labels in the admin service editor", () => {
+  setLanguage("hi", false);
+  mount(<DefaultHarness garment="alteration" />);
+  for (const key of ["public.design.alterationScope", "public.design.alterationPreparation", "public.design.alterationFitting", "public.design.alterationLimits"])
+    expect(screen.getByLabelText(t(key))).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: t("public.design.serviceDetails") })).toBeInTheDocument();
+  expect(screen.queryByRole("group", { name: t("Included catalogue components") })).not.toBeInTheDocument();
 });

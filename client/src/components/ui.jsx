@@ -5,14 +5,13 @@ import {
   ArrowRight,
   Check,
   ChevronLeft,
-  ChevronRight,
   LoaderCircle,
   Scissors,
   ShieldCheck,
   Upload,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { cloneElement, isValidElement, useId } from "react";
+import { cloneElement, isValidElement, useEffect, useId, useRef } from "react";
 export function Spinner({ label = t("Loading\u2026") }) {
   useLanguage();
   return (
@@ -133,27 +132,44 @@ export function Button({ busy, children, ...props }) {
     </button>
   );
 }
-export function Steps({ current, labels }) {
+export function Steps({ current, labels, currentTarget, onCurrentClick }) {
   useLanguage();
+  const progressRef = useRef(null);
+  useEffect(() => {
+    const progress = progressRef.current;
+    const active = progress?.querySelector('[aria-current="step"]');
+    if (!active || progress.scrollWidth <= progress.clientWidth) return;
+    const progressBounds = progress.getBoundingClientRect();
+    const activeBounds = active.getBoundingClientRect();
+    progress.scrollLeft += activeBounds.left - progressBounds.left -
+      (progress.clientWidth - activeBounds.width) / 2;
+  }, [current, labels.length]);
   return (
-    <ol className="steps" aria-label={t("Request progress")}>
-      {labels.map((label, i) => (
-        <li
-          key={label}
-          className={`${i === current ? "active" : ""} ${i < current ? "done" : ""}`.trim()}
-          aria-current={i === current ? "step" : undefined}
-        >
-          <div className="step-pill">
-            <span className="step-badge">
-              {i < current ? <Check size={13} /> : String(i + 1).padStart(2, "0")}
-            </span>
-            <small>{t(label)}</small>
-          </div>
-          {i < labels.length - 1 && (
-            <ChevronRight className="step-arrow" size={15} aria-hidden="true" />
-          )}
-        </li>
-      ))}
+    <ol ref={progressRef} className="steps" style={{ "--visible-steps": Math.min(labels.length, 4) }} tabIndex={labels.length > 4 ? 0 : undefined} aria-label={t("Request progress")}>
+      {labels.map((label, i) => {
+        const isCurrent = i === current;
+        const Pill = isCurrent && currentTarget ? "a" : "div";
+        return (
+          <li
+            key={label}
+            className={`${isCurrent ? "active" : ""} ${i < current ? "done" : ""}`.trim()}
+            aria-current={isCurrent ? "step" : undefined}
+          >
+            <Pill
+              className="step-pill"
+              href={isCurrent && currentTarget ? "#" + currentTarget : undefined}
+              aria-controls={isCurrent ? currentTarget : undefined}
+              onClick={isCurrent && currentTarget ? onCurrentClick : undefined}
+            >
+              <span className="step-badge">
+                {i < current ? <Check size={13} aria-hidden="true" /> : String(i + 1).padStart(2, "0")}
+              </span>
+              <small>{t(label)}</small>
+              {isCurrent && <span className="step-boundary-pointer" aria-hidden="true" />}
+            </Pill>
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -271,6 +287,8 @@ export function UploadButton({
   onChange,
   disabled,
   label = t("Upload image"),
+  accept = "image/jpeg,image/png,image/webp",
+  multiple = false,
 }) {
   useLanguage();
   return (
@@ -279,7 +297,8 @@ export function UploadButton({
       {t(label)}
       <input
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={accept}
+        multiple={multiple}
         onChange={onChange}
         disabled={disabled}
       />

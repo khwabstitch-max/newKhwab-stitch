@@ -37,10 +37,10 @@ const garmentGuidePoints = {
 };
 
 const garmentGuideImageMap = {
-  kurti: "/guides/measurement/kurti-measurement-guide.jpg",
-  blouse: "/guides/measurement/blouse-measurement-guide.jpg",
-  suit: "/guides/measurement/suit-measurement-guide.jpg",
-  kameez: "/guides/measurement/suit-measurement-guide.jpg",
+  kurti: "/guides/measurement/kurti-measurement-guide-clean-v2.webp",
+  blouse: "/guides/measurement/blouse-measurement-guide-clean-v3.webp",
+  suit: "/guides/measurement/suit-measurement-guide-clean-v2.webp",
+  kameez: "/guides/measurement/suit-measurement-guide-clean-v2.webp",
 };
 
 const garmentTitleMap = {
@@ -77,7 +77,7 @@ export function MeasurementGuides({
   );
 
   const points = garmentGuidePoints[garment] || garmentGuidePoints.kurti;
-  const specificGuideImage = garmentGuideImageMap[garment] || "/guides/measurement-guide.jpg";
+  const specificGuideImage = garmentGuideImageMap[garment] || "/guides/measurement/measurement-master-top-v3.webp";
   const garmentTitle = garmentTitleMap[garment] ? (language === "hi" ? garmentTitleMap[garment].hi : garmentTitleMap[garment].en) : t("Measurement Guide – सही नाप, परफेक्ट फिट!");
 
   return (

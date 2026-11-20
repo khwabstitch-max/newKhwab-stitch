@@ -36,7 +36,7 @@ function language(value) {
 it("opens a fresh reference request from the homepage CTA and preserves it when the language changes", async () => {
   mount(<RequestWizard />, "/request?source=reference&garment=blouse");
   expect(screen.getByRole("radio", { name: "Upload my own reference" })).toBeChecked();
-  expect(screen.queryByLabelText("Find a design")).not.toBeInTheDocument();
+  expect(screen.queryByRole("searchbox", { name: "Search designs" })).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText(/^Quantity/), { target: { value: "3" } });
   language("hi");
   expect(screen.getByRole("radio", { name: t("Upload my own reference") })).toBeChecked();

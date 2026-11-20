@@ -17,12 +17,13 @@ export function estimateLineLabel(line, estimate = {}, design = {}) {
   if (kind === "stitching") {
     let title = localize(design, "title") || original.split(" · ").slice(1).join(" · ");
     if (["kurti", "suit", "blouse", "alteration"].includes(title)) title = labelToken(title);
-    return [t("Base stitching"), title].filter(Boolean).join(" · ");
+    return [t(design?.garment === "alteration" ? "Alteration service" : estimate.uploadedDesignReviewRequired ? "Stitching quote" : "Base stitching"), title].filter(Boolean).join(" · ");
   }
   if (kind === "sleeveLength") return t("Sleeve length — no additional charge");
   if (componentCopy[kind]) {
     const component = estimate.components?.[kind];
     const name = component?.name ? localize(component, "name") : original.split(" · ").slice(1).filter(value => value !== "included").join(" · ");
+    if (identity === "original") return t("request.pricePendingOriginal", { 0: name || t(componentCopy[kind][0]) });
     if (identity === "included" && name) return t("{0} · {1} · included", { 0: t(componentCopy[kind][0]), 1: name });
     return [t(name ? componentCopy[kind][1] : componentCopy[kind][0]), name].filter(Boolean).join(" · ");
   }
@@ -31,12 +32,15 @@ export function estimateLineLabel(line, estimate = {}, design = {}) {
     return addon ? localize(addon, "name") : original;
   }
   if (kind === "transport" && ["inbound", "outbound"].includes(identity)) {
-    const title = t(identity === "inbound" ? "Inbound fabric transport" : "Outbound outfit transport");
-    const area = original.split(" · ").slice(1).join(" · ");
-    const method = original.includes("customer pays their courier directly") ? t("Your chosen courier")
-      : original === "inbound: dropoff" ? t("Drop off your fabric")
-        : original === "outbound: collect" ? t("Collect your finished outfit") : area;
-    return [title, method].filter(Boolean).join(" · ");
+    const arranged = line.method === "business";
+    const title = t(arranged ? identity === "inbound" ? "Fabric pickup" : "Outfit delivery" : identity === "inbound" ? "Inbound fabric transport" : "Outbound outfit transport");
+    const area = line.serviceAreaName
+      ? localize({ name: line.serviceAreaName, nameHi: line.serviceAreaNameHi }, "name")
+      : original.split(" · ").slice(1).join(" · ");
+    const method = line.method === "customer_courier" || original.includes("customer pays their courier directly") ? t("Your chosen courier")
+      : line.method === "dropoff" || original === "inbound: dropoff" ? t("Drop off your fabric")
+      : line.method === "collect" || original === "outbound: collect" ? t("Collect your finished outfit") : area;
+    return [title, method, line.postalCode].filter(Boolean).join(" · ");
   }
   if (code === "legacy-configuration") return t("Design details");
   return original;

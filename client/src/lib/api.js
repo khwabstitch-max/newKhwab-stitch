@@ -24,6 +24,14 @@ export class ApiError extends Error {
     this.details = details;
   }
 }
+// Legacy local API URLs must use Vite's same-origin proxy. Explicit remote
+// endpoints and production builds retain their configured API base.
+export function resolveApiBaseUrl(configuredBase, development = false) {
+  const base = (configuredBase || "/api").replace(/\/$/, "");
+  return development && /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):3000\/api$/i.test(base)
+    ? "/api"
+    : base;
+}
 export async function api(
   path,
   {
@@ -51,7 +59,7 @@ export async function api(
     retryAllowed && !controller.signal.aborted &&
     globalThis.navigator?.onLine !== false;
   try {
-    const url = `${(import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "")}${path}`;
+    const url = `${resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL, import.meta.env.DEV)}${path}`;
     const request = {
       method,
       credentials: "omit",

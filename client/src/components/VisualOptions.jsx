@@ -1,8 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Check, ImageOff, Search, X, Sparkles, BookOpen } from "lucide-react";
+import { Check, ImageOff, Search, X } from "lucide-react";
 import { getLocale, labelToken, localize, t } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
-import { GuideModal } from "./GuideModal";
 import {
   findNeckGuide,
   findBackGuide,
@@ -41,7 +40,7 @@ export function optionPriceLabel(option) {
     : t("Additional {0} per garment", { 0: money(amount) });
 }
 
-function OptionImage({ option, kind, enlarged = false }) {
+export function OptionImage({ option, kind, enlarged = false }) {
   const [failed, setFailed] = useState(false);
   const effectiveKind = kind || option.kind;
   const isNeck = ["neck", "neckFront"].includes(effectiveKind);
@@ -255,7 +254,6 @@ export function VisualOptions({
   const [limit, setLimit] = useState(12);
   const [preview, setPreview] = useState(null);
   const [returnFocus, setReturnFocus] = useState(null);
-  const [showStyleGuide, setShowStyleGuide] = useState(false);
   const radioName = useId();
   const searchId = useId();
   const externalPaging = typeof onLoadMore === "function";
@@ -285,11 +283,10 @@ export function VisualOptions({
       .includes(search.trim().toLocaleLowerCase(getLocale())),
   );
   const visible = externalPaging ? filtered : filtered.slice(0, limit);
-
   const isNeck = ["neck", "neckFront"].includes(kind);
   const isBack = ["back", "neckBack"].includes(kind);
   const isSleeve = kind === "sleeve";
-  const [showBackGuide, setShowBackGuide] = useState(false);
+
 
   return (
     <section
@@ -298,69 +295,6 @@ export function VisualOptions({
         0: kind ? labelToken(kind) : t("Design"),
       })}
     >
-      {isNeck && (
-        <div className="guide-banner-card">
-          <div className="guide-banner-info">
-            <span className="guide-banner-tag">
-              <Sparkles size={13} aria-hidden="true" />
-              {t("Official Style Guide")}
-            </span>
-            <strong>{t("Neck Design Options — 8 Signature Styles")}</strong>
-            <p>{t("Explore neck and sleeve design references")}</p>
-          </div>
-          <button
-            type="button"
-            className="guide-banner-btn"
-            onClick={() => setShowStyleGuide(true)}
-          >
-            <BookOpen size={16} aria-hidden="true" />
-            {t("View Neck Design Chart")}
-          </button>
-        </div>
-      )}
-
-      {isBack && (
-        <div className="guide-banner-card">
-          <div className="guide-banner-info">
-            <span className="guide-banner-tag">
-              <Sparkles size={13} aria-hidden="true" />
-              {t("Official Style Guide")}
-            </span>
-            <strong>{t("Back Design Options — 8 Signature Styles")}</strong>
-            <p>{t("Explore back neck design references")}</p>
-          </div>
-          <button
-            type="button"
-            className="guide-banner-btn"
-            onClick={() => setShowBackGuide(true)}
-          >
-            <BookOpen size={16} aria-hidden="true" />
-            {t("View Back Design Chart")}
-          </button>
-        </div>
-      )}
-
-      {isSleeve && (
-        <div className="guide-banner-card">
-          <div className="guide-banner-info">
-            <span className="guide-banner-tag">
-              <Sparkles size={13} aria-hidden="true" />
-              {t("Official Style Guide")}
-            </span>
-            <strong>{t("Sleeve Design Options — 11 Bespoke Styles")}</strong>
-            <p>{t("Explore neck and sleeve design references")}</p>
-          </div>
-          <button
-            type="button"
-            className="guide-banner-btn"
-            onClick={() => setShowStyleGuide(true)}
-          >
-            <BookOpen size={16} aria-hidden="true" />
-            {t("View Sleeve Design Chart")}
-          </button>
-        </div>
-      )}
-
       <div className="visual-options-toolbar">
         <div className="visual-options-search">
           <label htmlFor={searchId}>
@@ -543,41 +477,6 @@ export function VisualOptions({
         />
       )}
 
-      {showStyleGuide && isNeck && (
-        <GuideModal
-          title={t("Neck Design Options — 8 Signature Styles")}
-          subtitle={t("Choose your perfect style • Khwab Stitch Atelier")}
-          imageUrl="/guides/neck-designs-guide.jpg"
-          onClose={() => setShowStyleGuide(false)}
-          footerNote={t(
-            "Our master tailor can adjust neckline width and depth as per your personal preference.",
-          )}
-        />
-      )}
-
-      {showStyleGuide && isSleeve && (
-        <GuideModal
-          title={t("Sleeve Design Options — 11 Bespoke Styles")}
-          subtitle={t("Choose your perfect style • Khwab Stitch Atelier")}
-          imageUrl="/guides/sleeve-designs-guide.jpg"
-          onClose={() => setShowStyleGuide(false)}
-          footerNote={t(
-            "Choose an administrator-confirmed sleeve and length combination, or ask our master tailor for guidance.",
-          )}
-        />
-      )}
-
-      {showBackGuide && (
-        <GuideModal
-          title={t("Back Design Options — 8 Signature Styles")}
-          subtitle={t("Choose your perfect style • Khwab Stitch Atelier")}
-          imageUrl="/guides/back-designs-guide.jpg"
-          onClose={() => setShowBackGuide(false)}
-          footerNote={t(
-            "Back neckline cuts are tailored to match your posture and outfit choice.",
-          )}
-        />
-      )}
     </section>
   );
 }

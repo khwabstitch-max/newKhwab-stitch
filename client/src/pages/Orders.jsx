@@ -1,12 +1,16 @@
 import { t, localize, labelToken } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
 import { useState } from "react";
+import { ReferenceFilePreview } from "../components/ReferenceFilePreview";
+import { DesignImage } from "../components/DesignGallery";
+import { OptionImage } from "../components/VisualOptions";
+import { findLengthGuide } from "../data/tailoringDesignGuide";
+import { withDesignPhotography } from "../lib/design-photography";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
   ExternalLink,
   Printer,
-  RefreshCw,
 } from "lucide-react";
 import { api, date, dateTime, idOf, money, readable } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -158,59 +162,48 @@ export function Orders() {
 }
 export function PrivateImage({ mediaId, publicImage = false, accessPath }) {
   useLanguage();
-  const [url, setUrl] = useState(""),
-    [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
-  async function access() {
-    setBusy(true);
-    setError("");
-    try {
-      const { data } = await api(accessPath || `/media/${mediaId}/access`);
-      setUrl(data.url);
-    } catch (e) {
-      setError(e);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <div className="private-image">
-      {url ? (
-        <>
-          <a href={url} target="_blank" rel="noreferrer">
-            <img
-              src={url}
-              referrerPolicy="no-referrer"
-              alt={
-                publicImage
-                  ? t("Catalogue image")
-                  : t("Private stitching reference")
-              }
-              onError={() => {
-                setUrl("");
-                setError(
-                  "This link expired or the image could not load. Request a fresh link.",
-                );
-              }}
-            />
-            <small>
-              {publicImage ? t("Open image ") : t("Open private image ")}
-              <ExternalLink size={12} />
-            </small>
-          </a>
-          <Button className="text-button" busy={busy} onClick={access}>
-            <RefreshCw size={13} />
-            {t("Refresh access link")}
-          </Button>
-        </>
-      ) : (
-        <Button className="button secondary small" busy={busy} onClick={access}>
-          {publicImage ? t("View image") : t("View private reference")}
-        </Button>
-      )}
-      <ErrorMessage message={error} />
+  return <ReferenceFilePreview mediaId={mediaId} accessPath={accessPath} autoLoad={false} label={t(publicImage ? "Catalogue image" : "Private stitching reference")} loadLabel={t(publicImage ? "View image" : "View private reference")} openLabel={t(publicImage ? "Open image " : "Open private image ")} />;
+}
+
+export function OrderReferenceGallery({ order }) {
+  useLanguage();
+  const snapshot = order.designSnapshot;
+  const design = snapshot ? withDesignPhotography({ ...snapshot, _id: snapshot._id || idOf(order.designId) }) : null;
+  const sourceViews = design?.views?.filter(view => view.kind === "garment").slice(0, 3);
+  const staticViews = sourceViews?.length ? sourceViews : design?.views?.slice(0, 3) || [];
+  const savedViews = snapshot?.imageViews?.length ? snapshot.imageViews.slice(0, 3) : (snapshot?.imageMediaIds || []).map(mediaId => ({ mediaId }));
+  const components = [...Object.entries(order.estimate?.components || {}).filter(([, part]) => !part.suppressed).map(([kind, part]) => ({ ...part, kind })), ...(order.estimate?.addons || []).map(part => ({ ...part, kind: "extra" }))];
+  const partsWithImages = components.filter(part => part.imageMediaIds?.length || part.imageMediaId || part.images?.length || part.imageUrl || ((part.optionId || part.source === "option") && ["sleeveLength", "sleeve", "neck", "back"].includes(part.kind)));
+  const references = order.referenceMediaIds || [];
+  const orderPath = mediaId => `/orders/${order._id}/media/${mediaId}`;
+  const partLabels = { sleeve: "Sleeve design", sleeveLength: "Sleeve length", neck: "Front neck design", back: "Back neck design", fit: "Fit", extra: "Extra add-ons" };
+  if (!design && !references.length && !partsWithImages.length) return null;
+  return <section className="panel no-print" id="order-design-references">
+    <h2>{t("reference.quote.title")}</h2>
+    <p className="small-print">{t("reference.quote.hint")}</p>
+    {design && <p><strong>{localize(design, "title")}</strong>{design.code && <> · {design.code}</>}</p>}
+    <div className="order-reference-gallery">
+      {staticViews.map((view, index) => <figure className="reference-file-preview" key={view.id + ":" + index}><div className="reference-file-visual"><DesignImage image={view} alt={[localize(design, "title"), localize(view, "label")].filter(Boolean).join(" · ")} /></div><figcaption><strong>{localize(view, "label") || t("reference.quote.design")}</strong><span>{design.code}</span></figcaption></figure>)}
+      {!staticViews.length && savedViews.map((view, index) => <ReferenceFilePreview key={(view.mediaId || view.id) + ":" + index} mediaId={view.mediaId || view.id} accessPath={orderPath(view.mediaId || view.id)} label={[localize(design, "title"), localize(view, "label")].filter(Boolean).join(" · ")} imageView={view} />)}
+      {!staticViews.length && !savedViews.length && design?.coverImageUrl && <figure className="reference-file-preview"><div className="reference-file-visual"><DesignImage image={{url:design.coverImageUrl}} alt={localize(design, "title")} /></div><figcaption>{localize(design, "title")}</figcaption></figure>}
+      {partsWithImages.map(part => {
+        const name = [t(partLabels[part.kind] || part.kind), localize(part, "name"), part.code].filter(Boolean).join(" · ");
+        const mediaId = part.imageMediaIds?.[0] || part.imageMediaId;
+        if (mediaId) return <ReferenceFilePreview key={part.kind + ":" + part.optionId} mediaId={mediaId} accessPath={orderPath(mediaId)} label={name} />;
+        const lengthImage = part.kind === "sleeveLength" ? findLengthGuide(part.lengthStyle || part.name || part.code)?.image : null;
+        const shown = lengthImage && !part.imageUrl && !part.images?.[0]?.url ? { ...part, imageUrl: lengthImage } : part;
+        return <figure className="reference-file-preview" key={part.kind + ":" + part.optionId}><div className="reference-file-visual"><OptionImage option={shown} kind={part.kind} /></div><figcaption>{name}</figcaption></figure>;
+      })}
+      {references.map((reference, index) => { const mediaId = idOf(reference); const file = order.referenceSnapshots?.find(item => String(item.mediaId || item._id) === mediaId); return <ReferenceFilePreview key={mediaId} mediaId={mediaId} accessPath={orderPath(mediaId)} file={file} label={t("reference.quote.submitted", { 0: index + 1 })} />; })}
     </div>
-  );
+  </section>;
+}
+function submittedReferenceLabel(order, part) {
+  const mediaId = part?.referenceMediaId;
+  if (!mediaId) return "";
+  const index = (order.referenceMediaIds || []).findIndex(reference => idOf(reference) === String(mediaId));
+  const file = order.referenceSnapshots?.find(reference => String(reference.mediaId || reference._id) === String(mediaId));
+  return [index >= 0 ? t("reference.quote.submitted", { 0: index + 1 }) : t("Private stitching reference"), file?.filename].filter(Boolean).join(" · ");
 }
 const transitions = {
   request_received: ["under_review", "rejected", "cancelled"],
@@ -327,10 +320,11 @@ export function OrderDetails({ admin = false }) {
               <div>
                 <dt>{t("Measurement method")}</dt>
                 <dd>
-                  {readable(order.measurements?.method)} ·{" "}
-                  {labelToken(order.measurements?.unit)}
+                  {t("request.measurement." + (["sample", "assistance"].includes(order.measurements?.takenBy) ? order.measurements.takenBy : order.measurements?.method === "assistance" ? "assistance" : "self"))}
+                  {!["sample", "assistance"].includes(order.measurements?.takenBy) && order.measurements?.method !== "assistance" && <> · {readable(order.measurements?.method)} · {labelToken(order.measurements?.unit)}</>}
                 </dd>
               </div>
+              {order.measurements?.sampleGarmentIncluded && <div><dt>{t("Sample")}</dt><dd>{t("request.sample.confirm")}</dd></div>}
               {Object.entries(order.measurements?.values || {}).map(
                 ([k, v]) => (
                   <div key={k}>
@@ -370,6 +364,7 @@ export function OrderDetails({ admin = false }) {
                   })}
                 </dd>
               </div>
+              {order.preferredDateReason && <div><dt>{t("request.dateReason")}</dt><dd>{order.preferredDateReason}</dd></div>}
               {order.notes && (
                 <div>
                   <dt>{t("Instructions")}</dt>
@@ -377,7 +372,7 @@ export function OrderDetails({ admin = false }) {
                 </div>
               )}
             </dl>
-            <p className="small-print">{t("Fabric provided by customer.")}</p>
+            <p className="small-print">{t(order.garment === "alteration" ? "public.design.alterationBring" : "Fabric provided by customer.")}</p>
           </section>
           <section className="panel">
             <h2>{t("Contact & delivery")}</h2>
@@ -395,16 +390,7 @@ export function OrderDetails({ admin = false }) {
               {order.address?.pin}
             </p>
           </section>
-          {order.referenceMediaIds?.length > 0 && (
-            <section className="panel no-print">
-              <h2>{t("Private references")}</h2>
-              <div className="media-grid">
-                {order.referenceMediaIds.map((m) => (
-                  <PrivateImage key={idOf(m)} mediaId={idOf(m)} />
-                ))}
-              </div>
-            </section>
-          )}
+          <OrderReferenceGallery order={order} />
           <section className="panel">
             <h2>{t("A stitch at a time")}</h2>
             <ol className="timeline">
@@ -432,14 +418,15 @@ export function OrderDetails({ admin = false }) {
                 )}
               </p>
               <dl className="review-list">
-                {Object.entries(order.estimate?.components || {}).map(
+                {Object.entries({ ...order.configuration?.components, ...order.estimate?.components }).map(
                   ([k, v]) => (
                     <div key={k}>
                       <dt>{readable(k)}</dt>
                       <dd>
-                        {v.name ||
-                          v.label ||
+                        {localize(v, "name") ||
+                          localize(v, "label") ||
                           readable(v.source || "Pending tailor review")}
+                        {submittedReferenceLabel(order, order.configuration?.components?.[k] || v) && <p className="small-print">{submittedReferenceLabel(order, order.configuration?.components?.[k] || v)}</p>}
                         {v.notes && <p>{v.notes}</p>}
                       </dd>
                     </div>
@@ -546,6 +533,7 @@ export function OrderDetails({ admin = false }) {
                 })}
               </p>
               <h2>{money(order.acceptedQuote?.amountPaise ?? latest.amountPaise)}</h2>
+              {(order.designSnapshot || order.referenceMediaIds?.length || Object.keys(order.estimate?.components || {}).length > 0) && <a className="order-quote-reference-link" href="#order-design-references">{t("reference.quote.link")}</a>}
               {latest.lineItems?.map((line, i) => (
                 <div className="account-row" key={i}>
                   <span>{line.label}</span>

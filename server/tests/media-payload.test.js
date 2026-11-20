@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import express from "express";
 import request from "supertest";
 import sharp from "sharp";
+import { PDFDocument } from "pdf-lib";
 import { mediaRoutes } from "../src/routes-media.js";
 import { errorHandler } from "../src/errors.js";
 
@@ -72,4 +73,30 @@ test("failed media persistence removes provider file rather than leaving a succe
   const response = await request(app).post("/api/media").field("purpose", "reference").attach("file", png, "real.png");
   assert.equal(response.status, 500); assert.deepEqual(calls.removed, ["fixture-file"]);
   assert.equal(calls.assets.length, 0);
+});
+
+test("PDF reference upload retains document type, pages and sanitized name without image conversion", async () => {
+  const { app, calls } = fixture();
+  const doc = await PDFDocument.create(); doc.addPage([400, 600]);
+  const response = await request(app).post("/api/media").field("purpose", "reference").attach("file", Buffer.from(await doc.save()), { filename: "all-views.pdf", contentType: "application/pdf" });
+  assert.equal(response.status, 201); assert.equal(response.body.data.mimeType, "application/pdf");
+  assert.equal(response.body.data.filename, "all-views.pdf"); assert.equal(response.body.data.pageCount, 1);
+  assert.equal(calls.uploads[0].options.mime, "application/pdf"); assert.equal(calls.uploads[0].options.private, true);
+  assert.equal(calls.uploads[0].bytes.subarray(0, 5).toString(), "%PDF-");
+  assert.equal(calls.assets[0].width, undefined); assert.equal(calls.assets[0].height, undefined);
+});
+test("PDFs cannot be attached as public catalogue/banner or measurement images", async () => {
+  const doc = await PDFDocument.create(); doc.addPage();
+  const bytes = Buffer.from(await doc.save());
+  for (const purpose of ["catalogue", "banner", "measurement"]) {
+    const { app, calls } = fixture({ role: "admin" });
+    const response = await request(app).post("/api/media").field("purpose", purpose).attach("file", bytes, "board.pdf");
+    assert.equal(response.status, 400); assert.equal(response.body.error.code, "PDF_REFERENCE_ONLY"); assert.equal(calls.uploads.length, 0);
+  }
+});
+test("standalone PDF upload enforces the same3MiB document limit before parsing or provider work", async () => {
+  const { app, calls } = fixture({ serverless: false });
+  const bytes = Buffer.alloc(3 * 1024 * 1024 + 1); bytes.write("%PDF-1.7");
+  const response = await request(app).post("/api/media").field("purpose", "reference").attach("file", bytes, "large.pdf");
+  assert.equal(response.status, 413); assert.equal(response.body.error.code, "PDF_PAYLOAD_TOO_LARGE"); assert.equal(calls.uploads.length, 0);
 });

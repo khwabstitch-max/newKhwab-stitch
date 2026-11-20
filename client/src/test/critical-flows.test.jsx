@@ -332,7 +332,7 @@ describe("customer journeys with mocked identity and API boundaries", () => {
       screen.getByText("Fabric provided by customer."),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /customize & stitch this design/i }),
+      screen.getByRole("link", { name: /make this design yours/i }),
     ).toHaveAttribute(
       "href",
       "/request?design=" + design._id + "&garment=kurti",
@@ -510,9 +510,7 @@ describe("customer journeys with mocked identity and API boundaries", () => {
     await act(async () => pending[2].resolve(estimate(3)));
     await waitFor(() => expect(submit()).toBeEnabled());
     expect(
-      within(screen.getByRole("complementary")).getByRole("heading", {
-        name: "₹1,950.75",
-      }),
+      screen.getByRole("heading", { name: "₹1,950.75" }),
     ).toBeInTheDocument();
     expect(mutations("/orders")).toHaveLength(0);
   });
@@ -654,6 +652,7 @@ describe("atelier management journeys with API contracts", () => {
         catalogue = [
           {
             ...body,
+            code: "K-0",
             _id: design._id,
             revision: 0,
             currency: "INR",
@@ -676,7 +675,7 @@ describe("atelier management journeys with API contracts", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "New design" }));
     await user.type(screen.getByLabelText(/Design title/), "Cotton daydream");
-    await user.type(screen.getByLabelText(/Design code/), "K-01");
+    expect(screen.getByRole("textbox", { name: "Design code" })).toHaveAttribute("readonly");
     await user.clear(screen.getByLabelText(/Stitching starting price/));
     await user.type(
       screen.getByLabelText(/Stitching starting price/),
@@ -693,9 +692,12 @@ describe("atelier management journeys with API contracts", () => {
       status: "draft",
       slug: "cotton-daydream",
     });
+    expect(mutations("/admin/designs")[0][1].body).not.toHaveProperty("code");
     await user.click(
       await screen.findByRole("button", { name: "Edit", exact: true }),
     );
+    expect(screen.getByRole("textbox", { name: "Design code" })).toHaveValue("K-0");
+    expect(screen.getByLabelText("Garment")).toBeDisabled();
     await user.clear(screen.getByLabelText(/Design title/));
     await user.type(
       screen.getByLabelText(/Design title/),

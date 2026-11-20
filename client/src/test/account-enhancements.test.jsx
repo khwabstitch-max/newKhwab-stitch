@@ -512,6 +512,7 @@ it("conversation uses authorized attachment context, marks history read and pres
   );
   expect(boundary.api).toHaveBeenCalledWith(
     `/conversations/${conversationId}/attachments/${jobId}`,
+    expect.objectContaining({ signal: expect.any(AbortSignal) }),
   );
   await user.type(
     screen.getByLabelText("Your message"),

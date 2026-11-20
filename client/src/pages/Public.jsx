@@ -1,3 +1,4 @@
+import { GARMENT_PHOTOGRAPHY, withDesignPhotography } from "../lib/design-photography";
 import { DesignImage, DesignPresentation } from "../components/DesignGallery";
 import { DesignGuideExplorer } from "../components/DesignGuideExplorer";
 import { t, localize, labelToken } from "../i18n/core";
@@ -20,7 +21,7 @@ import {
   Check,
   Ruler,
   Scissors,
-  Leaf,
+  Shirt,
   Search,
   MessageCircle,
   Mail,
@@ -49,19 +50,24 @@ import {
 } from "../components/ui";
 export function DesignCard({ design, index = 0 }) {
   useLanguage();
+  design = withDesignPhotography(design);
+  const [selectedPreview, setSelectedPreview] = useState(null);
+  const previews = (design.views || []).slice(0, 3);
   const location = useLocation();
-  const isBoard = Boolean(
-    (design.coverView && !design.coverView.crop) ||
-    (design.coverView?.crop &&
-      design.coverView.crop.width > design.coverView.crop.height * 1.15) ||
-    (!design.coverView && design.coverImageUrl),
-  );
+  const cover = selectedPreview === null ? design.coverView : previews[selectedPreview] || design.coverView;
+  const frame = design.coverView || cover;
+  const aspect = frame?.crop
+    ? (frame.crop.width * (frame.width || 1)) / (frame.crop.height * (frame.height || 1))
+    : frame?.width && frame?.height ? frame.width / frame.height : null;
+  const isBoard = design.mediaPresentation === "board" || (aspect !== null && aspect > 1.15);
   return (
-    <Link className="design-card public-design-card" to={`/designs/${design.slug}`} state={location.pathname === "/catalogue" ? { catalogueReturnTo: location.pathname + location.search } : undefined}>
+    <article className="design-card public-design-card">
+    <Link className="design-card-main" to={`/designs/${design.slug}`} state={location.pathname === "/catalogue" ? { catalogueReturnTo: location.pathname + location.search } : undefined}>
       <div className={`design-image tone-${index % 4} ${isBoard ? "is-board" : ""}`}>
-        {design.coverView ? (
+        {cover ? (
           <DesignImage
-            image={design.coverView}
+            image={cover}
+            fit={cover?.crop || location.pathname === "/" || isBoard ? "contain" : "cover"}
             alt={localize(design, "title")}
           />
         ) : design.coverImageUrl ? (
@@ -90,16 +96,32 @@ export function DesignCard({ design, index = 0 }) {
         <h3>{localize(design, "title")}</h3>
         <p>
           {Number.isSafeInteger(design.startingPricePaise) && design.startingPricePaise >= 0
-            ? <>{t("public.card.price")} <strong>{money(design.startingPricePaise)}</strong></>
+            ? <>{t(design.garment === "alteration" ? "public.design.alterationPrice" : "public.card.price")} <strong>{money(design.startingPricePaise)}</strong></>
             : <strong>{t("public.card.pending")}</strong>}
         </p>
-        <small>{t("public.card.fabric")}</small>
+        <small>{t(design.garment === "alteration" ? "public.card.alterationFabric" : "public.card.fabric")}</small>
         <span className="design-card-cta">
-          {t("public.card.choose")}
+          {t(design.garment === "alteration" ? "public.card.alterationChoose" : "public.card.choose")}
           <ArrowRight size={15} aria-hidden="true" />
         </span>
       </div>
     </Link>
+    {previews.length > 1 && (
+      <div className="design-card-views" role="group" aria-label={t("public.card.views", { 0: localize(design, "title") })}>
+        {previews.map((view, viewIndex) => (
+          <button
+            type="button"
+            key={viewIndex}
+            aria-pressed={(selectedPreview ?? 0) === viewIndex}
+            aria-label={localize(view, "label")}
+            onClick={() => setSelectedPreview(viewIndex)}
+          >
+            {localize(view, "previewLabel") || localize(view, "label")}
+          </button>
+        ))}
+      </div>
+    )}
+    </article>
   );
 }
 function DesignGridSkeleton({ count = 3 }) {
@@ -118,13 +140,6 @@ function DesignGridSkeleton({ count = 3 }) {
     </div>
   );
 }
-const garmentVisualMap = {
-  kurti: "/guides/measurement/kurti-measurement-guide.jpg",
-  blouse: "/guides/measurement/blouse-measurement-guide.jpg",
-  suit: "/guides/measurement/suit-measurement-guide.jpg",
-  alteration: "/guides/sleeve-length-guide.jpg",
-};
-
 export function Home() {
   const { language } = useLanguage();
   const site = useSite();
@@ -138,180 +153,120 @@ export function Home() {
   const garments = [...new Set((services.data || []).flatMap((service) => service.itemTypes || []))]
     .filter((garment) => ["kurti", "suit", "blouse", "alteration"].includes(garment));
   const process = Array.isArray(homepage.process) && homepage.process.length === 4 &&
-    homepage.process.every((item) => homepageText(item, "title", language) && (!item.description || homepageText(item, "description", language)))
+    homepage.process.every((item) => homepageText(item, "title", language))
     ? homepage.process : DEFAULT_HOMEPAGE.process;
-  const photo = homepage.hero?.imageUrl || site.bannerImageUrl || designs.find((design) => design.coverImageUrl)?.coverImageUrl || "/design-library/teal-kurti-board.png";
-  const faqs = (site.faqs || []).filter((faq) => homepageText(faq, "question", language) && homepageText(faq, "answer", language)).slice(0, 4);
+  const ownerPhoto = homepage.hero?.imageUrl || site.bannerImageUrl;
+  const journey = ["fabric", "design", "stitch", "wear"];
+  const faqs = (site.faqs || []).filter((faq) => homepageText(faq, "question", language) && homepageText(faq, "answer", language)).slice(0, 3);
+  const processIcons = [Scissors, Ruler, Check, Shirt];
   return (
-    <div className="public-home">
+    <div className="public-home atelier-home atelier-home--stitching">
       <section className="home-hero">
         <div className="container home-hero-grid">
-          <div>
+          <div className="atelier-hero-copy">
             <p className="eyebrow">{hero.eyebrow}</p>
             <h1>{hero.headline}</h1>
             <p className="home-hero-description">{hero.description}</p>
-            <div className="home-hero-visual-strip" aria-label={t("Atelier tailoring highlights")}>
-              <div className="hero-visual-card">
-                <span className="hero-visual-icon"><Leaf size={16} aria-hidden="true" /></span>
-                <span className="hero-visual-label"><strong>{t("public.hero.feature1Title")}</strong><small>{t("public.hero.feature1Desc")}</small></span>
-              </div>
-              <div className="hero-visual-card">
-                <span className="hero-visual-icon"><Scissors size={16} aria-hidden="true" /></span>
-                <span className="hero-visual-label"><strong>{t("public.hero.feature2Title")}</strong><small>{t("public.hero.feature2Desc")}</small></span>
-              </div>
-              <div className="hero-visual-card">
-                <span className="hero-visual-icon"><Ruler size={16} aria-hidden="true" /></span>
-                <span className="hero-visual-label"><strong>{t("public.hero.feature3Title")}</strong><small>{t("public.hero.feature3Desc")}</small></span>
-              </div>
-              <div className="hero-visual-card">
-                <span className="hero-visual-icon"><Truck size={16} aria-hidden="true" /></span>
-                <span className="hero-visual-label"><strong>{t("public.hero.feature4Title")}</strong><small>{t("public.hero.feature4Desc")}</small></span>
-              </div>
-            </div>
             <div className="home-hero-actions">
-              <Link className="button" to="/catalogue" onMouseEnter={() => prefetchPublicResource("/designs?limit=12&page=1")}>{heroCtas.primaryCtaLabel || t("public.action.explore")}<ArrowRight size={17} aria-hidden="true" /></Link>
+              <Link className="button" to="/catalogue" onMouseEnter={() => prefetchPublicResource("/designs?limit=12&page=1")}>{heroCtas.primaryCtaLabel || t("public.action.explore")}<ArrowUpRight size={18} aria-hidden="true" /></Link>
               <Link className="button secondary" to="/request?source=reference">{heroCtas.secondaryCtaLabel || t("public.action.reference")}</Link>
             </div>
-            <Link className="home-hero-guidance" to="/contact">{t("public.action.guidance")}<ArrowRight size={16} aria-hidden="true" /></Link>
+            <ul className="atelier-hero-assurance" aria-label={t("public.commitments.title")}>
+              <li><Scissors size={15} aria-hidden="true" />{t("atelier.fabric")}</li>
+              <li><Ruler size={15} aria-hidden="true" />{t("atelier.measured")}</li>
+              <li><Check size={15} aria-hidden="true" />{t("atelier.quote")}</li>
+            </ul>
           </div>
           <figure className="home-hero-figure">
-            <div className="home-hero-showcase">
-              <div className="home-hero-showcase-head">
-                <span className="home-hero-showcase-tag">
-                  <Scissors size={13} aria-hidden="true" />
-                  {t("public.hero.cardTag")}
-                </span>
-                <span className="home-hero-showcase-views">
-                  {t("public.hero.cardViews")}
-                </span>
-              </div>
-              <div className={`home-hero-image ${photo ? "has-photo" : "is-illustration"}`}>
-                {photo ? (
-                  <img src={photo} alt="" fetchPriority="high" />
-                ) : (
-                  <GarmentArt garment="kurti" large />
-                )}
-              </div>
-              <div className="home-hero-craft-swatches" aria-label={t("Custom styling options")}>
-                <div className="craft-swatch-item">
-                  <img src="/crops/neck/v-neck.jpg" alt="" loading="lazy" />
-                  <span>{t("Neck Design")}</span>
-                </div>
-                <div className="craft-swatch-item">
-                  <img src="/crops/sleeve/bishop-balloon.jpg" alt="" loading="lazy" />
-                  <span>{t("Sleeve Design")}</span>
-                </div>
-                <div className="craft-swatch-item">
-                  <img src="/crops/back/deep-back.jpg" alt="" loading="lazy" />
-                  <span>{t("Back Design")}</span>
-                </div>
-              </div>
-              <ul className="home-hero-showcase-foot" aria-label={t("public.commitments.title")}>
-                {[1, 2, 3].map((chip) => (
-                  <li key={chip}>
-                    <Check size={13} aria-hidden="true" />
-                    <span>{t(`public.hero.chip${chip}`)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <figcaption>{t(photo ? "public.designPhoto" : "public.illustration")}</figcaption>
+            <ol className="home-hero-showcase stitch-journey" aria-label={t("stitch.journey.label")}>
+              {journey.map((stage, index) => {
+                const customPhoto = stage === "design" && ownerPhoto;
+                return <li className="stitch-journey-frame" data-stage={stage} key={stage}>
+                  <div className={"stitch-frame-media" + (stage === "design" ? " home-hero-image has-photo" : "")}>
+                    <img src={customPhoto || `/atelier/stitching/${stage}-600.webp`}
+                      srcSet={customPhoto ? undefined : `/atelier/stitching/${stage}-300.webp 300w, /atelier/stitching/${stage}-600.webp 600w`}
+                      sizes={customPhoto ? undefined : "(max-width: 760px) calc((100vw - 60px) / 2), 24vw"}
+                      width={customPhoto ? homepage.hero?.imageWidth || 600 : 600}
+                      height={customPhoto ? homepage.hero?.imageHeight || 600 : 600}
+                      alt={t(customPhoto ? "public.designPhoto" : `stitch.journey.${stage}.alt`)}
+                      fetchPriority={index === 0 ? "high" : undefined} decoding="async" />
+                  </div>
+                  <div className="stitch-frame-caption"><span className="stitch-frame-number">0{index + 1}</span><strong>{t(`stitch.journey.${stage}.title`)}</strong>{index === 3 ? <Check size={15} aria-hidden="true" /> : <ArrowRight size={15} aria-hidden="true" />}</div>
+                </li>;
+              })}
+            </ol>
+            <figcaption>{t("stitch.journey.caption")}</figcaption>
           </figure>
         </div>
       </section>
-      <HomeCarousel slides={homepage.slides || DEFAULT_HOMEPAGE.slides} />
-      {(garments.length > 0 || services.error) && <section className="container public-section" aria-labelledby="home-garments-title">
-        <div className="public-section-heading"><h2 id="home-garments-title">{t("public.garments.title")}</h2><p>{t("public.garments.description")}</p></div>
-        {services.error ? <ErrorMessage message={services.error} retry={services.reload} /> : <div className="home-garments">
-          {garments.map((garment) => {
-            const basePrice = site.garmentBasePrices?.[garment];
-            return (
-              <article className="home-garment-card" key={garment}>
-                <div className="home-garment-art" aria-hidden="true">
-                  {garmentVisualMap[garment] ? (
-                    <img
-                      src={garmentVisualMap[garment]}
-                      alt=""
-                      className="home-garment-photo"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <GarmentArt garment={garment} />
-                  )}
+      {garments.length > 0 && (
+        <section className="container public-section atelier-garments" aria-labelledby="home-garments-title">
+          <div className="atelier-garment-intro">
+            <p className="eyebrow">{t("atelier.garments.eyebrow")}</p>
+            <h2 id="home-garments-title">{t("public.garments.title")}</h2>
+            <p>{t("atelier.garments.note")}</p>
+          </div>
+          <nav className="atelier-garment-grid" aria-label={t("public.garments.title")}>
+            {garments.map((garment) => (
+              <Link
+                className={"atelier-garment-tile garment-" + garment}
+                key={garment}
+                to={"/catalogue?garment=" + garment}
+                aria-label={t("public.garment." + garment)}
+              >
+                <div className="atelier-garment-photo">
+                  <img src={GARMENT_PHOTOGRAPHY[garment]} alt={t("public.garment." + garment)} loading="lazy" decoding="async" width="640" height="800" />
                 </div>
-                <div className="home-garment-body">
-                  <span className="garment-stitching-pill">
-                    <Scissors size={11} aria-hidden="true" />
-                    {t("Aapka Fabric • Custom Stitching")}
+                <div className="atelier-garment-copy">
+                  <h3>{t("public.garment." + garment)}</h3>
+                  <p>{t("atelier.garmentNote." + garment)}</p>
+                  <span className="atelier-garment-action">
+                    {Number.isSafeInteger(site.garmentBasePrices?.[garment]) && site.garmentBasePrices[garment] >= 0
+                      ? <span>{t("atelier.garmentFrom", { 0: money(site.garmentBasePrices[garment]) })}</span>
+                      : <span>{t("public.action.explore")}</span>}
+                    <ArrowUpRight size={18} aria-hidden="true" />
                   </span>
-                  <h3>
-                    <Link to={"/catalogue?garment=" + garment}>{t("public.garment." + garment)}</Link>
-                  </h3>
-                  <p className="home-garment-desc">{t("public.garmentDesc." + garment)}</p>
-                  {Number.isSafeInteger(basePrice) && basePrice >= 0 && (
-                    <p className="home-garment-price">
-                      {t("public.card.price")} <strong>{money(basePrice)}</strong>
-                    </p>
-                  )}
-                  <small className="home-garment-fabric">{t("public.card.fabric")}</small>
-                  <Link className="home-garment-cta" to={"/catalogue?garment=" + garment}>
-                    {t("public.garmentCta." + garment)}
-                    <ArrowUpRight size={15} aria-hidden="true" />
-                  </Link>
                 </div>
-              </article>
-            );
-          })}
-        </div>}
-      </section>}
-      <section className="container public-section" aria-labelledby="home-collection-title">
+              </Link>
+            ))}
+          </nav>
+        </section>
+      )}
+      <section className="container public-section atelier-collection" aria-labelledby="home-collection-title">
         <div className="public-collection-header">
-          <div className="public-section-heading"><h2 id="home-collection-title">{t("public.collection.title")}</h2><p>{t("public.collection.description")}</p></div>
+          <div className="public-section-heading"><p className="eyebrow">{t("atelier.collection.eyebrow")}</p><h2 id="home-collection-title">{t("public.collection.title")}</h2></div>
           <ArrowLink to="/catalogue" onMouseEnter={() => prefetchPublicResource("/designs?limit=12&page=1")}>{t("public.nav.all")}</ArrowLink>
         </div>
         {collection.loading && !designs.length ? <DesignGridSkeleton count={3} />
           : collection.error && !designs.length ? <ErrorMessage message={collection.error} retry={collection.reload} />
           : designs.length ? <div className="design-grid">{designs.map((design, index) => <DesignCard key={design._id} design={design} index={index} />)}</div>
-          : <Empty title={t("public.collection.empty")}><p>{t("public.collection.emptyHelp")}</p><Link className="button secondary" to="/request?source=reference">{t("public.action.reference")}</Link></Empty>}
+          : <Empty title={t("public.collection.empty")}><Link className="button secondary" to="/request?source=reference">{t("public.action.reference")}</Link></Empty>}
+        <p className="atelier-collection-note">{t("public.card.fabric")}</p>
       </section>
-      <section className="home-process public-section">
+      <HomeCarousel slides={homepage.slides || DEFAULT_HOMEPAGE.slides} />
+      <section className="home-process public-section atelier-process">
         <div className="container">
-          <div className="public-section-heading"><h2>{t("public.process.title")}</h2></div>
+          <div className="public-section-heading atelier-section-heading"><div><p className="eyebrow">{t("atelier.process.eyebrow")}</p><h2>{t("public.process.title")}</h2></div><ArrowLink to="/how-it-works">{t("public.process.details")}</ArrowLink></div>
           <ol className="home-process-grid home-process-compact">
-            {process.map((item, index) => (
-              <li key={index} className="home-process-step-item">
-                <div className="home-process-step-header">
-                  <span className="process-step-number">0{index + 1}</span>
-                  <span className="process-step-indicator" />
-                </div>
-                <h3>{homepageText(item, "title", language)}</h3>
-              </li>
-            ))}
+            {process.map((item, index) => { const Icon = processIcons[index]; return (
+              <li key={index}><span className="atelier-process-icon"><Icon size={25} strokeWidth={1.4} aria-hidden="true" /></span><span className="atelier-step-number">0{index + 1}</span><h3>{homepageText(item, "title", language)}</h3></li>
+            ); })}
           </ol>
-          <ul className="home-commitments" aria-label={t("public.commitments.title")}>
-            {[1, 2, 3, 4].map((step) => (
-              <li key={step}>
-                <Check size={16} aria-hidden="true" />
-                <span>{t(`public.commitments.${step}`)}</span>
-              </li>
-            ))}
-          </ul>
-          <ArrowLink to="/how-it-works">{t("public.process.details")}</ArrowLink>
-        </div>
-      </section>
-      <section className="container public-section">
-        <div className="home-help">
-          <h2>{help.title}</h2><p>{help.description}</p>
-          <Link className="button secondary" to="/contact">{t("public.action.guidance")}<ArrowRight size={17} aria-hidden="true" /></Link>
-          <HomeResume />
-          <details className="public-guides" id="guides"><summary>{t("public.help.guides")}</summary><HomeGuidesShowcase /></details>
+          <p className="atelier-process-note">{t("atelier.process.note")}</p>
         </div>
       </section>
       <SelectedReviews />
+      <section className="container public-section atelier-help-section">
+        <div className="home-help">
+          <div><p className="eyebrow">{t("atelier.help.eyebrow")}</p><h2>{help.title}</h2><p>{help.description}</p></div>
+          <Link className="button" to="/contact">{t("public.action.guidance")}<ArrowUpRight size={18} aria-hidden="true" /></Link>
+        </div>
+        <HomeResume />
+        <details className="public-guides" id="guides"><summary>{t("public.help.guides")}<Ruler size={17} aria-hidden="true" /></summary><HomeGuidesShowcase /></details>
+      </section>
       {faqs.length > 0 && <section className="container public-section home-faqs">
         <div className="public-section-heading"><h2>{t("public.faq.title")}</h2></div>
         {faqs.map((faq, index) => <details key={index}><summary>{homepageText(faq, "question", language)}</summary><p>{homepageText(faq, "answer", language)}</p></details>)}
-        <ArrowLink to="/contact">{t("public.faq.more")}</ArrowLink>
       </section>}
     </div>
   );
@@ -474,9 +429,10 @@ export function Catalogue() {
         </>
       ) : (
         <Empty title={t("No designs found")}>
-          {t(
-            "Try another category, or start a request with your own reference.",
-          )}
+          <div className="stack-actions">
+            <button type="button" className="button secondary" onClick={() => { setSearch(""); setParams({}); }}>{t("atelier.filters.clear")}</button>
+            <Link className="button" to="/request?source=reference">{t("public.action.reference")}</Link>
+          </div>
         </Empty>
       )}
       <Notice>
@@ -517,62 +473,17 @@ export function DesignDetails() {
 }
 
 export function HowItWorks() {
-  useLanguage();
+  const { language } = useLanguage();
   return (
-    <div className="container page narrow">
-      <PageHeading
-        eyebrow={t("YOUR FABRIC, OUR CRAFT")}
-        title={t("Simple, transparent stitching from your home.")}
-      >
-        {t(
-          "Choose or upload a design, customize every detail, get help from choosing fabric to measurements, and enjoy doorstep pickup & delivery.",
-        )}
+    <div className="container page narrow atelier-how">
+      <PageHeading eyebrow={t("YOUR FABRIC, OUR CRAFT")} title={t("Simple, transparent stitching from your home.")}>
+        {t("atelier.how.intro")}
       </PageHeading>
       <div className="journey">
-        {[
-          [
-            t("Choose our design or share your own"),
-            t(
-              "Start by picking a kurti, suit/kameez, blouse, or alteration design you want tailored from our collection—or upload your own design reference image.",
-            ),
-          ],
-          [
-            t("Select what you want to customize"),
-            t(
-              "Tell us which parts of the chosen design you want customized—such as the front neck design, back neck design, sleeve design, or sleeve length.",
-            ),
-          ],
-          [
-            t("Pick neck & sleeve styles step-by-step—or upload yours"),
-            t(
-              "Click Next to step through your selected neck and sleeve choices. Pick from our studio options on screen, or upload a photo of your own neck or sleeve pattern.",
-            ),
-          ],
-          [
-            t("Enter measurements, delivery address & get help anytime"),
-            t(
-              "Share your body or well-fitting garment measurements in inches or centimetres along with your delivery address. Need help anywhere? Ask our master tailor—from how to measure right to which fabric to buy for your chosen design.",
-            ),
-          ],
-          [
-            t("Review your personal quote before stitching"),
-            t(
-              "We inspect your design choices, customizations, measurements and pickup preference, then share a clear versioned quote covering stitching and any applicable doorstep pickup/delivery charges. Accept only when you are completely happy.",
-            ),
-          ],
-          [
-            t("Doorstep fabric pickup, live tracking & home delivery"),
-            t(
-              "With doorstep pickup & delivery, we collect your unstitched fabric from home and deliver the stitched outfit back to your door for a sensible fee shown in your quote—or you can arrange atelier handover. Track every stage in My requests.",
-            ),
-          ],
-        ].map(([title, copy], i) => (
-          <article key={title}>
-            <span>{String(i + 1).padStart(2, "0")}</span>
-            <div>
-              <h2>{title}</h2>
-              <p>{copy}</p>
-            </div>
+        {DEFAULT_HOMEPAGE.process.map((item, index) => (
+          <article key={index}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <div><h2>{homepageText(item, "title", language)}</h2><p>{homepageText(item, "description", language)}</p></div>
           </article>
         ))}
       </div>
@@ -580,114 +491,63 @@ export function HowItWorks() {
         <article className="panel how-support-card">
           <Scissors size={22} aria-hidden="true" />
           <h3>{t("Guidance from fabric buying to final fit")}</h3>
-          <p>
-            {t(
-              "Not sure whether cotton, silk, rayon or linen suits a neckline or drape best? Ask our tailor before buying your fabric, and request measurement guidance anytime inside the form or on WhatsApp.",
-            )}
-          </p>
+          <p>{t("atelier.how.help")}</p>
+          <Link className="text-link" to="/contact">{t("public.action.guidance")}<ArrowUpRight size={15} aria-hidden="true" /></Link>
         </article>
         <article className="panel how-support-card">
           <Truck size={22} aria-hidden="true" />
           <h3>{t("Doorstep fabric pickup & outfit delivery")}</h3>
-          <p>
-            {t(
-              "Skip the trip when you need convenience: your unstitched fabric is picked up right from your doorstep and returned stitched to your address. Pickup and delivery charges are clearly agreed in your quote based on service details.",
-            )}
-          </p>
+          <p>{t("atelier.how.pickup")}</p>
         </article>
       </div>
-      <Notice>
-        {t(
-          "Preferred dates are requests, not guaranteed commitments. We will discuss feasibility and agree the final quote before work begins.",
-        )}
-      </Notice>
-      <Link to="/request" className="button">
-        {t("Start your stitching request")}
-        <ArrowRight size={17} />
-      </Link>
+      <Notice>{t("atelier.how.review")}</Notice>
+      <Link to="/request" className="button">{t("Start your stitching request")}<ArrowUpRight size={17} aria-hidden="true" /></Link>
     </div>
   );
 }
+
 export function Contact() {
   useLanguage();
-  const s = useSite();
-  const phone = (s.whatsapp || "").replace(/\D/g, "");
-  const supportHours = formatSupportSummary(s.support, t);
+  const site = useSite();
+  const phone = /^[+\d\s()-]{10,25}$/.test(site.whatsapp || "") ? site.whatsapp.replace(/\D/g, "") : "";
+  const instagram = /^https:\/\/(?:www\.)?instagram\.com\//.test(site.instagram || "") ? site.instagram : "";
+  const supportHours = formatSupportSummary(site.support, t);
   return (
-    <div className="container page">
-      <PageHeading
-        eyebrow={t("THE KHWAB ATELIER")}
-        title={t("Every good stitch begins with a conversation.")}
-      >
-        {t(
-          "Questions about fabric, fit, or an idea you cannot quite put into words? Say hello.",
-        )}
+    <div className="container page atelier-contact">
+      <PageHeading eyebrow={t("THE KHWAB ATELIER")} title={t("Every good stitch begins with a conversation.")}>
+        {t("Questions about fabric, fit, or an idea you cannot quite put into words? Say hello.")}
       </PageHeading>
       <div className="contact-grid">
-        <div className="contact-card">
-          <MessageCircle size={26} />
+        {phone && <article className="contact-card">
+          <MessageCircle size={25} aria-hidden="true" />
           <h2>{t("Let's talk stitching")}</h2>
-          <p>
-            {t(
-              "Discuss your idea or fabric handover directly with the atelier.",
-            )}
-          </p>
-          {phone && (
-            <a
-              className="button"
-              href={`https://wa.me/${phone}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("Chat on WhatsApp")}
-              <ArrowUpRight size={17} />
-            </a>
-          )}
-        </div>
-        <div className="contact-card">
-          <Instagram size={26} />
+          <a className="button" href={`https://wa.me/${phone}`} target="_blank" rel="noopener noreferrer">{t("Chat on WhatsApp")}<ArrowUpRight size={17} aria-hidden="true" /></a>
+        </article>}
+        {site.contactEmail && <article className="contact-card">
+          <Mail size={25} aria-hidden="true" />
+          <h2>{t("Write to us")}</h2>
+          <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>
+        </article>}
+        {instagram && <article className="contact-card">
+          <Instagram size={25} aria-hidden="true" />
           <h2>{t("A little inspiration")}</h2>
-          <p>{t("Find us on Instagram and discover our stitching story.")}</p>
-          {/^https:\/\/((www\.)?instagram\.com)\//.test(s.instagram || "") && (
-            <a
-              className="text-link"
-              href={s.instagram}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("Visit Instagram")}
-              <ArrowUpRight size={17} />
-            </a>
-          )}
-        </div>
-        {s.contactEmail && (
-          <div className="contact-card">
-            <Mail size={26} />
-            <h2>{t("Write to us")}</h2>
-            <a href={`mailto:${s.contactEmail}`}>{s.contactEmail}</a>
-          </div>
-        )}
+          <a className="text-link" href={instagram} target="_blank" rel="noopener noreferrer">{t("Visit Instagram")}<ArrowUpRight size={17} aria-hidden="true" /></a>
+        </article>}
+        {!phone && !site.contactEmail && !instagram && <article className="contact-card">
+          <MessageCircle size={25} aria-hidden="true" />
+          <h2>{t("Let's talk stitching")}</h2>
+          <Link className="button" to="/account/support">{t("public.action.guidance")}<ArrowUpRight size={17} aria-hidden="true" /></Link>
+        </article>}
       </div>
       <section className="policy">
         <h2>{t("Before you visit")}</h2>
-        <p>
-          {t(
-            "We are a home-based custom stitching service. Contact the atelier to arrange fabric handover and appointments. Fabric is provided by you; quotes and delivery commitments follow a personal review.",
-          )}
-        </p>
+        <p>{t("atelier.contact.note")}</p>
         {supportHours && <p><strong>{supportHours}</strong></p>}
       </section>
-      {s.faqs?.length > 0 && (
-        <section className="faq">
-          <h2>{t("A few helpful answers")}</h2>
-          {s.faqs.map((f, i) => (
-            <details key={i}>
-              <summary>{localize(f, "question")}</summary>
-              <p>{localize(f, "answer")}</p>
-            </details>
-          ))}
-        </section>
-      )}
+      {site.faqs?.length > 0 && <section className="faq">
+        <h2>{t("A few helpful answers")}</h2>
+        {site.faqs.map((faq, index) => <details key={index}><summary>{localize(faq, "question")}</summary><p>{localize(faq, "answer")}</p></details>)}
+      </section>}
     </div>
   );
 }

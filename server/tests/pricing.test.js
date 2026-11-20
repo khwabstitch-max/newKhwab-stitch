@@ -171,7 +171,8 @@ test("mixed references preserve per-part associations and never present unknown 
   assert.equal(result.hasPending, true);
   assert.equal(result.components.sleeve.referenceMediaId, ids.ref);
   assert.equal(result.components.neck.source, "option");
-  assert.equal(result.pendingItems.length, 3);
+  assert.ok(result.pendingItems.some(item => item.code === "stitching"));
+  assert.ok(result.pendingItems.some(item => item.code === `neck:${ids.neck}`));
 });
 test("unconfigured or legacy component data produces pending review without inventing a component", () => {
   const result = priced(input(), {

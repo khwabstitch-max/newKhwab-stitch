@@ -1,0 +1,196 @@
+/* Shared shell: ivory navigation, plum atelier footer and responsive controls. */
+.header.atelier-header {
+  position: sticky; top: 0; z-index: 50;
+  border-top: 3px solid var(--color-primary);
+  border-bottom: 1px solid var(--color-border);
+  background: #fffdfaf5; backdrop-filter: blur(18px);
+  box-shadow: 0 4px 24px #35272c06;
+}
+.atelier-header .header-inner {
+  position: relative; display: flex; align-items: center; flex-wrap: nowrap;
+  max-width: 1440px; min-height: 90px; margin-inline: auto; padding: 16px 36px; gap: 24px;
+}
+.atelier-header .logo.brand-logo { flex-shrink: 0; gap: 9px; }
+.atelier-header .brand-monogram { width: 50px; height: 50px; }
+.atelier-header .brand-wordmark {
+  font-family: var(--font-brand); font-size: 35px; font-weight: 600; line-height: 1;
+  letter-spacing: -.04em; color: var(--color-charcoal);
+}
+.atelier-header .brand-wordmark > span { color: var(--color-primary); }
+.atelier-header .logo .brand-tagline {
+  display: block; margin-top: 7px; padding: 0; color: var(--color-muted);
+  font-family: var(--font-body); font-size: 10px; font-weight: 500; font-style: normal;
+  line-height: 1.4; letter-spacing: .02em; text-transform: none;
+}
+.atelier-header .header-inner .public-nav {
+  position: static; display: flex; flex-direction: row; flex: 1; align-items: center;
+  justify-content: space-between; gap: 20px; min-width: 0; width: auto; margin: 0; padding: 0;
+  background: transparent; border: 0; box-shadow: none;
+}
+.atelier-nav-pages, .atelier-nav-tools { display: flex; align-items: center; }
+.atelier-header .atelier-nav-pages { gap: 3px; padding: 0; border: 0; background: none; }
+.atelier-nav-tools { gap: 10px; }
+.atelier-header .public-nav-link, .atelier-header .nav-designs > summary {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 44px; padding: 10px 12px; border: 0; border-radius: 8px;
+  color: var(--color-charcoal); font-size: 13px; font-weight: 600; line-height: 1.5;
+}
+.atelier-header .public-nav-link:hover, .atelier-header .nav-designs > summary:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+.atelier-header .public-nav-link.active, .atelier-header .nav-designs.is-current > summary { color: var(--color-primary); background: transparent; box-shadow: none; }
+.atelier-header .public-nav-link.active::after, .atelier-header .nav-designs.is-current > summary::after {
+  content: ""; display: block; position: absolute; left: 12px; right: 12px; bottom: 2px;
+  height: 2px; border-radius: 2px; background: var(--color-primary);
+}
+.atelier-header .nav-designs { position: relative; }
+.atelier-header .nav-designs > summary { list-style: none; cursor: pointer; }
+.atelier-header .nav-designs > summary::-webkit-details-marker { display: none; }
+.atelier-header .nav-designs[open] > summary > svg { transform: rotate(180deg); }
+.atelier-header .nav-design-links {
+  position: absolute; top: 100%; left: 0; z-index: 3; min-width: 240px;
+  margin-top: 12px; padding: 10px; border: 1px solid var(--color-border); border-radius: 14px;
+  background: var(--color-surface); box-shadow: 0 18px 46px #35272c18;
+}
+.atelier-header .nav-design-links a { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; border-radius: 8px; color: var(--color-charcoal); font-size: 13px; }
+.atelier-header .nav-design-links a:hover, .atelier-header .nav-design-links a.active { background: var(--color-primary-soft); color: var(--color-primary); }
+.atelier-header .public-search { display: flex; align-items: center; width: 174px; padding: 0; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-ivory); }
+.header.atelier-header .public-nav .public-search input { min-width: 0; min-height: 44px; padding: 10px 0 10px 12px; border: 0; border-radius: 0; background: transparent; color: var(--color-charcoal); font-size: 12px; }
+.atelier-header .public-search input::placeholder { color: var(--color-muted); opacity: 1; }
+.atelier-header .public-search:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+.atelier-header .public-search button { width: 44px; min-width: 44px; min-height: 44px; padding: 0; color: var(--color-primary); }
+.atelier-header .language-picker { gap: 5px; padding: 0; color: var(--color-primary); }
+.atelier-header .language-picker > svg { width: 16px; flex-shrink: 0; }
+.atelier-header .language-picker select { width: 84px; min-height: 44px; padding: 8px 14px 8px 5px; border: 0; border-radius: 8px; background-color: transparent; color: var(--color-charcoal); font-size: 12px; }
+.atelier-header .public-account { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; min-width: 44px; min-height: 44px; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-primary); background: var(--color-surface); }
+.atelier-header .public-account:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
+.atelier-header .public-account .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+.header.atelier-header .button.atelier-request-link {
+  display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 9px;
+  min-height: 48px; padding: 12px 17px; border: 1px solid var(--color-primary); border-radius: 10px;
+  background: var(--color-primary); color: var(--color-surface); font-size: 13px; font-weight: 600;
+  white-space: nowrap; box-shadow: 0 4px 12px #743f4b18;
+}
+.header.atelier-header .button.atelier-request-link:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); transform: none; }
+.atelier-header :is(a,button,select,input,summary):focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+.atelier-menu-backdrop { position: fixed; inset: 0; z-index: 45; background: #30232a55; backdrop-filter: blur(3px); }
+
+.footer.atelier-footer { position: relative; overflow: clip; margin-top: 0; padding: 0; border-top: 0; background: var(--color-footer); color: var(--color-footer-text); background-image: none; }
+.atelier-footer::before { content: ""; position: absolute; top: -210px; right: 3%; width: 430px; height: 430px; border: 1px solid #e1c39920; border-radius: 50%; pointer-events: none; }
+.atelier-footer .container { position: relative; width: 100%; max-width: 1320px; padding-inline: 40px; }
+.atelier-footer .atelier-footer-invitation { display: flex; justify-content: space-between; align-items: center; gap: 32px; padding-block: 42px 38px; border-bottom: 1px solid #ffffff21; }
+.atelier-footer-invitation > div { min-width: 0; }
+.atelier-footer .atelier-footer-invitation .eyebrow { margin: 0 0 10px; color: var(--color-footer-accent); font-size: 11px; font-weight: 600; letter-spacing: .13em; line-height: 1.6; }
+.atelier-footer .atelier-footer-invitation h2 { margin: 0; max-width: 23ch; color: var(--color-footer-text); font-size: clamp(30px, 3vw, 42px); font-weight: 400; line-height: 1.2; letter-spacing: -.02em; }
+.atelier-footer-actions { display: flex; flex-shrink: 0; align-items: center; gap: 12px; }
+.atelier-footer .atelier-footer-actions .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 13px 18px; border: 1px solid var(--color-footer-text); color: var(--color-footer); background: var(--color-footer-text); font-size: 13px; font-weight: 600; line-height: 1.5; box-shadow: none; text-decoration: none; }
+.atelier-footer .atelier-footer-actions .button:hover { background: var(--color-footer-accent); border-color: var(--color-footer-accent); }
+.atelier-footer .atelier-footer-actions .button.secondary { background: transparent; border-color: #c6b1ba; color: var(--color-footer-text); }
+.atelier-footer .atelier-footer-actions .button.secondary:hover { border-color: var(--color-footer-accent); background: #ffffff09; color: var(--color-footer-accent); }
+.atelier-footer .footer-grid { display: grid; grid-template-columns: 1.35fr .8fr 1fr 1.15fr; align-items: start; gap: 36px; padding-block: 42px 36px; }
+.atelier-footer .footer-grid > div { min-width: 0; grid-column: auto; }
+.atelier-footer .public-footer-brand { max-width: 320px; }
+.atelier-footer .logo.brand-logo { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 18px; }
+.atelier-footer .brand-monogram { width: 54px; height: 54px; padding: 5px; border-radius: 50%; background: var(--color-ivory); }
+.atelier-footer .brand-wordmark { color: var(--color-footer-text); font-family: var(--font-brand); font-size: 37px; font-weight: 600; line-height: 1; letter-spacing: -.04em; }
+.atelier-footer .brand-wordmark > span { color: var(--color-footer-accent); }
+.atelier-footer .logo .brand-tagline { display: none; }
+.footer.atelier-footer .public-footer-brand > p { margin: 0; max-width: 34ch; color: var(--color-footer-muted); font-size: 14px; line-height: 1.8; }
+.atelier-footer h3 { margin: 2px 0 13px; color: var(--color-footer-accent); font-family: var(--font-body); font-size: 12px; font-weight: 600; letter-spacing: .05em; line-height: 1.7; text-transform: none; }
+.atelier-footer .footer-grid a:not(.logo), .atelier-footer .text-button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding-block: 9px; color: var(--color-footer-text); font-size: 13px; font-weight: 500; line-height: 1.6; text-decoration: none; overflow-wrap: anywhere; }
+.atelier-footer a:hover, .atelier-footer .text-button:hover { color: var(--color-footer-accent); text-decoration: underline; text-underline-offset: 5px; }
+.atelier-footer .footer-grid a.atelier-footer-reference { display: inline-flex; margin-top: 14px; color: var(--color-footer-accent); font-weight: 600; border-bottom: 1px solid #e1c39966; }
+.atelier-footer .atelier-footer-contact { padding: 20px; border: 1px solid #ffffff1f; border-radius: 14px; background: #ffffff05; }
+.atelier-footer .atelier-footer-contact a { align-items: flex-start; }
+.atelier-footer .atelier-footer-contact a svg { flex-shrink: 0; margin-top: 3px; }
+.atelier-footer .public-footer-hours { margin: 12px 0 0; color: var(--color-footer-muted); font-size: 12px; line-height: 1.8; }
+.atelier-footer .public-footer-brand .public-footer-announcement { padding-top: 12px; margin-top: 12px; border-top: 1px solid #ffffff21; }
+.atelier-footer .atelier-footer-socials { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
+.atelier-footer .atelier-footer-socials a { font-size: 12px; }
+.atelier-footer .footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding-block: 18px; border-top: 1px solid #ffffff21; color: var(--color-footer-muted); font-size: 12px; line-height: 1.7; }
+.atelier-footer .footer-bottom .atelier-footer-legal { display: flex; flex-wrap: wrap; gap: 20px; }
+.atelier-footer .footer-bottom a { display: flex; align-items: center; min-height: 44px; color: var(--color-footer-text); font-size: 12px; }
+.atelier-footer :is(a,button):focus-visible { outline: 3px solid var(--color-footer-accent); outline-offset: 4px; }
+
+@media (min-width: 1201px) {
+  .atelier-header .header-inner .public-nav { display: flex !important; }
+  .atelier-header .mobile-menu { display: none !important; }
+}
+@media (min-width: 1201px) and (max-width: 1320px) {
+  .atelier-header .header-inner { gap: 16px; padding-inline: 24px; }
+  .atelier-header .brand-wordmark { font-size: 31px; }
+  .atelier-header .brand-monogram { width: 46px; height: 46px; }
+  .atelier-header .public-nav-link, .atelier-header .nav-designs > summary { padding-inline: 9px; font-size: 12px; }
+  .atelier-header .header-inner .public-nav { gap: 12px; }
+  .atelier-header .public-search { width: 150px; }
+  .atelier-nav-tools { gap: 7px; }
+  .header.atelier-header .button.atelier-request-link { padding-inline: 12px; font-size: 12px; }
+}
+@media (max-width: 1200px) {
+  .atelier-header .header-inner { min-height: 82px; padding: 14px 28px; gap: 12px; }
+  .atelier-header .logo.brand-logo { margin-right: auto; }
+  .atelier-header .mobile-menu { display: inline-flex !important; align-items: center; justify-content: center; width: 46px; height: 46px; min-width: 46px; min-height: 46px; padding: 0; border: 1px solid var(--color-border); border-radius: 10px; color: var(--color-primary); background: var(--color-surface); box-shadow: none; }
+  .atelier-header .mobile-menu[aria-expanded="true"] { border-color: var(--color-primary); background: var(--color-primary-soft); }
+  .atelier-header .header-inner .public-nav { display: none !important; }
+  .atelier-header .header-inner .public-nav.open {
+    position: absolute; inset: 100% 0 auto; display: flex !important; flex-direction: column !important;
+    align-items: stretch; justify-content: flex-start; width: 100% !important; max-height: calc(100dvh - 86px);
+    margin: 0; padding: 16px 28px 24px; gap: 22px; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--color-surface); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);
+    border-radius: 0 0 18px 18px; box-shadow: 0 18px 30px #35272c15; animation: none;
+  }
+  .atelier-header .atelier-nav-pages { display: grid; gap: 2px; }
+  .atelier-header .public-nav.open .public-nav-link, .atelier-header .public-nav.open .nav-designs > summary { justify-content: space-between; width: 100%; min-height: 50px; padding: 12px 4px; border-bottom: 1px solid var(--color-border); border-radius: 0; background: transparent; color: var(--color-charcoal); font-size: 15px; box-shadow: none; }
+  .atelier-header .public-nav.open .public-nav-link.active::after, .atelier-header .public-nav.open .nav-designs.is-current > summary::after { left: 4px; right: auto; width: 28px; bottom: 1px; }
+  .atelier-header .public-nav.open .nav-designs { width: 100%; }
+  .atelier-header .public-nav.open .nav-design-links { position: static; min-width: 0; margin: 6px 0 10px; padding: 4px 0 4px 14px; border: 0; border-left: 2px solid var(--color-primary-soft); border-radius: 0; background: transparent; box-shadow: none; }
+  .atelier-header .public-nav.open .nav-design-links a { min-height: 44px; font-size: 14px; }
+  .atelier-header .atelier-nav-tools { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 16px; }
+  .atelier-header .public-nav.open .public-search { grid-column: 1 / -1; width: 100%; background: var(--color-ivory); }
+  .atelier-header .public-nav.open .public-search input { min-height: 48px; padding: 12px; font-size: 16px; }
+  .atelier-header .public-nav.open .public-search button { width: 48px; min-height: 48px; }
+  .atelier-header .language-picker { width: fit-content; justify-content: flex-start; }
+  .atelier-header .language-picker select { width: auto; max-width: none; font-size: 16px; }
+  .atelier-header .public-nav.open .public-account { width: auto; height: auto; min-height: 44px; gap: 8px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+  .atelier-header .public-nav.open .public-account .sr-only { position: static; width: auto; height: auto; margin: 0; padding: 0; clip: auto; overflow: visible; white-space: normal; font-size: 14px; }
+  .atelier-footer .atelier-footer-invitation { align-items: flex-start; flex-direction: column; gap: 24px; }
+  .atelier-footer .footer-grid { grid-template-columns: 1.1fr 1fr 1.1fr; gap: 28px; }
+  .atelier-footer .public-footer-brand { grid-column: 1 / -1 !important; max-width: none; }
+  .footer.atelier-footer .public-footer-brand > p { max-width: 62ch; }
+}
+@media (max-width: 640px) {
+  .atelier-header .header-inner { min-height: 76px; padding: 12px 18px; gap: 9px; }
+  .atelier-header .brand-monogram { width: 41px; height: 41px; }
+  .atelier-header .brand-wordmark { font-size: 29px; }
+  .atelier-header .logo .brand-tagline { font-size: 9px; letter-spacing: 0; margin-top: 6px; }
+  .header.atelier-header .button.atelier-request-link { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; }
+  .header.atelier-header .button.atelier-request-link > span, .header.atelier-header .button.atelier-request-link .atelier-request-arrow { display: none; }
+  .atelier-header .mobile-menu { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  .atelier-header .header-inner .public-nav.open { max-height: calc(100dvh - 80px); padding-inline: 20px; }
+  .atelier-footer .container { padding-inline: 22px; }
+  .atelier-footer .atelier-footer-invitation { padding-block: 32px; gap: 22px; }
+  .atelier-footer .atelier-footer-invitation h2 { font-size: 32px; max-width: 19ch; }
+  .atelier-footer .atelier-footer-invitation .eyebrow { font-size: 10px; letter-spacing: .11em; }
+  .atelier-footer-actions { width: 100%; display: grid; grid-template-columns: minmax(0,1fr); gap: 10px; }
+  .atelier-footer .atelier-footer-actions .button { width: 100%; min-height: 48px; }
+  .atelier-footer .footer-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px 22px; padding-block: 32px; }
+  .atelier-footer .brand-wordmark { font-size: 36px; }
+  .atelier-footer .brand-monogram { width: 50px; height: 50px; }
+  .atelier-footer .public-footer-brand { grid-column: 1 / -1; }
+  .footer.atelier-footer .public-footer-brand > p { font-size: 14px; max-width: 38ch; }
+  .atelier-footer .atelier-footer-contact { grid-column: 1 / -1 !important; padding: 18px; }
+  .atelier-footer .public-footer-hours { max-width: none; }
+  .atelier-footer .footer-bottom { align-items: flex-start; flex-direction: column; gap: 6px; padding-block: 16px; font-size: 12px; }
+  .atelier-footer .footer-bottom .atelier-footer-legal { order: -1; gap: 24px; }
+}
+@media (max-width: 380px) {
+  .atelier-header .header-inner { padding-inline: 12px; gap: 7px; }
+  .atelier-header .logo.brand-logo { gap: 4px; }
+  .atelier-header .brand-monogram { width: 35px; height: 35px; }
+  .atelier-header .brand-wordmark { font-size: 25px; }
+  .atelier-header .logo .brand-tagline { font-size: 8px; }
+  .atelier-footer .brand-wordmark { font-size: 31px; }
+}
+html[lang="hi"] .atelier-header .brand-wordmark, html[lang="hi"] .atelier-footer .brand-wordmark { font-family: var(--font-brand); }
+html[lang="hi"] .atelier-footer .atelier-footer-invitation h2 { font-weight: 600; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) {
+  .atelier-header *, .atelier-footer * { transition: none !important; animation: none !important; }
+}

@@ -15,6 +15,7 @@ const text = (max = 2000) => ({
 });
 export function createModels(connection = mongoose) {
   const schemas = {
+    CatalogueCodeSequence: new Schema({ _id: { type: String }, value: { type: Number, required: true, min: 0, default: 0 } }, opts),
     RequestLimit: new Schema({ key: {type:String,required:true}, bucket:{type:Number,required:true}, hits:{type:Number,default:0,min:0}, expiresAt:{type:Date,required:true} }, opts),
     User: new Schema(
       {
@@ -60,6 +61,7 @@ export function createModels(connection = mongoose) {
     DesignOption: new Schema(
       {
         code: { type: String, maxlength: 50 },
+        codeAliases: { type: [String], default: undefined },
         importKey: { type: String, maxlength: 180 },
         importDigest: String,
         usedCount: { type: Number, default: 0, min: 0 },
@@ -131,6 +133,8 @@ export function createModels(connection = mongoose) {
         },
         private: { type: Boolean, required: true },
         mime: { type: String, required: true },
+        filename: { type: String, maxlength: 120 },
+        pageCount: { type: Number, min: 1, max: 10 },
         bytes: { type: Number, required: true },
         width: Number,
         height: Number,
@@ -165,6 +169,7 @@ export function createModels(connection = mongoose) {
                 "fabricRequirementHi",
                 "turnaround",
                 "turnaroundHi",
+                "scope", "scopeHi", "preparation", "preparationHi", "fitting", "fittingHi", "limitations", "limitationsHi",
               ].map((key) => [key, text(300)]),
             ),
             { _id: false, strict: "throw" },
@@ -215,6 +220,7 @@ export function createModels(connection = mongoose) {
           default: undefined,
         },
         code: { type: String, required: true, unique: true },
+        codeAliases: { type: [String], default: undefined },
         slug: { type: String, required: true, unique: true },
         garment: { type: String, enum: GARMENTS, required: true },
         description: { type: String, required: true },
@@ -256,9 +262,11 @@ export function createModels(connection = mongoose) {
         guideSnapshots: { type: [Schema.Types.Mixed], default: undefined },
         publicMediaPins: Schema.Types.Mixed,
         referenceMediaIds: [{ type: oid, ref: "MediaAsset" }],
+        referenceSnapshots: { type: [Schema.Types.Mixed], default: undefined },
         customer: Schema.Types.Mixed,
         address: Schema.Types.Mixed,
         preferredDate: String,
+        preferredDateReason: text(1000),
         notes: text(),
         fabricDetails: text(1000),
         fabricAcknowledged: { type: Boolean, required: true },

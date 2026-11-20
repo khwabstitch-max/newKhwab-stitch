@@ -1,5 +1,5 @@
 import { beforeEach, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 const boundary = vi.hoisted(() => ({ api: vi.fn(), auth: {} }));
@@ -132,9 +132,8 @@ it("only the requested component appears, and choosing a sleeve proceeds directl
     screen.getByRole("heading", { level: 2, name: "Sleeve design" }),
   ).toBeInTheDocument();
   await user.click(await screen.findByRole("radio", { name: /Full sleeve/ }));
-  await waitFor(() =>
-    expect(screen.getByRole("heading", { name: "₹800" })).toBeInTheDocument(),
-  );
+  await waitFor(() => expect(boundary.api.mock.calls.some(([path, request]) => path === "/pricing/estimate" && request.body.configuration.components.sleeve?.optionId === sleeveId)).toBe(true));
+  expect(screen.queryByRole("heading", { name: "₹800" })).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Continue" }));
   expect(
     screen.getByRole("heading", { name: "Your fit", level: 2 }),
@@ -142,6 +141,9 @@ it("only the requested component appears, and choosing a sleeve proceeds directl
   expect(
     screen.queryByRole("heading", { name: "Front neck design", level: 2 }),
   ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  expect(await screen.findByRole("heading", { name: "₹800" })).toBeInTheDocument();
 });
 it("cancel editing restores that section and preserves unrelated notes and selections", async () => {
   const d = createDraft({
@@ -274,19 +276,27 @@ it("loads later catalogue pages and preserves the chosen design through a server
     await screen.findByRole("radio", { name: /Later catalogue design/ }),
   );
   await user.type(
-    screen.getByRole("searchbox", { name: "Find a design" }),
+    screen.getByRole("searchbox", { name: "Search designs" }),
     "कमल",
   );
   expect(
     await screen.findByRole("radio", { name: /Lotus design/ }),
   ).toBeInTheDocument();
   await waitFor(() =>
-    expect(screen.getByText("Later catalogue design")).toBeInTheDocument(),
+    expect(screen.getByRole("heading", { name: "Later catalogue design", level: 3 })).toBeInTheDocument(),
   );
   expect(screen.getByLabelText("Same as shown")).toBeChecked();
-  expect(screen.getByRole("searchbox", { name: "Find a design" })).toHaveValue(
-    "कमल",
-  );
+  const searchbox = screen.getByRole("searchbox", { name: "Search designs" });
+  expect(searchbox).toHaveValue("कमल");
+  expect(searchbox).toHaveAttribute("placeholder", "Name or design code…");
+  await user.type(searchbox, "{Enter}");
+  expect(screen.getByRole("form", { name: "Your garment" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Clear search" }));
+  expect(searchbox).toHaveValue("");
+  expect(searchbox).toHaveFocus();
+  expect(await screen.findByRole("radio", { name: /Garden kurti/ })).toBeInTheDocument();
+  expect(screen.getByLabelText("Same as shown")).toBeChecked();
+  expect(screen.getByRole("heading", { name: "Later catalogue design", level: 3 })).toBeInTheDocument();
 });
 
 it("reaches component choices beyond the first fifty with bounded requests and keeps earlier selections", async () => {
@@ -418,7 +428,8 @@ it("recovers an original component outside the loaded gallery independently of t
       screen.getByText(/Original hidden sleeve.*Full sleeve/),
     ).toBeInTheDocument(),
   );
-  await screen.findByRole("heading", { name: "₹800" });
+  await waitFor(() => expect(boundary.api.mock.calls.some(([path, request]) => path === "/pricing/estimate" && request.body.configuration.components.sleeve?.optionId === sleeveId)).toBe(true));
+  expect(screen.queryByRole("heading", { name: "₹800" })).not.toBeInTheDocument();
   expect(
     screen.getByText(/Original hidden sleeve.*Full sleeve/),
   ).toBeInTheDocument();
@@ -434,18 +445,36 @@ it("links the active wizard step visually to the current form section", async ()
   expect(shell).toBeInTheDocument();
   const activeStep = shell.querySelector('li[aria-current="step"]');
   expect(activeStep).toHaveClass("active");
-  expect(shell.querySelectorAll(".step-arrow").length).toBeGreaterThanOrEqual(
-    1,
-  );
-  const toolbarIndicator = shell.querySelector(".wizard-active-link");
-  expect(toolbarIndicator).toHaveTextContent(/Step 1 of \d+/);
-  expect(toolbarIndicator).toHaveTextContent(/Your garment/);
-  const formIndicator = container.querySelector(
-    ".wizard-form .wizard-section-link",
-  );
-  expect(formIndicator).toHaveTextContent(/Step 1 of \d+/);
-  expect(formIndicator).toHaveTextContent(/Your garment/);
+  expect(shell.querySelector(".step-arrow")).not.toBeInTheDocument();
+  expect(shell.closest(".wizard-request-section")).toContainElement(screen.getByRole("form", { name: "Your garment" }));
+  expect(shell.querySelector(".wizard-active-link")).not.toBeInTheDocument();
+  expect(within(container.querySelector(".draft-toolbar")).queryByText("Your garment")).not.toBeInTheDocument();
+  const currentLink = within(activeStep).getByRole("link", { name: /Your garment/ });
+  expect(currentLink).toHaveAttribute("href", "#request-step-heading");
+  expect(currentLink).toHaveAttribute("aria-controls", "request-step-heading");
+  expect(currentLink.querySelector(".step-boundary-pointer")).toBeInTheDocument();
+  await userEvent.click(currentLink);
+  expect(screen.getByRole("heading", { name: "Your garment", level: 2 })).toHaveFocus();
+  const form = screen.getByRole("form", { name: "Your garment" });
+  expect(form).toHaveAttribute("aria-labelledby", "request-step-heading");
+  expect(container.querySelector(".wizard-section-link")).not.toBeInTheDocument();
   expect(
     screen.getByRole("button", { name: "Save draft" }),
   ).toHaveAttribute("type", "button");
+  await screen.findByText("Same as shown");
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  const nextHeading = await screen.findByRole("heading", { name: "Your fit", level: 2 });
+  expect(nextHeading).toHaveFocus();
+  expect(screen.getByRole("form", { name: "Your fit" })).toBeInTheDocument();
+  expect(shell.querySelector('li[aria-current="step"]')).toHaveTextContent("Your fit");
+});
+
+it("brings a rejected request step back to its error without advancing", async () => {
+  const { container } = mount("/request");
+  await screen.findByLabelText(/Garden kurti/);
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByText("Choose a catalogue design or upload your reference.");
+  expect(container.querySelector(".wizard-error-summary")).toHaveFocus();
+  expect(screen.getByRole("form", { name: "Your garment" })).toBeInTheDocument();
+  expect(boundary.api.mock.calls.some(([path]) => path === "/orders")).toBe(false);
 });

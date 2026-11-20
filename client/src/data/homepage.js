@@ -1,55 +1,54 @@
-// Bilingual service copy shared by the public page and its existing admin editor.
-// Empty promotional arrays never create offers or publish catalogue records.
+// Bilingual defaults; owner-authored complete language blocks remain editable.
 export const DEFAULT_HOMEPAGE = {
-  hero: {
-    eyebrow: "WELCOME TO KHWAB STITCH • CUSTOM STITCHING ON YOUR FABRIC",
-    eyebrowHi: "ख्वाब स्टिच में आपका स्वागत है • आपके कपड़े पर कस्टम सिलाई",
-    headline: "Your fabric, your design — stitched to your exact fit.",
-    headlineHi: "आपका कपड़ा, आपकी पसंद का डिज़ाइन — आपके सटीक नाप की सिलाई।",
-    description: "Tailor-stitched on your fabric to your exact measurements, with doorstep pickup & delivery.",
-    descriptionHi: "आपके अपने कपड़े पर सटीक नाप की दर्ज़ी सिलाई — घर से पिकअप और डिलीवरी।",
-    primaryCtaLabel: "Explore designs",
-    primaryCtaLabelHi: "डिज़ाइन देखें",
-    secondaryCtaLabel: "Share your design",
-    secondaryCtaLabelHi: "अपना डिज़ाइन भेजें",
-    imageMediaId: null,
+  "hero": {
+    "eyebrow": "CUSTOM STITCHING · MADE TO ORDER",
+    "eyebrowHi": "कस्टम सिलाई · आपकी पसंद पर",
+    "headline": "Your fabric. Your design. Stitched for you.",
+    "headlineHi": "आपका कपड़ा। आपकी पसंद। आपके नाप की सिलाई।",
+    "description": "Kurtis, suits, blouses & alterations. Your fabric, your fit.",
+    "descriptionHi": "कुर्ती, सूट, ब्लाउज़ और फिटिंग। कपड़ा आपका, सिलाई आपके नाप की।",
+    "primaryCtaLabel": "Explore designs",
+    "primaryCtaLabelHi": "डिज़ाइन देखें",
+    "secondaryCtaLabel": "Share your design",
+    "secondaryCtaLabelHi": "अपना डिज़ाइन भेजें",
+    "imageMediaId": null
   },
-  slides: [],
-  featuredDesignIds: [],
-  process: [
+  "slides": [],
+  "featuredDesignIds": [],
+  "process": [
     {
-      title: "Choose a design or share yours & customize neck or sleeves",
-      titleHi: "हमारा डिज़ाइन चुनें या अपना भेजें, और गला-आस्तीन बदलें",
-      description: "",
-      descriptionHi: "",
+      "title": "Choose your design",
+      "titleHi": "डिज़ाइन चुनें",
+      "description": "Pick a design, change the details, or share your reference.",
+      "descriptionHi": "हमारा डिज़ाइन चुनें, बदलाव करें या अपनी तस्वीर भेजें।"
     },
     {
-      title: "Add fit measurements, address & get fabric-to-naap help",
-      titleHi: "नाप व डिलीवरी पता दें, और कपड़ा चुनने से नाप तक मदद पाएँ",
-      description: "",
-      descriptionHi: "",
+      "title": "Share your measurements",
+      "titleHi": "अपना नाप दें",
+      "description": "Use your measurements, a well-fitting garment, or ask for help.",
+      "descriptionHi": "अपना नाप दें, सही फिटिंग के कपड़े से नाप लें या मदद माँगें।"
     },
     {
-      title: "Review & approve your transparent personal quote",
-      titleHi: "काम शुरू होने से पहले स्पष्ट कोटेशन की पुष्टि करें",
-      description: "",
-      descriptionHi: "",
+      "title": "Approve your quote",
+      "titleHi": "कोटेशन मंज़ूर करें",
+      "description": "Confirm the stitching details, final price and any transport charges before work begins.",
+      "descriptionHi": "काम शुरू होने से पहले सिलाई की बारीकियाँ, अंतिम कीमत और आने-जाने के शुल्क की पुष्टि करें।"
     },
     {
-      title: "Doorstep fabric pickup, live updates & stitched delivery",
-      titleHi: "घर से कपड़ा पिकअप, सिलाई ट्रैकिंग और तैयार डिलीवरी",
-      description: "",
-      descriptionHi: "",
-    },
+      "title": "Made for you",
+      "titleHi": "आपके लिए तैयार",
+      "description": "Fabric handover and delivery are agreed with the tailor.",
+      "descriptionHi": "कपड़ा देने और तैयार पोशाक लेने की व्यवस्था दर्ज़ी से तय करें।"
+    }
   ],
-  help: {
-    title: "Need help choosing or measuring?",
-    titleHi: "डिज़ाइन चुनने या नाप लेने में मदद चाहिए?",
-    description: "Share your question with our master tailor. We’ll help you confirm design details, fit and the next step.",
-    descriptionHi: "अपना सवाल हमारे मास्टर दर्ज़ी को भेजें। हम डिज़ाइन, फिटिंग और आगे की प्रक्रिया समझने में आपकी मदद करेंगे।",
+  "help": {
+    "title": "A little help with the fit?",
+    "titleHi": "डिज़ाइन या नाप में मदद चाहिए?",
+    "description": "From choosing a neckline to taking measurements, ask your tailor.",
+    "descriptionHi": "गला चुनने से लेकर नाप लेने तक, दर्ज़ी से सलाह लें।"
   },
-  footer: {
-    description: "Custom stitching on your fabric. Design, measurements, price and delivery are confirmed before work begins.",
-    descriptionHi: "आपके कपड़े पर आपकी पसंद की सिलाई। काम शुरू होने से पहले डिज़ाइन, नाप, कीमत और डिलीवरी की पुष्टि की जाती है।",
-  },
+  "footer": {
+    "description": "Custom stitching, made around you. Your fabric. Your design. Your fit.",
+    "descriptionHi": "आपकी पसंद की कस्टम सिलाई। आपका कपड़ा, आपका डिज़ाइन, आपका नाप।"
+  }
 };

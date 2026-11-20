@@ -1,3 +1,42 @@
+import { DEFAULT_HOMEPAGE } from "../data/homepage";
+
+// Exact shipped templates may still be returned by saved website settings.
+// Only these values are refreshed for display; owner edits and API records stay intact.
+const previousHeroTemplates = {
+  eyebrow: new Set([
+    "CUSTOM STITCHING · EMBROIDERY · MADE TO ORDER",
+    "WELCOME TO KHWAB STITCH • CUSTOM STITCHING ON YOUR FABRIC",
+  ]),
+  eyebrowHi: new Set([
+    "कस्टम सिलाई · कढ़ाई · आपकी पसंद पर",
+    "ख्वाब स्टिच में आपका स्वागत है • आपके कपड़े पर कस्टम सिलाई",
+  ]),
+  headline: new Set([
+    "Stitching & embroidery, made for you.",
+    "Your fabric, your design — stitched to your exact fit.",
+  ]),
+  headlineHi: new Set([
+    "आपकी पसंद की सिलाई और कढ़ाई।",
+    "आपका कपड़ा, आपकी पसंद का डिज़ाइन — आपके सटीक नाप की सिलाई।",
+  ]),
+  description: new Set([
+    "Tailor-stitched on your fabric to your exact measurements, with doorstep pickup & delivery.",
+  ]),
+  descriptionHi: new Set([
+    "आपके अपने कपड़े पर सटीक नाप की दर्ज़ी सिलाई — घर से पिकअप और डिलीवरी।",
+  ]),
+};
+const previousFooterTemplates = {
+  description: new Set([
+    "Made-to-order stitching & embroidery. Your fabric, your personal touch.",
+    "Custom stitching on your fabric. Design, measurements, price and delivery are confirmed before work begins.",
+  ]),
+  descriptionHi: new Set([
+    "आपकी पसंद की सिलाई और कढ़ाई। आपका कपड़ा, आपके नाप की पोशाक।",
+    "आपके कपड़े पर आपकी पसंद की सिलाई। काम शुरू होने से पहले डिज़ाइन, नाप, कीमत और डिलीवरी की पुष्टि की जाती है।",
+  ]),
+};
+
 export function homepageText(record, field, language) {
   const value = record?.[field + (language === "hi" ? "Hi" : "")];
   return typeof value === "string" ? value.trim() : "";
@@ -7,7 +46,14 @@ export function homepageText(record, field, language) {
 export function homepageBlock(record, fallback, fields, language) {
   const complete = fields.every((field) => homepageText(record, field, language));
   const source = complete ? record : fallback;
-  return Object.fromEntries(fields.map((field) => [field, homepageText(source, field, language)]));
+  const previousTemplates = fallback === DEFAULT_HOMEPAGE.hero ? previousHeroTemplates
+    : fallback === DEFAULT_HOMEPAGE.footer ? previousFooterTemplates : null;
+  return Object.fromEntries(fields.map((field) => {
+    const value = homepageText(source, field, language);
+    const key = field + (language === "hi" ? "Hi" : "");
+    return [field, previousTemplates?.[key]?.has(value)
+      ? homepageText(fallback, field, language) : value];
+  }));
 }
 
 export function publicHref(value) {

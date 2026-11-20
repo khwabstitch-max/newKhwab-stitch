@@ -16,6 +16,7 @@ import {
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import request from "supertest";
 import sharp from "sharp";
+import { PDFDocument } from "pdf-lib";
 import pino from "pino";
 import { createApp } from "../src/app.js";
 import { createModels, transaction } from "../src/models.js";
@@ -44,7 +45,7 @@ const images = {
         (options.private ? "private" : "public") +
         "/" +
         randomUUID() +
-        ".webp",
+        (options.mime === "application/pdf" ? ".pdf" : ".webp"),
     };
   },
   async remove() {
@@ -1500,6 +1501,7 @@ test("Hindi catalogue fields are validated, publicly readable, searchable and pr
   await auth("patch", "/api/admin/designs/" + design._id, tokenAdmin)
     .send({
       ...payload,
+      code: design.code,
       titleHi: "नई हिंदी जानकारी",
       revision: design.revision,
     })
@@ -1647,6 +1649,7 @@ test("design boards expose labelled cropped previews, bilingual specifications a
   )
     .send({
       ...payload,
+      code: created.body.data.code,
       designDetails: { ...payload.designDetails, neck: "Custom neckline" },
       imageViews: payload.imageViews.slice().reverse(),
       revision: created.body.data.revision,
@@ -2569,12 +2572,12 @@ test("submitted guide snapshots and their original public images survive guide r
 
 test("account erasure releases separate public option and guide pins exactly once and removes private snapshot context", async () => {
   const user = await models.User.create({ name: "Snapshot erasure", email: "snapshot-delete-" + randomUUID() + "@example.test", passwordHash: fixtureHash, role: "customer", deletionRequestedAt: new Date() });
-  const image = await models.MediaAsset.create({ owner: other._id, fileId: randomUUID(), filePath: "/khwab/public/shared-snapshot.webp", purpose: "catalogue", private: false, mime: "image/webp", bytes: 100, references: 3 });
-  const order = await models.Order.create({ ...body(), owner: user._id, orderNumber: "DELETE-" + randomUUID(), idempotencyKey: randomUUID(), requestHash: "fixture", status: "delivered", estimate: { components: { neck: { imageMediaIds: [String(image._id)] } }, addons: [] }, guideSnapshots: [{ imageMediaIds: [String(image._id)], instructions: "Original instructions" }], publicMediaPins: { optionImages: [String(image._id)], guideImages: [String(image._id)] }, designSnapshot: { code: "HISTORICAL", components: { sleeve: { source: "reference", notes: "Private customer note", referenceMediaId: "a".repeat(24) } } } });
+  const image = await models.MediaAsset.create({ owner: other._id, fileId: randomUUID(), filePath: "/khwab/public/shared-snapshot.webp", purpose: "catalogue", private: false, mime: "image/webp", bytes: 100, references: 4 });
+  const order = await models.Order.create({ ...body(), owner: user._id, orderNumber: "DELETE-" + randomUUID(), idempotencyKey: randomUUID(), requestHash: "fixture", status: "delivered", estimate: { components: { neck: { imageMediaIds: [String(image._id)] } }, addons: [] }, guideSnapshots: [{ imageMediaIds: [String(image._id)], instructions: "Original instructions" }], publicMediaPins: { designImages: [String(image._id)], optionImages: [String(image._id)], guideImages: [String(image._id)] }, referenceSnapshots: [{ mediaId: "a".repeat(24), filename: "Private customer reference.pdf", mimeType: "application/pdf" }], designSnapshot: { code: "HISTORICAL", components: { sleeve: { source: "reference", notes: "Private customer note", referenceMediaId: "a".repeat(24) } } } });
   await executeAccountDeletion(context, user);
   const erased = await models.Order.findById(order._id);
   assert.equal((await models.MediaAsset.findById(image._id)).references, 1);
-  assert.equal(erased.guideSnapshots, undefined); assert.equal(erased.publicMediaPins, undefined);
+  assert.equal(erased.guideSnapshots, undefined); assert.equal(erased.publicMediaPins, undefined); assert.deepEqual(erased.referenceSnapshots, []);
   assert.deepEqual(erased.designSnapshot.components, {});
   assert.equal((await executeAccountDeletion(context, user)).alreadyComplete, true);
   assert.equal((await models.MediaAsset.findById(image._id)).references, 1);
@@ -2704,7 +2707,7 @@ test("featured homepage designs disappear on unpublish and cannot be deleted whi
   const actors = await homepageActors(), payload = adminDesign({ status: "published" });
   const design = (await auth("post", "/api/admin/designs", actors.admin).send(payload).expect(201)).body.data;
   await auth("patch", "/api/admin/settings", actors.admin).send(await homepageSettingsBody(actors.admin, { homepage: { featuredDesignIds: [design._id], slides: [] } })).expect(200);
-  const unpublished = (await auth("patch", "/api/admin/designs/" + design._id, actors.admin).send({ ...payload, status: "draft", revision: design.revision }).expect(200)).body.data;
+  const unpublished = (await auth("patch", "/api/admin/designs/" + design._id, actors.admin).send({ ...payload, code: design.code, status: "draft", revision: design.revision }).expect(200)).body.data;
   const homepage = (await request(app).get("/api/settings").expect(200)).body.data.homepage;
   assert.deepEqual(homepage.featuredDesignIds, []); assert.deepEqual(homepage.featuredDesigns, []);
   await auth("delete", "/api/admin/designs/" + design._id, actors.admin).send({ revision: unpublished.revision }).expect(409);
@@ -2760,4 +2763,110 @@ test("public settings safely omit corrupt legacy homepage metadata and invalid o
   } finally {
     await models.SiteSettings.updateOne({ key: "main" }, previous?.homepage === undefined ? { $unset: { homepage: 1 } } : { $set: { homepage: previous.homepage } });
   }
+});
+
+test("catalogue production codes allocate concurrently and remain stable through edits and deletions", async () => {
+  const responses = await Promise.all(Array.from({ length: 6 }, () => auth("post", "/api/admin/designs", tokenAdmin).send(adminDesign({ garment: "blouse", code: "" })).expect(201)));
+  const records = responses.map(response => response.body.data);
+  const numbers = records.map(record => Number(record.code.slice(2))).sort((a,b) => a-b);
+  assert.ok(records.every(record => /^B-(0|[1-9][0-9]*)$/.test(record.code)));
+  assert.equal(new Set(records.map(record=>record.code)).size,6);
+  assert.deepEqual(numbers, Array.from({length:6},(_,index)=>numbers[0]+index));
+  const record=records[0], payload=adminDesign({code:record.code,slug:record.slug,garment:"blouse",title:"Changed display title"});
+  await auth("patch","/api/admin/designs/"+record._id,tokenAdmin).send({...payload,code:"B-999999",revision:0}).expect(409);
+  await auth("patch","/api/admin/designs/"+record._id,tokenAdmin).send({...payload,garment:"kurti",revision:0}).expect(409);
+  const changed=(await auth("patch","/api/admin/designs/"+record._id,tokenAdmin).send({...payload,revision:0}).expect(200)).body.data;
+  assert.equal(changed.code,record.code);assert.equal(changed._id,record._id);
+  await auth("delete","/api/admin/designs/"+record._id,tokenAdmin).send({revision:changed.revision}).expect(200);
+  const next=(await auth("post","/api/admin/designs",tokenAdmin).send(adminDesign({garment:"blouse"})).expect(201)).body.data;
+  assert.ok(Number(next.code.slice(2))>numbers.at(-1));
+});
+test("catalogue production option codes are automatic and maintain their category while applicability can change", async () => {
+  const payload={name:"Production sleeve",nameHi:"नए डिज़ाइन की आस्तीन",kind:"sleeve",garments:["kurti","blouse"],priceMode:"additional",amountPaise:7000,status:"published"};
+  const record=(await auth("post","/api/admin/options",tokenAdmin).send(payload).expect(201)).body.data;
+  assert.match(record.code,/^SD-(0|[1-9][0-9]*)$/);
+  await auth("patch","/api/admin/options/"+record._id,tokenAdmin).send({...payload,code:record.code,kind:"neck",revision:record.revision}).expect(409);
+  const changed=(await auth("patch","/api/admin/options/"+record._id,tokenAdmin).send({...payload,code:record.code,garments:["blouse"],revision:record.revision}).expect(200)).body.data;
+  assert.equal(changed.code,record.code);assert.equal(changed.amountPaise,7000);assert.deepEqual(changed.garments,["blouse"]);
+});
+
+test("concurrent operator imports recover the allocated-code winner by stable slug and clean up the losing upload", async () => {
+  const template = JSON.parse(readFileSync(new URL("../../client/src/data/teal-kurti.json", import.meta.url), "utf8"));
+  template.design.code = "RACE-" + randomUUID().slice(0, 8);
+  template.design.slug = "import-race-" + randomUUID().slice(0, 8);
+  const owner = await models.User.create({ email: "race-import-" + randomUUID() + "@example.test", role: "admin", passwordHash: fixtureHash });
+  let uploads = 0, release;
+  const bothUploading = new Promise(resolve => { release = resolve; }), removed = [];
+  const ctx = { ...context, images: {
+    async upload() {
+      const current = ++uploads;
+      if (uploads === 2) release();
+      await bothUploading;
+      return { fileId: "import-race-" + current, filePath: "/public/import-race-" + current + ".webp" };
+    },
+    async remove(fileId) { removed.push(fileId); },
+  } };
+  const results = await Promise.all([0, 1].map(() => importDesignBoard(ctx, { template, buffer: png, ownerEmail: owner.email, publish: true })));
+  assert.deepEqual(results.map(item => item.created).sort(), [false, true]);
+  assert.equal(String(results[0].design._id), String(results[1].design._id));
+  assert.match(results[0].design.code, /^K-(0|[1-9][0-9]*)$/);
+  assert.notEqual(results[0].design.code, template.design.code);
+  assert.equal(await models.Design.countDocuments({ slug: template.design.slug }), 1);
+  assert.equal(await models.MediaAsset.countDocuments({ owner: owner._id }), 1);
+  assert.equal(removed.length, 1);
+  const retained = await models.MediaAsset.findById(results[0].design.coverMediaId);
+  assert.equal(retained.references, 1); assert.notEqual(retained.fileId, removed[0]);
+});
+
+test("private PDF and image boards persist through submission and quotes with owner/admin-only historical access", async () => {
+  const pdf = await PDFDocument.create(); pdf.addPage([400, 600]).drawText("Front, side and back on one board");
+  const uploaded = (await auth("post", "/api/media").field("purpose", "reference").attach("file", Buffer.from(await pdf.save()), { filename: "all-three-views.pdf", contentType: "application/pdf" }).expect(201)).body.data;
+  assert.equal(uploaded.mimeType, "application/pdf"); assert.equal(uploaded.pageCount, 1);
+  assert.equal(uploaded.filename, "all-three-views.pdf"); assert.equal(uploaded.filePath, undefined);
+  const image = (await auth("post", "/api/media").field("purpose", "reference").attach("file", png, "detail.png").expect(201)).body.data;
+  const detached = (await auth("post", "/api/media").field("purpose", "reference").attach("file", png, "unattached.png").expect(201)).body.data;
+  const access = await auth("get", "/api/media/" + uploaded._id + "/access").expect(200);
+  assert.equal(access.body.data.mimeType, "application/pdf"); assert.equal(access.body.data.filename, "all-three-views.pdf");
+  assert.equal(access.headers["cache-control"], "private, no-store"); assert.match(access.body.data.url, /[.]pdf[?]/);
+  await auth("get", "/api/media/" + uploaded._id + "/access", tokenB).expect(404);
+  const payload = { ...body(), referenceMediaIds: [uploaded._id.toUpperCase(), image._id], configuration: { source: "reference", mode: "custom", components: {}, addonIds: [] } };
+  const settings = await models.SiteSettings.findOne({ key: "main" }).lean(); if (settings?.policies?.version) payload.policyVersion = settings.policies.version;
+  let order = (await createOrder(payload).expect(201)).body.data;
+  assert.deepEqual(order.referenceSnapshots.map(item => item.mimeType), ["application/pdf", "image/webp"]);
+  assert.equal(order.referenceSnapshots[0].filename, "all-three-views.pdf");
+  assert.equal((await models.MediaAsset.findById(uploaded._id)).references, 1);
+  await auth("delete", "/api/media/" + uploaded._id).send({}).expect(409);
+  for (const token of [tokenA, tokenAdmin]) {
+    const result = await auth("get", "/api/orders/" + order._id + "/media/" + uploaded._id, token).expect(200);
+    assert.equal(result.body.data.mimeType, "application/pdf"); assert.equal(result.body.data.pageCount, 1);
+  }
+  await auth("get", "/api/orders/" + order._id + "/media/" + uploaded._id, tokenB).expect(404);
+  await auth("get", "/api/orders/" + order._id + "/media/" + detached._id).expect(404);
+  order = (await auth("patch", "/api/admin/orders/" + order._id + "/status", tokenAdmin).send({ revision: order.revision, status: "under_review", note: "Review reference board" }).expect(200)).body.data;
+  order = (await auth("post", "/api/admin/orders/" + order._id + "/quotes", tokenAdmin).send({ revision: order.revision, amountPaise: 80000, deliveryDate: "2099-12-10", notes: "Quote based on the attached PDF and image" }).expect(200)).body.data;
+  assert.equal(order.referenceSnapshots[0].filename, "all-three-views.pdf");
+  order = (await auth("post", "/api/orders/" + order._id + "/quote-response").send({ revision: order.revision, quoteVersion: order.quotes.at(-1).version, decision: "accept" }).expect(200)).body.data;
+  assert.equal(order.acceptedQuote.amountPaise, 80000);
+  const historical = (await auth("get", "/api/orders/" + order._id).expect(200)).body.data;
+  assert.equal(historical.referenceSnapshots[0].mimeType, "application/pdf");
+  await auth("get", "/api/orders/" + order._id + "/media/" + uploaded._id).expect(200);
+});
+test("submitted catalogue photos are snapshotted and retained after the published design changes", async () => {
+  const asset = (await auth("post", "/api/media", tokenAdmin).field("purpose", "catalogue").attach("file", png, "original-front.png").expect(201)).body.data;
+  const payloadDesign = adminDesign({ title: "Historical image design", status: "published", mediaIds: [asset._id], coverMediaId: asset._id, imageViews: [{ mediaId: asset._id, label: "Original front view", labelHi: "Front reference", crop: null }] });
+  const design = (await auth("post", "/api/admin/designs", tokenAdmin).send(payloadDesign).expect(201)).body.data;
+  const payload = { ...body(), designId: design._id, configuration: { source: "catalogue", mode: "exact", components: {}, addonIds: [] } };
+  const settings = await models.SiteSettings.findOne({ key: "main" }).lean(); if (settings?.policies?.version) payload.policyVersion = settings.policies.version;
+  const order = (await createOrder(payload).expect(201)).body.data;
+  assert.equal(order.designSnapshot._id, design._id); assert.deepEqual(order.designSnapshot.imageMediaIds, [asset._id]);
+  assert.equal(order.designSnapshot.imageViews[0].label, "Original front view"); assert.equal(order.designSnapshot.images[0].mimeType, "image/webp");
+  assert.equal((await models.MediaAsset.findById(asset._id)).references, 2);
+  await auth("patch", "/api/admin/designs/" + design._id, tokenAdmin).send({ ...payloadDesign, code: design.code, title: "Changed current design", mediaIds: [], coverMediaId: null, imageViews: [], revision: design.revision }).expect(200);
+  assert.equal((await models.MediaAsset.findById(asset._id)).references, 1);
+  await auth("delete", "/api/media/" + asset._id, tokenAdmin).send({}).expect(409);
+  const reference = (await auth("get", "/api/orders/" + order._id + "/media/" + asset._id).expect(200)).body.data;
+  assert.equal(reference.mimeType, "image/webp"); assert.match(reference.url, /images[.]example[.]test/);
+  await auth("get", "/api/orders/" + order._id + "/media/" + asset._id, tokenB).expect(404);
+  const stored = (await auth("get", "/api/admin/orders/" + order._id, tokenAdmin).expect(200)).body.data;
+  assert.equal(stored.designSnapshot.title, "Historical image design"); assert.equal(stored.designSnapshot.imageViews[0].label, "Original front view");
 });

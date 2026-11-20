@@ -12,6 +12,8 @@ function fakeClient({
   badPath = false,
   getFails = false,
   removeFails = false,
+  fileType = "image",
+  mime,
 } = {}) {
   let uploadBody,
     removed = 0;
@@ -29,7 +31,8 @@ function fakeClient({
             ? "/unrelated/asset.webp"
             : uploadBody.folder + "/" + uploadBody.fileName,
           isPrivateFile: badPrivacy ? false : uploadBody.isPrivateFile,
-          fileType: "image",
+          fileType,
+          ...(mime ? { mime } : {}),
         };
       },
       async delete() {
@@ -157,4 +160,21 @@ test("all media URLs request signatures and bounded expiry", () => {
     provider.url("/public/image.webp", 300),
     /signed=true&seconds=300$/,
   );
+});
+
+test("private PDF storage uses a PDF name and verifies document MIME and privacy from provider metadata", async () => {
+  const sdk = fakeClient({ fileType: "non-image", mime: "application/pdf" });
+  const result = await imageProvider(config, sdk).upload(Buffer.from("%PDF-1.7"), { private: true, purpose: "reference", owner: "owner", mime: "application/pdf" });
+  assert.ok(result.filePath.endsWith(".pdf")); assert.equal(sdk.uploadBody.isPrivateFile, true);
+  assert.match(sdk.uploadBody.fileName, /^[a-f0-9-]+[.]pdf$/);
+});
+test("PDF provider mismatches are cleaned up and non-reference PDF storage fails before upload", async () => {
+  for (const fields of [{ fileType: "non-image", mime: "text/html" }, { fileType: "non-image", mime: "application/pdf", badPrivacy: true }]) {
+    const sdk = fakeClient(fields);
+    await assert.rejects(imageProvider(config, sdk).upload(Buffer.from("pdf"), { private: true, purpose: "reference", owner: "owner", mime: "application/pdf" }), { code: "MEDIA_PROVIDER_FAILURE" });
+    assert.equal(sdk.removed, 1);
+  }
+  const sdk = fakeClient();
+  await assert.rejects(imageProvider(config, sdk).upload(Buffer.from("pdf"), { private: false, purpose: "catalogue", owner: "owner", mime: "application/pdf" }), { code: "PDF_REFERENCE_ONLY" });
+  assert.equal(sdk.uploadBody, undefined);
 });

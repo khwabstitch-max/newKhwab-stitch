@@ -7,7 +7,7 @@ import { usePagedCollection } from "../lib/usePagedCollection";
 import { ErrorMessage, Field } from "./ui";
 import { DesignImage, DesignPresentation } from "./DesignGallery";
 import template from "../data/teal-kurti.json";
-const fields = [
+const garmentFields = [
   ["neck", "Neck design"],
   ["sleeve", "Sleeve design"],
   ["back", "Back design"],
@@ -16,9 +16,18 @@ const fields = [
   ["fabricRequirement", "Fabric required"],
   ["turnaround", "Delivery estimate"],
 ];
+const alterationFields = [
+  ["scope", "public.design.alterationScope"],
+  ["preparation", "public.design.alterationPreparation"],
+  ["fitting", "public.design.alterationFitting"],
+  ["limitations", "public.design.alterationLimits"],
+  ["turnaround", "Delivery estimate"],
+];
 export function DesignEditorExtras({ editing, setEditing, busy }) {
   useLanguage();
-  const optionResource = usePagedCollection("/admin/options?limit=30");
+  const alteration = editing.garment === "alteration";
+  const fields = alteration ? alterationFields : garmentFields;
+  const optionResource = usePagedCollection(alteration ? null : "/admin/options?limit=30");
   const componentOptions = optionResource.data;
   const available = (option) =>
     option.active &&
@@ -109,8 +118,8 @@ export function DesignEditorExtras({ editing, setEditing, busy }) {
   return (
     <div className="design-editor-extras">
       <section>
-        <h3>{t("Design details")}</h3>
-        <fieldset>
+        <h3>{t(alteration ? "public.design.serviceDetails" : "Design details")}</h3>
+        {!alteration && <fieldset>
           <legend>{t("Included catalogue components")}</legend>
           <p className="small-print">
             {t(
@@ -247,7 +256,7 @@ export function DesignEditorExtras({ editing, setEditing, busy }) {
               {t("Load more component choices")}
             </button>
           )}
-        </fieldset>
+        </fieldset>}
         <p className="small-print">
           {t(
             "Describe the actual design. Leave information blank until you have confirmed it.",

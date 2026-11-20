@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowDown, CornerDownRight } from "lucide-react";
+import { Check, CircleHelp, LoaderCircle, Save, Search, X } from "lucide-react";
 import { api, money, readable } from "../lib/api";
-import { uploadMedia } from "../lib/media";
+import { uploadMedia, REFERENCE_ACCEPT, REFERENCE_FILE_LIMIT } from "../lib/media";
+import { ReferenceFilePreview } from "../components/ReferenceFilePreview";
 import { estimateLineLabel } from "../lib/order-labels";
 import { useAuth } from "../lib/auth";
 import { useResource, useSite } from "../lib/hooks";
@@ -18,6 +19,8 @@ import {
   requestReturnTo,
 } from "../lib/drafts";
 import { VisualOptions, optionPriceLabel } from "../components/VisualOptions";
+import { DesignImage } from "../components/DesignGallery";
+import { withDesignPhotography } from "../lib/design-photography";
 import { SleeveLengthOptions } from "../components/SleeveLengthOptions";
 import { MeasurementGuides } from "../components/MeasurementGuides";
 import {
@@ -38,6 +41,8 @@ import {
 import { t, localize, contentTranslation } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
 import "./request.css";
+import "./request-production.css";
+import { RequestSelectionReview, SelectedDesignSummary } from "../components/RequestSelectionReview";
 const kinds = {
   sleeveLength: "Sleeve length",
   sleeve: "Sleeve design",
@@ -106,19 +111,20 @@ const estimateBody = (d, sleeveless = false) => ({
   configuration: cleanConfig(d.configuration, sleeveless),
   logistics: d.logistics,
 });
-function Price({ data, error, loading, retry, design }) {
+function Price({ data, error, loading, retry, design, reference = false, garment }) {
   return (
-    <section className="panel request-price">
-      <p className="eyebrow">{t("YOUR STITCHING ESTIMATE")}</p>
-      <h2>{data ? money(data.knownSubtotalPaise) : "—"}</h2>
-      <p>{t(data?.hasPending ? "Known subtotal" : "Estimated total")}</p>
+    <section className={`panel request-price${reference ? " request-review-quote" : ""}`}>
+      <p className="eyebrow">{t(garment === "alteration" ? "request.alterationEstimate" : "YOUR STITCHING ESTIMATE")}</p>
+      <h2>{reference ? t("request.uploadedPrice") : data ? money(data.knownSubtotalPaise) : "—"}</h2>
+      <p>{reference ? t("request.knownCharges", { 0: money(data?.knownTransportSubtotalPaise ?? data?.knownSubtotalPaise ?? 0) }) : t(data?.hasPending ? "Known subtotal" : "Estimated total")}</p>
+      {reference && <p className="small-print">{t("request.uploadedPriceNote")}</p>}
       {data?.hasPending && (
         <p className="pending-price">{t("Pending tailor review")}</p>
       )}
       {loading && <small role="status">{t("Updating estimate…")}</small>}
       <ErrorMessage message={error} retry={retry} />
       {data && (
-        <details>
+        <details open>
           <summary>{t("Price breakdown")}</summary>
           <dl className="review-list">
             {data.lineItems.map((line) => (
@@ -182,6 +188,8 @@ function Address({ leg, value, onChange }) {
           required={k !== "line2"}
           minLength={k === "line1" ? 5 : undefined}
           maxLength={k === "pin" ? 6 : 200}
+          inputMode={k === "pin" ? "numeric" : undefined}
+          autoComplete={{line1:"address-line1",line2:"address-line2",city:"address-level2",state:"address-level1",pin:"postal-code"}[k]}
           pattern={k === "pin" ? "[1-9][0-9]{5}" : undefined}
           value={value[k] || ""}
           onChange={(e) => onChange({ ...value, [k]: e.target.value })}
@@ -190,41 +198,8 @@ function Address({ leg, value, onChange }) {
     </div>
   );
 }
-function Reference({ id, index = 0, onRemove }) {
-  const [url, setUrl] = useState(""),
-    [error, setError] = useState("");
-  useEffect(() => {
-    const c = new AbortController();
-    api(`/media/${id}/access`, { signal: c.signal })
-      .then(({ data }) => {
-        if (!c.signal.aborted) setUrl(data.url);
-      })
-      .catch((e) => {
-        if (!c.signal.aborted) setError(e);
-      });
-    return () => c.abort();
-  }, [id]);
-  return (
-    <div className="reference-preview">
-      {url ? (
-        <img
-          src={url}
-          alt={t("Private reference {0}", { 0: index + 1 })}
-          referrerPolicy="no-referrer"
-        />
-      ) : (
-        <span>
-          {t("Private reference")} {index + 1}
-        </span>
-      )}
-      <ErrorMessage message={error} />
-      {onRemove && (
-        <button className="text-button danger" type="button" onClick={onRemove}>
-          {t("Remove")}
-        </button>
-      )}
-    </div>
-  );
+function Reference({ id, index = 0, onRemove, disabled }) {
+  return <ReferenceFilePreview mediaId={id} label={t("Private reference {0}", { 0: index + 1 })} onRemove={onRemove} disabled={disabled} />;
 }
 function Summary({ draft, design, estimate }) {
   return (
@@ -234,7 +209,7 @@ function Summary({ draft, design, estimate }) {
       </strong>
       <p>
         {t(
-          draft.configuration.mode === "exact"
+          draft.garment === "alteration" ? "request.alterationSelection" : draft.configuration.mode === "exact"
             ? "Same as shown"
             : "Customize this design",
         )}
@@ -242,7 +217,7 @@ function Summary({ draft, design, estimate }) {
       {Object.entries(estimate?.components || {}).map(([k, c]) => (
         <small key={k}>
           {t(kinds[k] || k)}:{" "}
-          {c.name ||
+          {localize(c, "name") ||
             t(
               c.source === "help"
                 ? "Master-tailor guidance requested"
@@ -286,6 +261,8 @@ export function RequestWizard() {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [uploading, setUploading] = useState(false),
+    [uploadProgress, setUploadProgress] = useState(null),
+    [uploadFailures, setUploadFailures] = useState([]),
     [saved, setSaved] = useState(""),
     [restoring, setRestoring] = useState(cloudId(requested)),
     [conflict, setConflict] = useState(false),
@@ -299,8 +276,24 @@ export function RequestWizard() {
     [priceBusy, setPriceBusy] = useState(false),
     [refresh, setRefresh] = useState(0),
     [search, setSearch] = useState("");
+  const uploadSession = useRef(null);
+  useEffect(() => () => uploadSession.current?.abort(), []);
   const current = useRef(draft);
+  const formHeading = useRef(null);
+  const errorSummary = useRef(null);
+  const previousStep = useRef(step);
   current.current = draft;
+  useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    formHeading.current?.focus({ preventScroll: true });
+    formHeading.current?.scrollIntoView?.({ block: "start", behavior: "auto" });
+  }, [step]);
+  useEffect(() => {
+    if (!error) return;
+    errorSummary.current?.focus({ preventScroll: true });
+    errorSummary.current?.scrollIntoView?.({ block: "center", behavior: "auto" });
+  }, [error]);
   const revision = useRef(draft.localRevision || 0),
     cloud = useRef(
       draft.cloudId
@@ -335,11 +328,10 @@ export function RequestWizard() {
     { publicRead: true },
   );
   const config = draft.configuration,
-    design =
+    design = withDesignPhotography(
       designs.data?.find((d) => d._id === draft.designId) ||
-      (selectedDesign.data?._id === draft.designId
-        ? selectedDesign.data
-        : null);
+      (selectedDesign.data?._id === draft.designId ? selectedDesign.data : null)
+    );
   const originals =
     originalSnapshot?.designId === draft.designId &&
     originalSnapshot?.garment === draft.garment
@@ -368,7 +360,7 @@ export function RequestWizard() {
     design?.defaultComponents?.sleeveLength,
   );
   const parts = deriveComponentSteps(config).filter(
-    (kind) => !(kind === "sleeve" && sleeveless),
+    (kind) => draft.garment !== "alteration" && !(kind === "sleeve" && sleeveless),
   );
   const steps = [
     "design",
@@ -400,6 +392,7 @@ export function RequestWizard() {
           ? partRecord("neck")
           : null;
     return optionCompatibility(option, {
+      garment: draft.garment,
       lengthStyle: separateLength ? lengthStyle : null,
       oppositeOptionId: oppositeKind ? partId(oppositeKind) : undefined,
       oppositeOption: opposite,
@@ -410,14 +403,18 @@ export function RequestWizard() {
       knownOptions.find((option) => option._id === id),
       "name",
     );
+  const referenceLabel = referenceId => {
+    const index = draft.referenceMediaIds.indexOf(referenceId);
+    return index >= 0 ? t("request.references.number", { 0: index + 1 }) : t("Choose a reference");
+  };
   const originalName = (kind) =>
     optionName(design?.defaultComponents?.[kind]) ||
-    originals?.components?.[kind]?.name ||
+    localize(originals?.components?.[kind], "name") ||
     (estimate?.components?.[kind]?.source === "original" &&
     estimate.components[kind].optionId === design?.defaultComponents?.[kind]
-      ? estimate.components[kind].name
+      ? localize(estimate.components[kind], "name")
       : "") ||
-    design?.designDetails?.[kind];
+    localize(design?.designDetails, kind);
   // Original defaults must remain available independently of the visible option
   // batches and of the customer's replacement estimate, including restored drafts.
   useEffect(() => {
@@ -479,7 +476,7 @@ export function RequestWizard() {
       ? t(kinds[s.slice(10)])
       : t(
           {
-            design: "Your garment",
+            design: draft.garment === "alteration" ? "request.alterationStep" : "Your garment",
             measurements: "Your fit",
             logistics: "Fabric and delivery",
             review: "Review",
@@ -622,6 +619,16 @@ export function RequestWizard() {
     const selections = { ...draft.measurements.guideSelections, [previous]: draft.measurements.guideIds || [] };
     return { guideSelections: selections, guideIds: selections[`${garment}:${method}`] || [] };
   };
+  function chooseMeasurementPlan(plan) {
+    const enteredMethod = ["body", "garment"].includes(draft.measurements.method) ? draft.measurements.method : draft.measurements.enteredMethod || "body";
+    const method = plan === "sample" ? "garment" : plan === "assistance" ? "assistance" : enteredMethod;
+    nested("measurements", {
+      takenBy: plan, method, enteredMethod,
+      ...measurementContext(draft.garment, method),
+      sampleGarmentIncluded: false,
+    });
+    setError("");
+  }
   function go(value) {
     setStep(value);
     setParams({ draft: requested || draft.id, step: value });
@@ -723,10 +730,11 @@ export function RequestWizard() {
         return compatibility(selectedOption).reason;
     }
     if (section === "measurements") {
+      if (draft.measurements.takenBy === "sample" && !draft.measurements.sampleGarmentIncluded) return t("request.sample.confirmNeeded");
       if (["self","tailor"].includes(draft.measurements.takenBy) && draft.measurements.method === "assistance") return "Choose body or a well-fitting garment as the measurement method.";
       if (draft.garment === "alteration" && !draft.measurements.notes?.trim())
         return "Describe the alteration needed.";
-      if (draft.measurements.method !== "assistance" && draft.measurements.takenBy !== "assistance") {
+      if (draft.measurements.method !== "assistance" && !["assistance", "sample"].includes(draft.measurements.takenBy)) {
         if (
           [
             ...new Set([
@@ -825,6 +833,7 @@ export function RequestWizard() {
   }
   function next(e) {
     e.preventDefault();
+    if (uploadSession.current) return;
     const message = validate(step);
     if (message) {
       setError(message);
@@ -836,23 +845,55 @@ export function RequestWizard() {
       go("review");
     } else go(steps[index + 1] || "review");
   }
-  async function upload(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setUploading(true);
+  function removeReference(id) {
+    setDraft(previous => ({
+      ...previous,
+      referenceMediaIds: previous.referenceMediaIds.filter(value => value !== id),
+      configuration: {
+        ...previous.configuration,
+        components: Object.fromEntries(Object.entries(previous.configuration.components || {}).map(([kind, choice]) =>
+          [kind, choice.referenceMediaId === id ? { ...choice, referenceMediaId: "" } : choice])),
+      },
+    }));
+  }
+  async function upload(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!files.length || uploadSession.current) return;
+    const initial = current.current;
+    if (initial.referenceMediaIds.length + files.length > REFERENCE_FILE_LIMIT) {
+      setError(t("request.references.limit", { 0: REFERENCE_FILE_LIMIT, 1: REFERENCE_FILE_LIMIT - initial.referenceMediaIds.length }));
+      return;
+    }
+    const controller = new AbortController();
+    uploadSession.current = controller;
+    setUploading(true); setError(""); setUploadFailures([]);
+    const failures = [];
     try {
-      const { data } = await uploadMedia(file, "reference");
-      patch({ referenceMediaIds: [...draft.referenceMediaIds, data._id] });
-    } catch (e) {
-      setError(e);
+      for (const [index, file] of files.entries()) {
+        if (controller.signal.aborted) break;
+        setUploadProgress({ index: index + 1, total: files.length, name: file.name });
+        try {
+          const { data } = await uploadMedia(file, "reference", { signal: controller.signal });
+          if (controller.signal.aborted) break;
+          setDraft(previous => previous.id !== initial.id ? previous : {
+            ...previous,
+            referenceMediaIds: [...new Set([...previous.referenceMediaIds, data._id])],
+          });
+        } catch (error) {
+          if (controller.signal.aborted) break;
+          failures.push({ name: file.name, error });
+          setUploadFailures([...failures]);
+        }
+      }
     } finally {
-      setUploading(false);
+      if (!controller.signal.aborted) { setUploading(false); setUploadProgress(null); }
+      if (uploadSession.current === controller) uploadSession.current = null;
     }
   }
   async function submit(e) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || uploadSession.current) return;
     if (!user) {
       if (!persist()) {
         setError(
@@ -901,13 +942,14 @@ export function RequestWizard() {
           unit: draft.measurements.unit,
           method: draft.measurements.method,
           takenBy: draft.measurements.takenBy,
+          ...(draft.measurements.takenBy === "sample" ? { sampleGarmentIncluded: Boolean(draft.measurements.sampleGarmentIncluded) } : {}),
           notes: draft.measurements.notes || "",
           guideIds: draft.measurements.guideIds || [],
-          reconfirmFields: (draft.measurements.reconfirmFields || []).filter(
+          reconfirmFields: (["sample", "assistance"].includes(draft.measurements.takenBy) ? [] : draft.measurements.reconfirmFields || []).filter(
             (field) => fields.includes(field),
           ),
           values: Object.fromEntries(
-            Object.entries(draft.measurements.values)
+            Object.entries(["sample", "assistance"].includes(draft.measurements.takenBy) ? {} : draft.measurements.values)
               .filter(
                 ([k, v]) => fields.includes(k) && v !== "" && v !== undefined,
               )
@@ -918,7 +960,7 @@ export function RequestWizard() {
         referenceMediaIds: draft.referenceMediaIds,
         notes: draft.notes || "",
         fabricDetails: draft.fabricDetails || "",
-        ...(draft.preferredDate ? { preferredDate: draft.preferredDate } : {}),
+        ...(draft.preferredDate ? { preferredDate: draft.preferredDate, ...(draft.preferredDateReason?.trim() ? { preferredDateReason: draft.preferredDateReason.trim() } : {}) } : {}),
         fabricAcknowledged: true,
         policyVersion: site.policies?.version || "service-v1",
         estimateVersion: estimate.configurationVersion,
@@ -974,6 +1016,8 @@ export function RequestWizard() {
     : Object.keys(baseFields);
   const priceProps = {
     data: hasCurrentEstimate ? estimate : null,
+    reference: config.source === "reference",
+    garment: draft.garment,
     error: priceError,
     loading: priceBusy,
     retry: () => setRefresh((v) => v + 1),
@@ -982,29 +1026,12 @@ export function RequestWizard() {
     <div
       className={`container page wizard-page ${step === "review" ? "review-step" : ""}`}
     >
-      <PageHeading title={t("Let's create something made for you.")}>
-        {t(
-          "Choose a design, share your preferences and add your measurements. Our master tailor can help at any step.",
-        )}
-      </PageHeading>
-      <div className="wizard-progress-shell">
-        <Steps current={index} labels={steps.map(label)} />
+      <PageHeading title={t(draft.garment === "alteration" ? "request.alterationTitle" : "Your stitching request")} />
         <div className="draft-toolbar">
-          <div className="wizard-toolbar-meta">
-            <span className="wizard-active-link">
-              <ArrowDown size={14} aria-hidden="true" />
-              <span>
-                {t("Step {0} of {1}", { 0: index + 1, 1: steps.length })}
-              </span>
-              <span className="wizard-active-sep" aria-hidden="true">
-                ·
-              </span>
-              <strong>{label(step)}</strong>
-            </span>
-            <span className="wizard-draft-status" role="status">
-              {t(saved || "Your choices stay with this draft.")}
-            </span>
-          </div>
+          <span className="wizard-draft-status" role="status">
+            <Save size={14} aria-hidden="true" />
+            <span>{t(saved || "Your choices stay with this draft.")}</span>
+          </span>
           <div className="wizard-draft-actions">
             <button
               type="button"
@@ -1012,6 +1039,7 @@ export function RequestWizard() {
               disabled={busy}
               onClick={saveCloud}
             >
+              <Save size={15} aria-hidden="true" />
               {t("Save draft")}
             </button>
             <Link
@@ -1021,10 +1049,23 @@ export function RequestWizard() {
               }}
               to={`/account/support?draft=${cloud.current?.id || draft.id}&step=${step}`}
             >
+              <CircleHelp size={16} aria-hidden="true" />
               {t("Need Help from a Master Tailor?")}
             </Link>
           </div>
         </div>
+      <div className="wizard-request-section">
+      <div className="wizard-progress-shell">
+        <Steps
+          current={index}
+          labels={steps.map(label)}
+          currentTarget="request-step-heading"
+          onCurrentClick={(event) => {
+            event.preventDefault();
+            formHeading.current?.focus({ preventScroll: true });
+            formHeading.current?.scrollIntoView?.({ block: "start", behavior: "auto" });
+          }}
+        />
       </div>
       {draft.sensitiveDataUnavailable && (
         <Notice>
@@ -1069,17 +1110,13 @@ export function RequestWizard() {
       <div className="wizard-grid">
         <form
           className="panel wizard-form"
+          aria-labelledby="request-step-heading"
           onSubmit={step === "review" ? submit : next}
         >
-          <div className="wizard-section-link">
-            <CornerDownRight size={14} aria-hidden="true" />
-            <span>
-              {t("Step {0} of {1}", { 0: index + 1, 1: steps.length })}
-            </span>
-            <strong>{label(step)}</strong>
-          </div>
-          <h2>{label(step)}</h2>
-          <ErrorMessage message={error} />
+          <h2 id="request-step-heading" ref={formHeading} tabIndex={-1}>{label(step)}</h2>
+          {uploadProgress && <p className="request-upload-status" role="status">{t("request.references.progress", { 0: uploadProgress.index, 1: uploadProgress.total })} <span>{uploadProgress.name}</span></p>}
+          {(step === "design" || step.startsWith("component-")) && uploadFailures.map((failure, index) => <div className="request-upload-failure" key={index}><strong>{failure.name}</strong><ErrorMessage message={failure.error} /></div>)}
+          {error && <div className="wizard-error-summary" ref={errorSummary} tabIndex={-1}><ErrorMessage message={error} /></div>}
           <fieldset className="request-fields" disabled={busy || uncertain}>
             {step === "design" && (
               <>
@@ -1097,6 +1134,7 @@ export function RequestWizard() {
                           patch({
                             garment: g,
                             designId: "",
+                            configuration: { ...config, mode: config.source === "catalogue" ? "exact" : "custom", changedParts: [], components: {}, addonIds: [], extraInitialized: false },
                             measurements: {
                               ...draft.measurements,
                               ...measurementContext(g, draft.measurements.method),
@@ -1121,7 +1159,7 @@ export function RequestWizard() {
                   value={draft.quantity}
                   onChange={(e) => patch({ quantity: e.target.value })}
                 />
-                <fieldset>
+                <fieldset className="request-choice-group">
                   <legend>{t("Where does your design begin?")}</legend>
                   {[
                     ["catalogue", "Choose a Khwab Stitch design"],
@@ -1141,9 +1179,7 @@ export function RequestWizard() {
                               source: value,
                               mode: value === "catalogue" ? "exact" : "custom",
                               changedParts:
-                                value === "reference"
-                                  ? ["sleeve", "neck", "back"]
-                                  : [],
+                                [],
                               components: {},
                               addonIds: [],
                               extraInitialized: false,
@@ -1151,26 +1187,59 @@ export function RequestWizard() {
                           })
                         }
                       />
-                      {t(text)}
+                      {t(draft.garment === "alteration" ? value === "catalogue" ? "request.alterationReference" : "request.alterationPhoto" : text)}
                     </label>
                   ))}
                 </fieldset>
                 {config.source === "catalogue" ? (
                   <>
-                    <Field
-                      label={t("Find a design")}
-                      name="find-design"
-                      type="search"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
+                    <div className="wizard-design-search" role="search" aria-label={t("Search designs")}>
+                      <label htmlFor="find-design">{t("Search designs")}</label>
+                      <div className="wizard-search-control">
+                        <Search size={20} aria-hidden="true" />
+                        <input
+                          id="find-design"
+                          name="find-design"
+                          type="search"
+                          placeholder={t("request.search.placeholder")}
+                          autoComplete="off"
+                          value={search}
+                          aria-controls="request-design-results"
+                          aria-describedby="request-search-hint"
+                          onChange={(event) => setSearch(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") event.preventDefault();
+                          }}
+                        />
+                        {search && (
+                          <button
+                            type="button"
+                            className="wizard-search-clear"
+                            aria-label={t("request.search.clear")}
+                            onClick={() => {
+                              setSearch("");
+                              document.getElementById("find-design")?.focus();
+                            }}
+                          >
+                            <X size={17} aria-hidden="true" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="wizard-search-meta">
+                        <span id="request-search-hint">{t("request.search.hint", { 0: readable(draft.garment) })}</span>
+                        <span role="status" aria-live="polite">
+                          {designs.loading ? <><LoaderCircle className="spin" size={13} aria-hidden="true" />{t("Loading designs…")}</> : t("request.search.count", { count: designs.data.filter((item) => item.garment === draft.garment).length })}
+                        </span>
+                      </div>
+                    </div>
                     <ErrorMessage
                       message={designs.error}
                       retry={designs.reload}
                     />
-                    <div className="request-designs">
+                    <div className="request-designs" id="request-design-results" aria-busy={designs.loading}>
                       {designs.data
                         .filter((d) => d.garment === draft.garment)
+                        .map(withDesignPhotography)
                         .map((d) => (
                           <label
                             className={`request-design ${draft.designId === d._id ? "selected" : ""}`}
@@ -1200,34 +1269,31 @@ export function RequestWizard() {
                                 })
                               }
                             />
-                            {d.coverImageUrl ? (
-                              <img
-                                src={d.coverImageUrl}
-                                alt={localize(d, "title")}
-                                loading="lazy"
+                            <div className="request-design-media">
+                              <DesignImage
+                                image={d.coverView || (d.coverImageUrl ? { url: d.coverImageUrl } : d.images?.[0])}
+                                alt=""
                               />
-                            ) : (
-                              <span className="photo-fallback">
-                                {t("Design photo not yet available")}
-                              </span>
-                            )}
+                            </div>
                             <strong>{localize(d, "title")}</strong>
-                            <small>
-                              {d.code} · {money(d.startingPricePaise)}
+                            <small className="request-design-meta">
+                              <span>{d.code}</span>
+                              <span>{money(d.startingPricePaise)}</span>
                             </small>
                             {draft.designId === d._id && (
-                              <span>✓ {t("Selected")}</span>
+                              <span className="request-design-selected"><Check size={13} aria-hidden="true" />{t("Selected")}</span>
                             )}
                           </label>
                         ))}
                     </div>
-                    {designs.loading && (
-                      <p role="status">{t("Loading designs…")}</p>
-                    )}
                     {!designs.loading &&
                       !designs.error &&
                       designs.data.length === 0 && (
-                        <p role="status">{t("No catalogue designs found.")}</p>
+                        <div className="wizard-search-empty" role="status">
+                          <Search size={25} aria-hidden="true" />
+                          <strong>{t("No catalogue designs found.")}</strong>
+                          {search && <p>{t("request.search.empty")}</p>}
+                        </div>
                       )}
                     {designs.hasMore && (
                       <button
@@ -1248,7 +1314,8 @@ export function RequestWizard() {
                       )}
                     {design && (
                       <>
-                        <fieldset>
+                        {draft.garment === "alteration" ? <Notice>{t("request.alterationSelection")}</Notice> : (
+                        <fieldset className="request-choice-group">
                           <legend>
                             {t("How would you like your outfit?")}
                           </legend>
@@ -1269,26 +1336,30 @@ export function RequestWizard() {
                             </label>
                           ))}
                         </fieldset>
-                        <dl className="review-list">
-                          {Object.entries(kinds)
-                            .filter(([kind]) => kind !== "extra")
-                            .map(([k, name]) => (
-                              <div key={k}>
-                                <dt>{t(name)}</dt>
-                                <dd>
-                                  {originalName(k) ||
-                                    t("Catalogue detail pending tailor review")}
-                                </dd>
-                              </div>
-                            ))}
-                        </dl>
+                        )}
+                        <details className="wizard-details">
+                          <summary>{t(draft.garment === "alteration" ? "public.design.serviceDetails" : "Design details")}</summary>
+                          <dl className="review-list">
+                            {Object.entries(draft.garment === "alteration" ? { scope: "public.design.alterationScope", preparation: "public.design.alterationPreparation", fitting: "public.design.alterationFitting", limitations: "public.design.alterationLimits" } : kinds)
+                              .filter(([kind]) => kind !== "extra")
+                              .map(([k, name]) => (
+                                <div key={k}>
+                                  <dt>{t(name)}</dt>
+                                  <dd>
+                                    {originalName(k) ||
+                                      t("Catalogue detail pending tailor review")}
+                                  </dd>
+                                </div>
+                              ))}
+                          </dl>
+                        </details>
                         <ErrorMessage
                           message={originals?.error}
                           retry={() => setOriginalRefresh((value) => value + 1)}
                         />
                         <p>
                           {t(
-                            config.mode === "exact"
+                            draft.garment === "alteration" ? "request.alterationNotice" : config.mode === "exact"
                               ? "Your catalogue design is preserved. Continue directly to measurements."
                               : "Only your selected parts have customization steps. Unchanged components stay as shown.",
                           )}
@@ -1303,23 +1374,31 @@ export function RequestWizard() {
                         "Our tailor will review your reference and contact you to confirm feasibility, stitching charges, and the final quote before work begins.",
                       )}
                     </Notice>
+                    <section className="request-reference-guidance" aria-label={t("request.references.title")}>
+                      <h3>{t("request.references.title")}</h3>
+                      <p>{t("request.references.views")}</p>
+                      <ul><li>{t("request.references.front")}</li><li>{t("request.references.side")}</li><li>{t("request.references.back")}</li></ul>
+                      <p className="small-print">{t("request.references.formats")}</p>
+                    </section>
                     {user ? (
                       <UploadButton
                         label={
                           uploading
                             ? t("Uploading securely…")
-                            : t("Choose a reference image")
+                            : t("request.references.add")
                         }
                         disabled={
-                          uploading || draft.referenceMediaIds.length >= 5
+                          uploading || draft.referenceMediaIds.length >= REFERENCE_FILE_LIMIT
                         }
+                        accept={REFERENCE_ACCEPT}
+                        multiple
                         onChange={upload}
                       />
                     ) : (
                       <>
                         <p>
                           {t(
-                            "Sign in before a private upload. Choose your file after returning; a local file selection cannot survive a full-page sign-in.",
+                            "request.signInReference",
                           )}
                         </p>
                         <Link
@@ -1333,19 +1412,15 @@ export function RequestWizard() {
                         </Link>
                       </>
                     )}
+                    <p className="small-print" role="status">{t("request.references.count", { 0: draft.referenceMediaIds.length, 1: REFERENCE_FILE_LIMIT })}</p>
                     <div className="reference-previews">
                       {draft.referenceMediaIds.map((id, i) => (
                         <Reference
                           key={id}
                           id={id}
                           index={i}
-                          onRemove={() =>
-                            patch({
-                              referenceMediaIds: draft.referenceMediaIds.filter(
-                                (v) => v !== id,
-                              ),
-                            })
-                          }
+                          disabled={uploading}
+                          onRemove={() => removeReference(id)}
                         />
                       ))}
                     </div>
@@ -1353,25 +1428,26 @@ export function RequestWizard() {
                 )}
                 <Notice>
                   {t(
-                    "Catalogue images are stitching references, not ready-made garments. You provide the fabric.",
+                    draft.garment === "alteration" ? "request.alterationNotice" : "Catalogue images are stitching references, not ready-made garments. You provide the fabric.",
                   )}
                 </Notice>
-                {config.mode === "custom" &&
+                {draft.garment !== "alteration" && config.mode === "custom" &&
                   (design || config.source === "reference") && (
-                    <fieldset>
-                      <legend>
-                        {t("Which parts would you like to change?")}
-                      </legend>
+                    <fieldset className="request-choice-group request-part-choices">
+                      <legend>{t("Which parts would you like to change?")}</legend>
+                      <p className="small-print">{t("request.customize." + draft.garment)} {t("request.customizeHint")}</p>
                       {Object.entries(kinds).map(([kind, name]) => (
                         <label className="checkbox" key={kind}>
                           <input
                             type="checkbox"
+                            aria-label={t(name)}
+                            aria-describedby={`part-${kind}-hint`}
                             checked={(config.changedParts || []).includes(kind)}
                             onChange={(event) =>
                               requestPart(kind, event.target.checked)
                             }
                           />
-                          {t(name)}
+                          <span><strong>{t(name)}</strong><small id={`part-${kind}-hint`}>{t("request.part." + kind)}</small></span>
                         </label>
                       ))}
                     </fieldset>
@@ -1668,9 +1744,11 @@ export function RequestWizard() {
                                 : t("Add a private close-up")
                             }
                             disabled={
-                              uploading || draft.referenceMediaIds.length >= 5
+                              uploading || draft.referenceMediaIds.length >= REFERENCE_FILE_LIMIT
                             }
-                            onChange={upload}
+                            accept={REFERENCE_ACCEPT}
+                        multiple
+                        onChange={upload}
                           />
                         ) : (
                           <Link
@@ -1770,7 +1848,7 @@ export function RequestWizard() {
                       {!selected || selected.source === "original"
                         ? t("Same as shown")
                         : selected.source === "reference"
-                          ? t("Uploaded reference")
+                          ? referenceLabel(selected.referenceMediaId)
                           : selected.source === "help"
                             ? t("Master-tailor guidance requested")
                             : optionName(selected?.optionId) ||
@@ -1814,32 +1892,27 @@ export function RequestWizard() {
             {step === "measurements" && (
               <>
                 <Summary draft={draft} design={design} estimate={estimate} />
-                <Field label={t("Who will take the measurements?")} name="taken-by"><select id="taken-by" value={draft.measurements.takenBy || (draft.measurements.method === "assistance" ? "assistance" : "self")} onChange={event => nested("measurements", { takenBy: event.target.value })}><option value="self">{t("I will measure myself")}</option><option value="tailor">{t("My tailor will take the measurements")}</option><option value="assistance">{t("I need help")}</option></select></Field>
-                <Field
-                  label={t("What is being measured?")}
-                  name="method"
-                >
-                  <select
-                    id="method"
-                    value={draft.measurements.method}
-                    onChange={(e) =>
-                      nested("measurements", { method: e.target.value, ...measurementContext(draft.garment, e.target.value) })
-                    }
-                  >
-                    {draft.measurements.method === "assistance" && <option value="assistance">{t("Choose body or well-fitting garment")}</option>}
-                    <option value="body">{t("Body measurements")}</option>
-                    <option value="garment">
-                      {t("Well-fitting garment measurements")}
-                    </option>
-                  </select>
-                </Field>
-                <MeasurementGuides garment={draft.garment} method={draft.measurements.method} selectedIds={draft.measurements.guideIds || []} onSelect={guideIds=>nested("measurements",{guideIds})} />
-                {draft.measurements.method === "assistance" || draft.measurements.takenBy === "assistance" ? (
-                  <Notice>
-                    {t(
-                      "Measurements are awaiting tailor assistance. No standard size is assumed; confirmed measurements are needed before work begins.",
-                    )}
-                  </Notice>
+                <fieldset className="request-measurement-plans">
+                  <legend>{t("request.measurementPlan")}</legend>
+                  {["self", "assistance", "sample"].map(plan => <label className="checkbox" key={plan}>
+                    <input type="radio" name="measurement-plan" aria-label={t("request.measurement." + plan)} aria-describedby={`measurement-${plan}-hint`} value={plan} checked={plan === "self" ? ["self", "tailor"].includes(draft.measurements.takenBy) : draft.measurements.takenBy === plan} onChange={() => chooseMeasurementPlan(plan)} />
+                    <span><strong>{t("request.measurement." + plan)}</strong><small id={`measurement-${plan}-hint`}>{t("request.measurement." + plan + "Hint")}</small></span>
+                  </label>)}
+                </fieldset>
+                {["self", "tailor"].includes(draft.measurements.takenBy) && <>
+                  <Field label={t("What is being measured?")} name="method">
+                    <select id="method" value={draft.measurements.method} onChange={event => nested("measurements", { method: event.target.value, enteredMethod: event.target.value, ...measurementContext(draft.garment, event.target.value), reconfirmFields: Object.keys(draft.measurements.values) })}>
+                      <option value="body">{t("Body measurements")}</option>
+                      <option value="garment">{t("Well-fitting garment measurements")}</option>
+                    </select>
+                  </Field>
+                  <MeasurementGuides garment={draft.garment} method={draft.measurements.method} selectedIds={draft.measurements.guideIds || []} onSelect={guideIds => nested("measurements", {guideIds})} />
+                </>}
+                {draft.measurements.takenBy === "sample" ? <>
+                  <Notice>{t("request.sample.note")}</Notice>
+                  <label className="checkbox"><input type="checkbox" checked={Boolean(draft.measurements.sampleGarmentIncluded)} onChange={event => nested("measurements", { sampleGarmentIncluded: event.target.checked })} />{t("request.sample.confirm")}</label>
+                </> : draft.measurements.method === "assistance" || draft.measurements.takenBy === "assistance" ? (
+                  <Notice>{t("request.measurement.helpNote")}</Notice>
                 ) : (
                   <>
                     <Field
@@ -2026,7 +2099,7 @@ export function RequestWizard() {
                   />
                 </div>
                 <Field
-                  label={t("Fabric details (optional)")}
+                  label={t(draft.garment === "alteration" ? "request.alterationGarmentDetails" : "Fabric details (optional)")}
                   name="fabricDetails"
                 >
                   <textarea
@@ -2039,23 +2112,23 @@ export function RequestWizard() {
                 {[
                   [
                     "inbound",
-                    "How will your fabric reach us?",
+                    draft.garment === "alteration" ? "request.transport.alterationTitle" : draft.measurements.takenBy === "sample" ? "request.transport.sampleTitle" : "request.transport.inboundTitle",
                     [
-                      ["dropoff", "I will drop it off."],
-                      ["customer_courier", "I will arrange courier delivery."],
-                      ["business", "Please arrange pickup from my address."],
+                      ["dropoff", "request.transport.dropoff"],
+                      ["customer_courier", "request.transport.inboundCourier"],
+                      ["business", "request.transport.pickup"],
                     ],
                   ],
                   [
                     "outbound",
-                    "How would you like to receive your stitched outfit?",
+                    "request.transport.outboundTitle",
                     [
-                      ["collect", "I will collect it."],
+                      ["collect", "request.transport.collect"],
                       [
                         "customer_courier",
-                        "I will arrange my own pickup/courier.",
+                        "request.transport.outboundCourier",
                       ],
-                      ["business", "Please arrange delivery to my address."],
+                      ["business", "request.transport.delivery"],
                     ],
                   ],
                 ].map(([leg, title, choices]) => (
@@ -2078,6 +2151,7 @@ export function RequestWizard() {
                     ))}
                     {draft.logistics[leg].method === "business" ? (
                       <>
+                        <p className="request-transport-hint">{t("request.transport.paidHint")}</p>
                         {addressBook.data?.addresses?.length > 0 && (
                           <Field
                             label={t("Use a saved address")}
@@ -2138,9 +2212,7 @@ export function RequestWizard() {
                     ) : (
                       <small>
                         {t(
-                          draft.logistics[leg].method === "customer_courier"
-                            ? "You pay your chosen courier directly. No Khwab Stitch transport charge is added; your courier is not free."
-                            : "No Khwab Stitch transport charge for this arrangement.",
+                          "request.transport.ownHint",
                         )}
                       </small>
                     )}
@@ -2155,8 +2227,9 @@ export function RequestWizard() {
                   })}
                   hint={t("A preference, not a guaranteed completion date.")}
                   value={draft.preferredDate || ""}
-                  onChange={(e) => patch({ preferredDate: e.target.value })}
+                  onChange={(e) => patch({ preferredDate: e.target.value, ...(!e.target.value ? { preferredDateReason: "" } : {}) })}
                 />
+                {draft.preferredDate && <Field label={t("request.dateReason")} name="preferredDateReason" hint={t("request.dateReasonHint")}><textarea id="preferredDateReason" maxLength={500} value={draft.preferredDateReason || ""} onChange={event => patch({preferredDateReason:event.target.value})} /></Field>}
                 <Field label={t("Notes (optional)")} name="request-notes">
                   <textarea
                     id="request-notes"
@@ -2200,15 +2273,17 @@ export function RequestWizard() {
                           design={design}
                           estimate={estimate}
                         />
+                        <RequestSelectionReview design={design} estimate={estimate} options={knownOptions} />
+                        {draft.referenceMediaIds.length > 0 && <section className="request-review-references" aria-label={t("request.references.review")}><h4>{t("request.references.review")}</h4><div className="reference-previews">{draft.referenceMediaIds.map((id,i) => <Reference key={id} id={id} index={i} />)}</div></section>}
                       </>
                     ) : s === "measurements" ? (
                       <>
                         <p>
-                          {readable(draft.measurements.method)} ·{" "}
-                          {draft.measurements.unit}
+                          {t("request.measurement." + (["self","tailor"].includes(draft.measurements.takenBy) ? "self" : draft.measurements.takenBy || "assistance"))}
+                          {["self","tailor"].includes(draft.measurements.takenBy) && <> · {readable(draft.measurements.method)} · {draft.measurements.unit}</>}
                         </p>
                         <dl className="review-list">
-                          {Object.entries(draft.measurements.values)
+                          {Object.entries(["sample","assistance"].includes(draft.measurements.takenBy) ? {} : draft.measurements.values)
                             .filter(([k]) => fields.includes(k))
                             .map(([k, v]) => (
                               <div key={k}>
@@ -2236,7 +2311,7 @@ export function RequestWizard() {
                                   : "Outbound outfit transport",
                               )}
                             </strong>{" "}
-                            · {readable(draft.logistics[leg].method)}
+                            · {t("request.transport." + (draft.logistics[leg].method === "business" ? leg === "inbound" ? "pickup" : "delivery" : draft.logistics[leg].method === "customer_courier" ? leg === "inbound" ? "inboundCourier" : "outboundCourier" : draft.logistics[leg].method))}
                             {draft.logistics[leg].method === "business" && (
                               <>
                                 {" "}
@@ -2247,6 +2322,7 @@ export function RequestWizard() {
                             )}
                           </p>
                         ))}
+                        {draft.preferredDate && <p><strong>{t("Preferred date (optional)")}</strong> · {draft.preferredDate}{draft.preferredDateReason && <> · {draft.preferredDateReason}</>}</p>}
                         <p>{draft.notes}</p>
                       </>
                     )}
@@ -2265,7 +2341,7 @@ export function RequestWizard() {
                     </ul>
                   </section>
                 )}
-                {config.mode === "custom" &&
+                {draft.garment !== "alteration" && config.mode === "custom" &&
                   [
                     "sleeve",
                     "sleeveLength",
@@ -2319,7 +2395,7 @@ export function RequestWizard() {
                               : !choice || choice.source === "original"
                                 ? originalName(kind) || t("Same as shown")
                                 : choice.source === "reference"
-                                  ? t("Uploaded reference")
+                                  ? referenceLabel(choice.referenceMediaId)
                                   : choice.source === "help"
                                     ? t("Master-tailor guidance requested")
                                     : optionName(choice.optionId) ||
@@ -2349,7 +2425,7 @@ export function RequestWizard() {
                   />
                   <span>
                     {t(
-                      "I provide the fabric and have reviewed my selections. This is a stitching request requiring tailor review and final quote acceptance. I acknowledge the service terms and current policy.",
+                      draft.garment === "alteration" ? "request.alterationAgreement" : "I provide the fabric and have reviewed my selections. This is a stitching request requiring tailor review and final quote acceptance. I acknowledge the service terms and current policy.",
                     )}{" "}
                     <Link to="/terms">{t("Service terms")}</Link> ·{" "}
                     {site.policies?.version || "service-v1"}
@@ -2414,19 +2490,22 @@ export function RequestWizard() {
                   : step === "review"
                     ? uncertain
                       ? "Retry same request"
-                      : "Submit Stitching Request"
+                      : draft.garment === "alteration" ? "request.submitAlteration" : "Submit Stitching Request"
                     : "Continue",
               )}
             </Button>
           </div>
         </form>
         <aside className="wizard-aside">
-          <Price {...priceProps} design={design} />
-          <p className="small-print">
-            {t(
-              "Guest design choices stay on this device for 30 days. Guest measurements, addresses, notes and private reference associations stay in this tab's session. Save a draft to your account for secure recovery on other devices.",
-            )}
-          </p>
+          {step !== "review" && <SelectedDesignSummary design={design} draft={draft} />}
+          <details className="wizard-details wizard-privacy">
+            <summary>{t("Draft privacy")}</summary>
+            <p className="small-print">
+              {t(
+                "Guest design choices stay on this device for 30 days. Guest measurements, addresses, notes and private reference associations stay in this tab's session. Save a draft to your account for secure recovery on other devices.",
+              )}
+            </p>
+          </details>
           <Link
             className="text-link"
             onClick={(e) => {
@@ -2437,6 +2516,7 @@ export function RequestWizard() {
             {t("Need Help from a Master Tailor?")}
           </Link>
         </aside>
+      </div>
       </div>
     </div>
   );

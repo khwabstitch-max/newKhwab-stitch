@@ -3,6 +3,7 @@ import {
   api,
   ApiError,
   money,
+  resolveApiBaseUrl,
   setTokenProvider,
   setUnauthorizedHandler,
 } from "../lib/api";
@@ -19,6 +20,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
@@ -267,5 +269,33 @@ describe("explicit anonymous public-read recovery", () => {
     fetch.mockResolvedValue({ ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => { throw new SyntaxError("Malformed response"); } });
     await expect(api("/settings", publicRead)).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("local API routing", () => {
+  it.each([
+    "http://localhost:3000/api",
+    "http://localhost:3000/api/",
+    "http://127.0.0.1:3000/api",
+    "http://[::1]:3000/api",
+  ])("uses the local development proxy for %s", base => {
+    expect(resolveApiBaseUrl(base, true)).toBe("/api");
+  });
+  it.each([
+    ["http://localhost:3000/api", false, "http://localhost:3000/api"],
+    ["https://api.example.test/api/", true, "https://api.example.test/api"],
+    ["http://localhost:4000/custom-api", true, "http://localhost:4000/custom-api"],
+    ["/custom-api/", true, "/custom-api"],
+    [undefined, true, "/api"],
+  ])("preserves deliberate API configuration %s in development=%s", (base, development, expected) => {
+    expect(resolveApiBaseUrl(base, development)).toBe(expected);
+  });
+  it("sends browser requests through the same-origin proxy despite a legacy local override", async () => {
+    vi.stubEnv("DEV", true);
+    vi.stubEnv("VITE_API_BASE_URL", "http://localhost:3000/api");
+    fetch.mockResolvedValue(json({ data: [] }));
+    await api("/designs?limit=3", { auth: false, publicRead: true });
+    expect(fetch.mock.calls[0][0]).toBe("/api/designs?limit=3");
+    expect(fetch.mock.calls[0][1].credentials).toBe("omit");
   });
 });

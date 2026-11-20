@@ -70,11 +70,17 @@ export async function startAuthFixture({ mediaUploads = false } = {}) {
       },
       upload: async (buffer, options) => {
         if (!mediaUploads) throw new Error("Image uploads are outside this auth smoke.");
-        const metadata = await require("sharp")(buffer).metadata();
-        if (metadata.format !== "webp" || !metadata.width || !metadata.height || storedMedia.size >= 50)
-          throw new Error("The isolated media fixture requires decoded, bounded WebP images.");
-        const fileId = randomUUID(), filePath = "/khwab/" + (options.private ? "private" : "public") + "/fixture/" + fileId + ".webp";
-        const record = { fileId, filePath, buffer: Buffer.from(buffer), private: options.private, owner: String(options.owner), purpose: options.purpose };
+        const pdf = options.mime === "application/pdf";
+        if (pdf) {
+          if (buffer.subarray(0, 5).toString("ascii") !== "%PDF-" || buffer.length > 3 * 1024 * 1024 || storedMedia.size >= 50)
+            throw new Error("The isolated media fixture requires bounded, validated PDFs.");
+        } else {
+          const metadata = await require("sharp")(buffer).metadata();
+          if (metadata.format !== "webp" || !metadata.width || !metadata.height || storedMedia.size >= 50)
+            throw new Error("The isolated media fixture requires decoded, bounded WebP images.");
+        }
+        const fileId = randomUUID(), filePath = "/khwab/" + (options.private ? "private" : "public") + "/fixture/" + fileId + (pdf ? ".pdf" : ".webp");
+        const record = { fileId, filePath, buffer: Buffer.from(buffer), mime: pdf ? "application/pdf" : "image/webp", private: options.private, owner: String(options.owner), purpose: options.purpose };
         storedMedia.set(fileId, record); mediaByPath.set(filePath, record);
         return { fileId, filePath };
       },
@@ -99,7 +105,7 @@ export async function startAuthFixture({ mediaUploads = false } = {}) {
         if (!record) return res.status(404).end();
         if (!/^\d{13}$/.test(expires) || Number(expires) <= Date.now() || !/^[a-f0-9]{64}$/.test(signature) || !timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(signMedia(record.fileId, expires), "hex")))
           return res.status(403).end();
-        res.set({ "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" });
+        res.set({ "Content-Type": record.mime || "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" });
         return res.send(record.buffer);
       });
       listener.use(app);
