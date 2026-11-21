@@ -45,3 +45,11 @@ export function estimateLineLabel(line, estimate = {}, design = {}) {
   if (code === "legacy-configuration") return t("Design details");
   return original;
 }
+
+export function knownTransportAmount(estimate) {
+  if (Number.isSafeInteger(estimate?.knownTransportSubtotalPaise) && estimate.knownTransportSubtotalPaise >= 0) return estimate.knownTransportSubtotalPaise;
+  return (estimate?.lineItems || []).filter(line => line.scope === "shipment" || String(line.code || "").startsWith("transport:")).reduce((sum, line) => {
+    const amount = line.totalPaise ?? line.amountPaise;
+    return sum + (Number.isSafeInteger(amount) && amount >= 0 ? amount : 0);
+  }, 0);
+}

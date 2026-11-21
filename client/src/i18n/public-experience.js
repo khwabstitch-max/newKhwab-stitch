@@ -1,6 +1,8 @@
 import { requestProductionCopy } from "./request-production.js";
 import { referenceFilesCopy } from "./reference-files.js";
+import { distanceDeliveryCopy } from "./distance-delivery.js";
 export const publicCopy = {
+  ...distanceDeliveryCopy,
   ...referenceFilesCopy,
   ...requestProductionCopy,
   "atelier.footer.invitationEyebrow": { en: "A PIECE THAT FEELS LIKE YOU", hi: "आपकी पसंद, आपकी पहचान" },

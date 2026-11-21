@@ -2870,3 +2870,71 @@ test("submitted catalogue photos are snapshotted and retained after the publishe
   const stored = (await auth("get", "/api/admin/orders/" + order._id, tokenAdmin).expect(200)).body.data;
   assert.equal(stored.designSnapshot.title, "Historical image design"); assert.equal(stored.designSnapshot.imageViews[0].label, "Original front view");
 });
+
+test("alteration public prices and new estimates require review while PIN transport and reviewed quotes stay exact", async () => {
+  const oldSettings = await models.SiteSettings.findOne({ key: "main" }).lean();
+  await models.SiteSettings.updateOne({ key: "main" }, { $set: { serviceAreas: [{ name: "Reviewed transport zone", pinPrefixes: ["110001"], enabled: true, inboundPaise: 4500, outboundPaise: 6500 }], garmentBasePrices: { alteration: 99000, kurti: 30000 } } }, { upsert: true });
+  try {
+    const publicSettings = (await request(app).get("/api/settings").expect(200)).body.data;
+    assert.equal(publicSettings.garmentBasePrices.alteration, undefined); assert.equal(publicSettings.garmentBasePrices.kurti, 30000);
+    const storedSettings = await models.SiteSettings.findOne({ key: "main" }).lean();
+    assert.equal(storedSettings.garmentBasePrices.alteration, 99000);
+    const service = await models.ServiceDefinition.create({ code: "review_only_alteration", name: "Review-only alteration service", serviceType: "alteration", active: true, audiences: ["women"], itemTypes: ["alteration"], materials: "customer", basePricePaise: 25000 });
+    const publicServices = (await request(app).get("/api/services?limit=50").expect(200)).body.data;
+    assert.equal(publicServices.find(item => item.code === service.code).basePricePaise, undefined);
+    assert.equal((await models.ServiceDefinition.findById(service._id)).basePricePaise, 25000);
+    const raw = adminDesign({ title: "Garment assessment reference", garment: "alteration", status: "published", startingPricePaise: 15000, priceOptions: [{ label: "Legacy alteration rate", amountPaise: 15000, isStartingPrice: true }] });
+    const design = (await auth("post", "/api/admin/designs", tokenAdmin).send(raw).expect(201)).body.data;
+    assert.equal(design.startingPricePaise, 15000); assert.equal(design.priceOptions[0].amountPaise, 15000);
+    const shown = (await request(app).get("/api/designs/" + design.slug).expect(200)).body.data;
+    assert.equal(shown.startingPricePaise, null); assert.deepEqual(shown.priceOptions, []);
+    const listed = (await request(app).get("/api/designs?garment=alteration&limit=50").expect(200)).body.data.find(item => item._id === design._id);
+    assert.equal(listed.startingPricePaise, null); assert.deepEqual(listed.priceOptions, []);
+    const logistics = { inbound: { method: "business", address: { line1: "123 Test road", city: "Delhi", state: "Delhi", pin: "110001" } }, outbound: { method: "business", address: { line1: "123 Test road", city: "Delhi", state: "Delhi", pin: "110001" } } };
+    const estimateBody = { garment: "alteration", quantity: 2, designId: design._id, configuration: { source: "catalogue", mode: "exact", components: {}, addonIds: [] }, logistics };
+    const estimate = (await request(app).post("/api/pricing/estimate").send(estimateBody).expect(200)).body.data;
+    assert.equal(estimate.knownGarmentSubtotalPaise, 0); assert.equal(estimate.knownTransportSubtotalPaise, 11000); assert.equal(estimate.knownSubtotalPaise, 11000);
+    assert.equal(estimate.estimatedTotalPaise, null); assert.deepEqual(estimate.pendingItems.map(item => item.code), ["alteration:assessment"]);
+    assert.ok(estimate.lineItems.every(item => item.scope === "shipment"));
+    const payload = { ...body(), ...estimateBody, measurements: { unit: "in", method: "assistance", values: {}, notes: "Review waist fit and hem length" }, estimateVersion: estimate.configurationVersion };
+    if (oldSettings?.policies?.version) payload.policyVersion = oldSettings.policies.version;
+    let order = (await createOrder(payload).expect(201)).body.data;
+    assert.equal(order.estimate.knownGarmentSubtotalPaise, 0); assert.equal(order.estimate.estimatedTotalPaise, null);
+    order = (await auth("patch", "/api/admin/orders/" + order._id + "/status", tokenAdmin).send({ revision: order.revision, status: "under_review", note: "Garment reviewed by tailor" }).expect(200)).body.data;
+    order = (await auth("post", "/api/admin/orders/" + order._id + "/quotes", tokenAdmin).send({ revision: order.revision, amountPaise: 45000, deliveryDate: "2099-12-10", notes: "Reviewed garment work and transport" }).expect(200)).body.data;
+    order = (await auth("post", "/api/orders/" + order._id + "/quote-response").send({ revision: order.revision, quoteVersion: order.quotes.at(-1).version, decision: "accept" }).expect(200)).body.data;
+    assert.equal(order.acceptedQuote.amountPaise, 45000);
+    await request(app).post("/api/pricing/estimate").send(estimateBody).expect(200);
+    assert.equal((await models.Order.findById(order._id)).acceptedQuote.amountPaise, 45000);
+    assert.equal((await models.Design.findById(design._id)).startingPricePaise, 15000);
+  } finally {
+    for (const field of ["serviceAreas", "garmentBasePrices"]) await models.SiteSettings.updateOne({ key: "main" }, oldSettings?.[field] === undefined ? { $unset: { [field]: "" } } : { $set: { [field]: oldSettings[field] } });
+  }
+});
+
+test("delivery pricing settings round trip independently of legacy PIN zones and reject incomplete active rates", async () => {
+  const prior = await models.SiteSettings.findOne({ key: "main" }).lean();
+  const legacyZones = [{ name: "Retained legacy PIN zone", pinPrefixes: ["110"], enabled: true, inboundPaise: 8000, outboundPaise: 12000, notes: "" }];
+  const deliveryPricing = { mode: "distance", originPin: "110001", distanceBasis: "pin_area", formula: "base_plus_distance", inbound: { minimumChargePaise: 5000, perKmPaise: 1000 }, outbound: { minimumChargePaise: 3000, perKmPaise: 2000 } };
+  try {
+    const requestBody = await homepageSettingsBody(tokenAdmin, { serviceAreas: legacyZones, deliveryPricing });
+    await auth("patch", "/api/admin/settings", tokenA).send(requestBody).expect(403);
+    const saved = (await auth("patch", "/api/admin/settings", tokenAdmin).send(requestBody).expect(200)).body.data;
+    assert.deepEqual(saved.deliveryPricing, deliveryPricing); assert.deepEqual(saved.serviceAreas, legacyZones);
+    const shown = (await request(app).get("/api/settings").expect(200)).body.data;
+    assert.deepEqual(shown.deliveryPricing, deliveryPricing);
+    await auth("patch", "/api/admin/settings", tokenAdmin).send(await homepageSettingsBody(tokenAdmin, { deliveryPricing: { ...deliveryPricing, inbound: { minimumChargePaise: null, perKmPaise: 1000 } } })).expect(400);
+    const pendingConfig = { ...deliveryPricing, mode: "service_areas", inbound: { minimumChargePaise: 5000, perKmPaise: null } };
+    const paused = (await auth("patch", "/api/admin/settings", tokenAdmin).send(await homepageSettingsBody(tokenAdmin, { deliveryPricing: pendingConfig })).expect(200)).body.data;
+    assert.equal(paused.deliveryPricing.inbound.minimumChargePaise, 5000); assert.equal(paused.deliveryPricing.inbound.perKmPaise, null);
+    assert.deepEqual(paused.serviceAreas, legacyZones);
+    const courier = { mode: "courier", courierProvider: "shiprocket", originPin: "110001", distanceBasis: "pin_area", formula: "base_plus_distance", inbound: { minimumChargePaise: null } };
+    const courierSaved = (await auth("patch", "/api/admin/settings", tokenAdmin).send(await homepageSettingsBody(tokenAdmin, { deliveryPricing: courier })).expect(200)).body.data;
+    assert.deepEqual(courierSaved.deliveryPricing, courier); assert.deepEqual(courierSaved.serviceAreas, legacyZones);
+    await auth("patch", "/api/admin/settings", tokenAdmin).send(await homepageSettingsBody(tokenAdmin, { deliveryPricing: { ...courier, apiToken: "must-not-persist" } })).expect(400);
+    await auth("patch", "/api/admin/settings", tokenAdmin).send(await homepageSettingsBody(tokenAdmin, { deliveryPricing: { ...courier, courierProvider: undefined } })).expect(400);
+    assert.equal(JSON.stringify((await models.SiteSettings.findOne({ key: "main" }).lean()).deliveryPricing).includes("must-not-persist"), false);
+  } finally {
+    for (const field of ["serviceAreas", "deliveryPricing"]) await models.SiteSettings.updateOne({ key: "main" }, prior?.[field] === undefined ? { $unset: { [field]: "" } } : { $set: { [field]: prior[field] } });
+  }
+});

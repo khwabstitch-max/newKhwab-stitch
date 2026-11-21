@@ -1,3 +1,4 @@
+import { courierRoutes } from "./routes-couriers.js";
 import { rateLimitFor } from "./rate-limits.js";
 import { authentication, adminOnly } from "./auth.js";
 import { publicRoutes } from "./routes-public.js";
@@ -41,6 +42,7 @@ export function registerRoutes(app, ctx) {
   orderRoutes(app, ctx, auth, orderLimit);
   mediaRoutes(app, ctx, auth, uploadLimit);
   visualCatalogueRoutes(app, ctx, auth);
+  courierRoutes(app, ctx, auth, adminOnly);
   adminRoutes(app, ctx, auth, adminOnly);
   pricingRoutes(app, ctx);
   draftRoutes(app, ctx, auth);

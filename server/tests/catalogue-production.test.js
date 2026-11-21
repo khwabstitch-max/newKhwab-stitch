@@ -62,9 +62,9 @@ test("production descriptions are bilingual, service-specific and owner edits re
   for(const profile of PRODUCTION_DESIGN_PROFILES){
     const record={_id:profile.id,code:profile.legacyCode,slug:profile.slug,garment:profile.garment,title:"Demo sample",startingPricePaise:12345};
     const content=productionDesignContent(record);assert.match(content.titleHi,/[\u0900-\u097f]/);assert.match(content.descriptionHi,/[\u0900-\u097f]/);assert.ok(content.serviceNotesHi);
-    const projected=publicProductionDesign(record);assert.equal(projected.startingPricePaise,12345);assert.equal(projected.code,record.code);
+    const projected=publicProductionDesign(record);assert.equal(projected.startingPricePaise,profile.garment==="alteration"?null:12345);assert.equal(projected.code,record.code);
     assert.equal(/demo/i.test(projected.title),false);
-    const owned={...record,title:"Owner's custom title"};assert.equal(publicProductionDesign(owned),owned);
+    const owned={...record,title:"Owner's custom title"};assert.equal(publicProductionDesign(owned).title,owned.title);assert.equal(owned.startingPricePaise,12345);
     if(profile.garment==="alteration"){assert.ok(content.designDetails.scope);assert.ok(content.designDetails.preparationHi);assert.equal(content.designDetails.neck,undefined);}
   }
   assert.equal(productionDesignContent({_id:"unrelated",slug:"other",garment:"kurti"}),null);
@@ -112,4 +112,14 @@ test("legacy option suffixes sort numerically and space-separated demo names are
   assert.deepEqual(plan.optionChanges.map(item => [item.previousCode, item.code]), [["LEGACY-2", "FN-0"], ["LEGACY-10", "FN-1"]]);
   assert.equal(plan.designChanges.find(item => item.id === profile.id).fields.title, profile.content.title);
   assert.ok(plan.warnings.some(item => item.id === "other"));
+});
+
+test("public alteration references expose review-only pricing without mutating admin catalogue amounts", () => {
+  const stored = { _id: "owned-alteration", garment: "alteration", code: "A-1", title: "Garment alterations", startingPricePaise: 15000, priceOptions: [{ label: "Legacy alteration", amountPaise: 15000 }] };
+  const before = structuredClone(stored), shown = publicProductionDesign(stored);
+  assert.equal(shown.startingPricePaise, null); assert.deepEqual(shown.priceOptions, []);
+  assert.deepEqual(stored, before); assert.equal(shown.code, "A-1");
+  const ordinary = { ...stored, garment: "kurti" };
+  assert.equal(publicProductionDesign(ordinary).startingPricePaise, 15000);
+  assert.deepEqual(publicProductionDesign(ordinary).priceOptions, stored.priceOptions);
 });

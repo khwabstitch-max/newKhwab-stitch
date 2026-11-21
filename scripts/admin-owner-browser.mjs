@@ -10,9 +10,9 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // Only disposable local identities/database and a fresh repository-local browser
 // profile are used. This module never imports dotenv or configured provider data.
-export async function withAdminBrowser(work) {
+export async function withAdminBrowser(work, { courierQuote } = {}) {
   process.env.KHWAB_NO_ENV_FILES = "1";
-  for (const key of ["MONGODB_URI", "TEST_MONGODB_URI", "ALLOW_EXTERNAL_TEST_DATABASE", "JWT_SECRET", "IMAGEKIT_PRIVATE_KEY", "RESEND_API_KEY", "EMAIL_FROM", "PUBLIC_WEB_URL", "GOOGLE_CLIENT_ID", "MONGOMS_SYSTEM_BINARY"]) delete process.env[key];
+  for (const key of ["COURIER_CREDENTIALS_KEY", "MONGODB_URI", "TEST_MONGODB_URI", "ALLOW_EXTERNAL_TEST_DATABASE", "JWT_SECRET", "IMAGEKIT_PRIVATE_KEY", "RESEND_API_KEY", "EMAIL_FROM", "PUBLIC_WEB_URL", "GOOGLE_CLIENT_ID", "MONGOMS_SYSTEM_BINARY"]) delete process.env[key];
   const temporary = path.join(artifacts, "isolated-tmp");
   await fs.mkdir(temporary, { recursive: true });
   process.env.TMP = process.env.TEMP = process.env.TMPDIR = temporary;
@@ -28,7 +28,7 @@ export async function withAdminBrowser(work) {
   const pending = new Map();
   try {
     const { startAuthFixture } = await import("./auth-browser-fixture.mjs");
-    fixture = await startAuthFixture({ mediaUploads: true });
+    fixture = await startAuthFixture({ mediaUploads: true, courierQuote });
     const dist = path.join(root, "client/dist");
     server = http.createServer(async (req, res) => {
       try {

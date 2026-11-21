@@ -42,6 +42,16 @@ Ordinary local development supports the existing environment configuration throu
 
 MongoDB requires a transaction-capable replica set. Before a reviewed rollout, back up and run `npm run db:indexes` against the intended environment. Register the owner, independently verify control, then use `npm --prefix server run admin:provision -- owner@example.com`; sign in again after promotion. No default admin/password/public promotion endpoint exists. Development seed is production-blocked and must not populate a live catalogue.
 
+### MongoDB DNS startup on Windows
+
+If the backend reports `querySrv ECONNREFUSED`, its Atlas SRV DNS lookup failed before the API could listen on port 3000. Vite's subsequent `ECONNREFUSED 127.0.0.1:3000` messages are a consequence of that failed backend startup. Mongoose documents this Windows/Node 24 resolver issue in its [official FAQ](https://mongoosejs.com/docs/faq.html#querysrv-econnrefused); Atlas also provides [connection diagnostics](https://www.mongodb.com/docs/atlas/troubleshoot-connection/).
+
+Both server entry points now initialize Node's current DNS resolver once for Windows SRV connections and retry only transient SRV/TXT DNS failures, at most three attempts. Resolver settings are not changed while a retry may still have a concurrent TXT lookup in flight. Authentication, TLS, missing-host and index failures remain visible and are not hidden by retries. Standard `mongodb://` connections remain unchanged.
+
+If your router/ISP DNS continues refusing SRV queries, optionally set `MONGODB_DNS_SERVERS=1.1.1.1,8.8.8.8` in your backend environment and restart `npm run dev`. Use your organization's DNS IPs instead where required. This explicit setting affects the backend Node process only; the app does not change Windows network settings or silently substitute public DNS. Real connection strings and credentials are never printed by the retry helper.
+
+Verified locally on 21 November 2026: the configured Atlas cluster's SRV/TXT lookups and all three hosts' TLS connections succeeded. Backend readiness and the settings, designs, options, services and estimate requests through the Vite proxy returned 200. The DNS/configuration/readiness/bootstrap regression suite passed 37 checks; backend lint and syntax checks passed. Evidence: `artifacts/mongodb-dns-regression.txt`, `artifacts/mongodb-dns-lint.txt` and `artifacts/mongodb-dns-build.txt`. Real environment files were not inspected or modified.
+
 ## Environment-isolated verification
 
 These commands disable Vite environment-file loading, remove configured provider/test connection values from children, and keep temporary files inside this repository:

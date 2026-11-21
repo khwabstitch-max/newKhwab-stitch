@@ -95,7 +95,7 @@ export function DesignCard({ design, index = 0 }) {
         </div>
         <h3>{localize(design, "title")}</h3>
         <p>
-          {Number.isSafeInteger(design.startingPricePaise) && design.startingPricePaise >= 0
+          {design.garment === "alteration" ? <strong>{t("public.design.alterationPrice")}</strong> : Number.isSafeInteger(design.startingPricePaise) && design.startingPricePaise >= 0
             ? <>{t(design.garment === "alteration" ? "public.design.alterationPrice" : "public.card.price")} <strong>{money(design.startingPricePaise)}</strong></>
             : <strong>{t("public.card.pending")}</strong>}
         </p>
@@ -221,7 +221,7 @@ export function Home() {
                   <h3>{t("public.garment." + garment)}</h3>
                   <p>{t("atelier.garmentNote." + garment)}</p>
                   <span className="atelier-garment-action">
-                    {Number.isSafeInteger(site.garmentBasePrices?.[garment]) && site.garmentBasePrices[garment] >= 0
+                    {garment === "alteration" ? <span>{t("public.design.alterationPrice")}</span> : Number.isSafeInteger(site.garmentBasePrices?.[garment]) && site.garmentBasePrices[garment] >= 0
                       ? <span>{t("atelier.garmentFrom", { 0: money(site.garmentBasePrices[garment]) })}</span>
                       : <span>{t("public.action.explore")}</span>}
                     <ArrowUpRight size={18} aria-hidden="true" />

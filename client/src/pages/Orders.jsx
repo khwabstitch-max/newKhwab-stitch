@@ -1,6 +1,8 @@
 import { t, localize, labelToken } from "../i18n/core";
 import { useLanguage } from "../i18n/Language";
 import { useState } from "react";
+import { DeliveryChargeDetails } from "../components/DeliveryChargeDetails";
+import { ParcelSummary } from "../components/ParcelDetails";
 import { ReferenceFilePreview } from "../components/ReferenceFilePreview";
 import { DesignImage } from "../components/DesignGallery";
 import { OptionImage } from "../components/VisualOptions";
@@ -15,7 +17,7 @@ import {
 import { api, date, dateTime, idOf, money, readable } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useResource, useSite } from "../lib/hooks";
-import { estimateLineLabel } from "../lib/order-labels";
+import { estimateLineLabel, knownTransportAmount } from "../lib/order-labels";
 import {
   OrderFulfilment,
   QuoteLineEditor,
@@ -381,7 +383,15 @@ export function OrderDetails({ admin = false }) {
               <br />
               {order.customer?.phone} <small>{t("(unverified)")}</small>
             </p>
-            <p>
+            {order.logistics ? ["inbound","outbound"].map(direction => {
+              const leg = order.logistics[direction], address = leg?.address;
+              return <div className="order-shipment-details" key={direction}>
+                <h4>{t(direction === "inbound" ? "Inbound fabric transport" : "Outbound outfit transport")}</h4>
+                <p>{t("request.transport." + (leg?.method === "business" ? direction === "inbound" ? "pickup" : "delivery" : leg?.method === "customer_courier" ? direction === "inbound" ? "inboundCourier" : "outboundCourier" : leg?.method || (direction === "inbound" ? "dropoff" : "collect")))}</p>
+                {address && <p>{[address.line1,address.line2,address.city,address.state,address.pin].filter(Boolean).join(", ")}</p>}
+                <ParcelSummary parcel={leg?.parcel} />
+              </div>;
+            }) : <>            <p>
               {order.address?.line1}
               <br />
               {order.address?.line2}
@@ -389,6 +399,7 @@ export function OrderDetails({ admin = false }) {
               {order.address?.city}, {order.address?.state} —{" "}
               {order.address?.pin}
             </p>
+</>}
           </section>
           <OrderReferenceGallery order={order} />
           <section className="panel">
@@ -504,11 +515,12 @@ export function OrderDetails({ admin = false }) {
           {order.estimate && (
             <section className="panel">
               <p className="eyebrow">{t("SUBMITTED ESTIMATE")}</p>
-              <h2>{money(order.estimate.knownSubtotalPaise)}</h2>
-              <p>{t("Known subtotal")}</p>
-              {order.estimate.lineItems?.map((line, i) => (
+              <h2>{order.garment === "alteration" ? t("public.design.alterationPrice") : money(order.estimate.knownSubtotalPaise)}</h2>
+              <p>{order.garment === "alteration" ? t("request.knownCharges", { 0: money(knownTransportAmount(order.estimate)) }) : t("Known subtotal")}</p>
+              {order.garment === "alteration" && <p className="small-print">{t("request.alterationPriceNote")}</p>}
+              {order.estimate.lineItems?.filter(line => order.garment !== "alteration" || line.scope === "shipment" || String(line.code || "").startsWith("transport:")).map((line, i) => (
                 <div className="account-row" key={i}>
-                  <span>{estimateLineLabel(line, order.estimate, order.designSnapshot)}</span>
+                  <div>{estimateLineLabel(line, order.estimate, order.designSnapshot)}<DeliveryChargeDetails line={line} /></div>
                   <strong>{money(line.totalPaise ?? line.amountPaise)}</strong>
                 </div>
               ))}

@@ -1,10 +1,72 @@
 import { t } from "../i18n/core";
-import { readable } from "../lib/api";
+import { money, readable } from "../lib/api";
+import { useLanguage } from "../i18n/Language";
 import { Field, Notice } from "./ui";
 import { AdminPolicyEditor } from "./AdminPolicyEditor";
 import { TokenListEditor } from "./AdminFields";
 
+export function DeliveryPricingControls({ value, onChange }) {
+  useLanguage();
+  const pricing = { mode: "service_areas", distanceBasis: "pin_area", formula: "base_plus_distance", ...value };
+  const distance = pricing.mode === "distance";
+  const courier = pricing.mode === "courier";
+  const patch = fields => onChange({ ...pricing, ...fields });
+  const updateRate = (leg, key, entered) => patch({ [leg]: { ...pricing[leg], [key]: entered === "" ? null : Math.round(Number(entered) * 100) } });
+  const knownRate = number => Number.isInteger(number) && number >= 0;
+  return <section aria-label={t("delivery.admin.method")}>
+    <Field label={t("delivery.admin.method")} name="delivery-mode">
+      <select id="delivery-mode" value={pricing.mode} onChange={event => patch({ mode: event.target.value, ...(event.target.value === "distance" ? { distanceBasis: "pin_area" } : {}) })}>
+        <option value="courier">{t("delivery.admin.courier")}</option>
+        <option value="service_areas">{t("delivery.admin.serviceAreas")}</option>
+        <option value="distance">{t("delivery.admin.distance")}</option>
+      </select>
+    </Field>
+    {(distance || courier) && <div className="form-grid">
+        <Field label={t("delivery.admin.originPin")} hint={t("delivery.admin.originHint")} name="delivery-originPin" required inputMode="numeric" autoComplete="postal-code" minLength={6} maxLength={6} pattern="[1-9][0-9]{5}" value={pricing.originPin || ""} onChange={event => patch({ originPin: event.target.value })} />
+        {courier && <Field label={t("delivery.admin.provider")} name="delivery-courierProvider" required>
+          <select id="delivery-courierProvider" required value={pricing.courierProvider || ""} onChange={event => patch({ courierProvider: event.target.value })}>
+            <option value="">{t("delivery.admin.chooseProvider")}</option>
+            <option value="shiprocket">Shiprocket</option>
+            <option value="delhivery">Delhivery</option>
+            <option value="bluedart" disabled>{t("delivery.admin.blueDartOption")}</option>
+          </select>
+        </Field>}
+      </div>}
+    {distance && <>
+      <Notice>{t("delivery.admin.pinHint")}</Notice>
+      <Field label={t("delivery.admin.formula")} hint={t(pricing.formula === "minimum_fare" ? "delivery.admin.minimumFareHint" : "delivery.admin.basePlusHint")} name="delivery-formula">
+        <select id="delivery-formula" value={pricing.formula} onChange={event => patch({ formula: event.target.value })}>
+          <option value="base_plus_distance">{t("delivery.admin.basePlus")}</option>
+          <option value="minimum_fare">{t("delivery.admin.minimumFare")}</option>
+        </select>
+      </Field>
+      <p className="small-print">{t("delivery.admin.rounding")}</p>
+      <div className="form-grid">
+        {["inbound", "outbound"].map(leg => {
+          const rates = pricing[leg] || {};
+          const complete = knownRate(rates.minimumChargePaise) && knownRate(rates.perKmPaise);
+          const distanceFare = complete ? rates.perKmPaise * 5 : null;
+          const example = complete ? pricing.formula === "minimum_fare" ? Math.max(rates.minimumChargePaise, distanceFare) : rates.minimumChargePaise + distanceFare : null;
+          return <fieldset key={leg}>
+            <legend>{t(leg === "inbound" ? "delivery.admin.pickup" : "delivery.admin.delivery")}</legend>
+            {["minimumChargePaise", "perKmPaise"].map(key => <Field key={key} name={`delivery-${leg}-${key}`} label={t(leg === "inbound" ? key === "minimumChargePaise" ? "delivery.admin.inboundMinimum" : "delivery.admin.inboundPerKm" : key === "minimumChargePaise" ? "delivery.admin.outboundMinimum" : "delivery.admin.outboundPerKm")} type="number" required min={0} max={key === "minimumChargePaise" ? 100000 : 10000} step="0.01" hint={t("delivery.admin.rateHint")} value={rates[key] == null ? "" : rates[key] / 100} onChange={event => updateRate(leg, key, event.target.value)} />)}
+            <p className="small-print" data-testid={`delivery-example-${leg}`}>{complete ? t(pricing.formula === "minimum_fare" ? "delivery.admin.exampleMinimum" : "delivery.admin.examplePlus", { 0: money(rates.minimumChargePaise), 1: money(rates.perKmPaise), 2: money(example) }) : t("delivery.admin.examplePending")}</p>
+          </fieldset>;
+        })}
+      </div>
+    </>}
+    {courier && <>
+      <Notice>{t("delivery.admin.courierHint")}</Notice>
+      <p className="small-print">{t("delivery.admin.courierMinimumHint")}</p>
+      <div className="form-grid">
+        {["inbound", "outbound"].map(leg => <Field key={leg} name={`delivery-${leg}-minimumChargePaise`} label={t(leg === "inbound" ? "delivery.admin.inboundMinimumOptional" : "delivery.admin.outboundMinimumOptional")} type="number" min={0} max={100000} step="0.01" value={pricing[leg]?.minimumChargePaise == null ? "" : pricing[leg].minimumChargePaise / 100} onChange={event => updateRate(leg, "minimumChargePaise", event.target.value)} />)}
+      </div>
+    </>}
+  </section>;
+}
+
 export function SettingsEnhancements({ draft, patch }) {
+  useLanguage();
   return (
     <>
       <details className="admin-advanced"><summary>{t("admin.home.legacy")}</summary>
@@ -59,6 +121,10 @@ export function SettingsEnhancements({ draft, patch }) {
         ))}
       </div>
       <h2>{t("Fabric pickup and outfit delivery")}</h2>
+      <DeliveryPricingControls value={draft.deliveryPricing} onChange={value => patch("deliveryPricing", value)} />
+      <details className="admin-advanced" open={!draft.deliveryPricing?.mode || draft.deliveryPricing.mode === "service_areas"}>
+      <summary>{t("delivery.admin.legacyRates")}</summary>
+      <p className="small-print">{t("delivery.admin.legacyHint")}</p>
       <Notice>
         {t(
           "Rates are per shipment and per direction. Blank rates mean a manual quote is pending. These settings never book a courier.",
@@ -179,6 +245,7 @@ export function SettingsEnhancements({ draft, patch }) {
       >
         {t("Add service area")}
       </button>
+      </details>
       <h2>{t("Human support response target")}</h2>
       <p className="small-print">
         {t(

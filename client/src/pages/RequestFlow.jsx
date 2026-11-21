@@ -4,7 +4,10 @@ import { Check, CircleHelp, LoaderCircle, Save, Search, X } from "lucide-react";
 import { api, money, readable } from "../lib/api";
 import { uploadMedia, REFERENCE_ACCEPT, REFERENCE_FILE_LIMIT } from "../lib/media";
 import { ReferenceFilePreview } from "../components/ReferenceFilePreview";
-import { estimateLineLabel } from "../lib/order-labels";
+import { ParcelInputs, ParcelSummary } from "../components/ParcelDetails";
+import { DeliveryChargeDetails } from "../components/DeliveryChargeDetails";
+import { requestLogistics } from "../lib/shipping";
+import { estimateLineLabel, knownTransportAmount } from "../lib/order-labels";
 import { useAuth } from "../lib/auth";
 import { useResource, useSite } from "../lib/hooks";
 import { usePagedCollection } from "../lib/usePagedCollection";
@@ -109,15 +112,17 @@ const estimateBody = (d, sleeveless = false) => ({
   quantity: Number(d.quantity),
   ...(d.designId ? { designId: d.designId } : {}),
   configuration: cleanConfig(d.configuration, sleeveless),
-  logistics: d.logistics,
+  logistics: requestLogistics(d.logistics),
 });
 function Price({ data, error, loading, retry, design, reference = false, garment }) {
+  const alteration = garment === "alteration";
+  const reviewOnly = reference || alteration;
   return (
-    <section className={`panel request-price${reference ? " request-review-quote" : ""}`}>
+    <section className={`panel request-price${reviewOnly ? " request-review-quote" : ""}`}>
       <p className="eyebrow">{t(garment === "alteration" ? "request.alterationEstimate" : "YOUR STITCHING ESTIMATE")}</p>
-      <h2>{reference ? t("request.uploadedPrice") : data ? money(data.knownSubtotalPaise) : "—"}</h2>
-      <p>{reference ? t("request.knownCharges", { 0: money(data?.knownTransportSubtotalPaise ?? data?.knownSubtotalPaise ?? 0) }) : t(data?.hasPending ? "Known subtotal" : "Estimated total")}</p>
-      {reference && <p className="small-print">{t("request.uploadedPriceNote")}</p>}
+      <h2>{alteration ? t("public.design.alterationPrice") : reference ? t("request.uploadedPrice") : data ? money(data.knownSubtotalPaise) : "—"}</h2>
+      <p>{reviewOnly ? t("request.knownCharges", { 0: money(knownTransportAmount(data)) }) : t(data?.hasPending ? "Known subtotal" : "Estimated total")}</p>
+      {reviewOnly && <p className="small-print">{t(alteration ? "request.alterationPriceNote" : "request.uploadedPriceNote")}</p>}
       {data?.hasPending && (
         <p className="pending-price">{t("Pending tailor review")}</p>
       )}
@@ -127,7 +132,7 @@ function Price({ data, error, loading, retry, design, reference = false, garment
         <details open>
           <summary>{t("Price breakdown")}</summary>
           <dl className="review-list">
-            {data.lineItems.map((line) => (
+            {data.lineItems.filter(line => !alteration || line.scope === "shipment" || String(line.code || "").startsWith("transport:")).map((line) => (
               <div key={line.code}>
                 <dt>
                   {estimateLineLabel(line, data, design)}
@@ -139,6 +144,7 @@ function Price({ data, error, loading, retry, design, reference = false, garment
                     )}{" "}
                     × {line.quantity}
                   </small>
+                  <DeliveryChargeDetails line={line} />
                   {line.materialCoverage && (
                     <small>{extraMaterialLabel(line)}</small>
                   )}
@@ -929,7 +935,7 @@ export function RequestWizard() {
         quantity: Number(draft.quantity),
         ...(draft.designId ? { designId: draft.designId } : {}),
         configuration: cleanConfig(config, sleeveless),
-        logistics: draft.logistics,
+        logistics: requestLogistics(draft.logistics),
         preferences: {
           neck: "",
           sleeve: "",
@@ -1278,7 +1284,7 @@ export function RequestWizard() {
                             <strong>{localize(d, "title")}</strong>
                             <small className="request-design-meta">
                               <span>{d.code}</span>
-                              <span>{money(d.startingPricePaise)}</span>
+                              <span>{d.garment === "alteration" ? t("public.design.alterationPrice") : Number.isSafeInteger(d.startingPricePaise) ? money(d.startingPricePaise) : t("public.card.pending")}</span>
                             </small>
                             {draft.designId === d._id && (
                               <span className="request-design-selected"><Check size={13} aria-hidden="true" />{t("Selected")}</span>
@@ -2203,6 +2209,7 @@ export function RequestWizard() {
                             })
                           }
                         />
+                        {site.deliveryPricing?.mode === "courier" && <ParcelInputs direction={leg} provider={site.deliveryPricing.courierProvider} value={draft.logistics[leg].parcel} onChange={parcel => nested("logistics", { [leg]: { ...draft.logistics[leg], parcel } })} />}
                         <small>
                           {t(
                             "Serviceability and scheduling require confirmation. This preference does not book a courier. Unconfigured transport rates remain pending.",
@@ -2317,7 +2324,7 @@ export function RequestWizard() {
                                 {" "}
                                 · {draft.logistics[leg].address?.line1},{" "}
                                 {draft.logistics[leg].address?.city},{" "}
-                                {draft.logistics[leg].address?.pin}
+                                {draft.logistics[leg].address?.pin}<ParcelSummary parcel={draft.logistics[leg].parcel} />
                               </>
                             )}
                           </p>

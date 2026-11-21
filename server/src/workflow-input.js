@@ -1,3 +1,5 @@
+import { parcelInput } from "./delivery-pricing.js";
+export { deliveryPricingInput, parcelInput } from "./delivery-pricing.js";
 import { z } from "zod";
 
 const id = z.string().regex(/^[a-f\d]{24}$/i);
@@ -82,7 +84,7 @@ export const addressInput = z
   .strict();
 const leg = (methods) =>
   z
-    .object({ method: z.enum(methods), address: addressInput.optional() })
+    .object({ method: z.enum(methods), address: addressInput.optional(), parcel: parcelInput.optional() })
     .strict();
 export const logisticsInput = z
   .object({

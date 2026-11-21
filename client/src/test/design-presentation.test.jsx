@@ -38,7 +38,8 @@ it("presents alterations as a service with visible scope and a matching request 
   const details = container.querySelector(".design-more-details");
   expect(details).toHaveAttribute("open");
   expect(within(details).getByText(design.designDetails.scope)).toBeVisible();
-  expect(screen.getByText("₹150")).toBeInTheDocument();
+  expect(screen.queryByText("₹150")).not.toBeInTheDocument();
+  expect(screen.getByText(t("public.design.alterationPrice"))).toBeInTheDocument();
   expect(screen.getByLabelText(t("public.design.serviceCode"))).toHaveTextContent("A-0");
 });
 it("renders the service, guidance and request action in Hindi", () => {
@@ -56,7 +57,7 @@ it("renders the service, guidance and request action in Hindi", () => {
 });
 it("does not display a missing starting price as a free service", () => {
   mount({...alteration(), startingPricePaise:undefined});
-  expect(screen.getByText(t("public.design.pricePending"))).toBeInTheDocument();
+  expect(screen.getByText(t("public.design.alterationPrice"))).toBeInTheDocument();
   expect(screen.queryByText("₹0")).toBeNull();
 });
 it("supplies only missing review guidance while preserving supplied service data and price", () => {

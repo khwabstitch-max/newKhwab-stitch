@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { connectDatabase } from "./database-connect.js";
 import "dotenv/config";
 import pino from "pino";
 import { loadConfig } from "./config.js";
@@ -13,14 +14,14 @@ import { assertDeploymentIndexes } from "./deployment-indexes.js";
 const config = loadConfig();
 const logger = pino({ level: config.LOG_LEVEL });
 mongoose.set("bufferCommands", false);
-await mongoose.connect(config.MONGODB_URI, {
+await connectDatabase(mongoose, config, {
   autoIndex: config.NODE_ENV !== "production",
   maxPoolSize: 10,
   minPoolSize: 0,
   serverSelectionTimeoutMS: 10000,
   connectTimeoutMS: 10000,
   socketTimeoutMS: 20000,
-});
+}, { logger });
 await models.User.init();
 await assertCredentialIndexes(models);
 await Promise.all(Object.values(models).map((model) => model.init()));

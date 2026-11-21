@@ -1,0 +1,163 @@
+import { useState } from "react";
+import { beforeEach, afterEach, expect, it, vi } from "vitest";
+import { act, render, screen, within, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+const boundary = vi.hoisted(() => ({ api: vi.fn() }));
+vi.mock("../lib/api", async original => ({ ...(await original()), api: boundary.api }));
+import { DeliveryPricingControls } from "../components/SettingsEnhancements";
+import { AdminWebsiteSettings } from "../components/AdminWebsiteSettings";
+import { AdminCourierConnections } from "../components/AdminCourierConnections";
+import { deliveryPricingInput } from "../../../server/src/workflow-input.js";
+import { setLanguage, t } from "../i18n/core";
+
+const initialArea = { name: "Saved local area", pinPrefixes: ["110001"], enabled: true, inboundPaise: 8000, outboundPaise: 9000, notes: "" };
+const fill = (control, value) => fireEvent.change(control, { target: { value: String(value) } });
+const field = id => document.getElementById(id);
+const statuses = (changes = {}) => ({ storageReady: true, providers: [{ provider: "shiprocket", configured: false, verified: false }, { provider: "delhivery", configured: false, verified: false }, { provider: "bluedart", supported: false, configured: false, reasonCode: "provider_contract_required" }], ...changes });
+beforeEach(() => { localStorage.clear(); sessionStorage.clear(); setLanguage("en", false); boundary.api.mockReset().mockResolvedValue({ data: statuses() }); });
+afterEach(() => { setLanguage("en", false); vi.restoreAllMocks(); });
+function Controls({ initial }) {
+  const [value, setValue] = useState(initial);
+  return <form><DeliveryPricingControls value={value} onChange={setValue} /><output data-testid="pricing-value">{JSON.stringify(value)}</output></form>;
+}
+function website(settings = {}) {
+  return render(<MemoryRouter initialEntries={["/admin/settings?section=business"]}><AdminWebsiteSettings settings={{businessName:"Khwab Stitch",revision:2,serviceAreas:[initialArea],...settings}} onSave={vi.fn()} /></MemoryRouter>);
+}
+it("keeps legacy pricing untouched, offers a real connected-courier mode and requires a provider and atelier PIN", () => {
+  render(<Controls />);
+  expect(field("delivery-mode")).toHaveValue("service_areas");
+  expect(screen.getByTestId("pricing-value")).toBeEmptyDOMElement();
+  fill(field("delivery-mode"), "courier");
+  expect(field("delivery-originPin")).toBeRequired();
+  expect(field("delivery-courierProvider")).toBeRequired();
+  expect(screen.getByRole("option", { name: t("delivery.admin.blueDartOption") })).toBeDisabled();
+  expect(field("delivery-inbound-minimumChargePaise")).not.toBeRequired();
+  expect(field("delivery-inbound-perKmPaise")).toBeNull();
+  expect(screen.getByText(t("delivery.admin.courierMinimumHint"))).toBeInTheDocument();
+  fill(field("delivery-originPin"), "012345");
+  expect(field("delivery-originPin").checkValidity()).toBe(false);
+  fill(field("delivery-originPin"), "110001");
+  fill(field("delivery-courierProvider"), "shiprocket");
+  fill(field("delivery-inbound-minimumChargePaise"), "48.75");
+  const value = JSON.parse(screen.getByTestId("pricing-value").textContent);
+  expect(value).toMatchObject({mode:"courier",courierProvider:"shiprocket",originPin:"110001",inbound:{minimumChargePaise:4875}});
+  expect(deliveryPricingInput.safeParse(value).success).toBe(true);
+});
+it("calculates both admin per-km formula examples from explicit rates, validates zero/limits and preserves them across modes and Hindi", () => {
+  render(<Controls />);
+  fill(field("delivery-mode"), "distance");
+  expect(field("delivery-inbound-minimumChargePaise")).toHaveDisplayValue("");
+  expect(field("delivery-inbound-perKmPaise")).toHaveDisplayValue("");
+  expect(field("delivery-inbound-minimumChargePaise")).toBeRequired();
+  fill(field("delivery-originPin"), "110001");
+  fill(field("delivery-inbound-minimumChargePaise"), "48.75"); fill(field("delivery-inbound-perKmPaise"), "2.25");
+  fill(field("delivery-outbound-minimumChargePaise"), "20"); fill(field("delivery-outbound-perKmPaise"), "3.20");
+  expect(screen.getByTestId("delivery-example-inbound")).toHaveTextContent("₹60");
+  expect(screen.getByTestId("delivery-example-outbound")).toHaveTextContent("₹36");
+  fill(field("delivery-formula"), "minimum_fare");
+  expect(screen.getByTestId("delivery-example-inbound")).toHaveTextContent("₹48.75");
+  expect(screen.getByTestId("delivery-example-outbound")).toHaveTextContent("₹20");
+  expect(deliveryPricingInput.safeParse(JSON.parse(screen.getByTestId("pricing-value").textContent)).success).toBe(true);
+  fill(field("delivery-inbound-perKmPaise"), "10000.01");
+  expect(field("delivery-inbound-perKmPaise").checkValidity()).toBe(false);
+  fill(field("delivery-inbound-perKmPaise"), "0"); fill(field("delivery-inbound-minimumChargePaise"), "0");
+  expect(field("delivery-inbound-perKmPaise")).toHaveValue(0);
+  expect(screen.getByTestId("delivery-example-inbound")).toHaveTextContent("₹0");
+  fill(field("delivery-mode"), "courier"); fill(field("delivery-courierProvider"), "delhivery");
+  fill(field("delivery-mode"), "service_areas");
+  act(() => setLanguage("hi", false));
+  fill(field("delivery-mode"), "distance");
+  expect(field("delivery-inbound-perKmPaise")).toHaveValue(0);
+  expect(field("delivery-outbound-perKmPaise")).toHaveValue(3.2);
+  expect(screen.getByLabelText(t("delivery.admin.originPin"))).toHaveValue("110001");
+  expect(screen.getByText(t("delivery.admin.pinHint"))).toBeInTheDocument();
+});
+it("saves transport settings and secure credentials through separate forms/APIs without leaking tokens into website settings", async () => {
+  let connected = false;
+  boundary.api.mockImplementation(async (path) => {
+    if(path === "/admin/courier-connections")return {data:statuses({providers:[{provider:"shiprocket",configured:connected,verified:false},{provider:"delhivery",configured:false,verified:false}]})};
+    if(path === "/admin/courier-connections/shiprocket"){ connected=true;return {data:{provider:"shiprocket",configured:true,verified:false}}; }
+    if(path === "/admin/settings") return {data:{}};
+    return {data:[]};
+  });
+  website();
+  const region = await screen.findByRole("region", { name: "Shiprocket" });
+  const token = within(region).getByLabelText(t("delivery.connection.token"));
+  expect(token).toHaveAttribute("type", "password");
+  expect(token.closest("form")).not.toBe(document.getElementById("owner-website-settings"));
+  fill(token, "unit-test-provider-token");
+  await userEvent.click(within(region).getByRole("button", { name: t("delivery.connection.save") }));
+  await waitFor(() => expect(token).toHaveValue(""));
+  expect(boundary.api.mock.calls.find(([path]) => path === "/admin/courier-connections/shiprocket")[1]).toMatchObject({method:"PUT",body:{credentials:{apiToken:"unit-test-provider-token"}}});
+  expect(within(region).getByText(t("delivery.connection.configured"))).toBeInTheDocument();
+  expect(within(region).queryByText(t("delivery.connection.verified"))).not.toBeInTheDocument();
+  fill(field("delivery-mode"), "courier"); fill(field("delivery-originPin"), "110001"); fill(field("delivery-courierProvider"), "shiprocket");
+  fill(field("delivery-inbound-minimumChargePaise"), "60");
+  await userEvent.click(screen.getByRole("button", { name: "Save website content" }));
+  await waitFor(() => expect(boundary.api.mock.calls.some(([path]) => path === "/admin/settings")).toBe(true));
+  const body = boundary.api.mock.calls.find(([path]) => path === "/admin/settings")[1].body;
+  expect(body.deliveryPricing).toMatchObject({mode:"courier",courierProvider:"shiprocket",originPin:"110001",inbound:{minimumChargePaise:6000}});
+  expect(body.serviceAreas).toEqual([initialArea]);
+  expect(JSON.stringify(body)).not.toContain("unit-test-provider-token");
+  expect(JSON.stringify(body)).not.toContain("credentials");
+  expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0);
+  expect(boundary.api.mock.calls.filter(([,options]) => options?.method === "POST")).toHaveLength(0);
+});
+it("runs a live test only on request with actual parcel data and physical pickup/delivery PIN directions", async () => {
+  boundary.api.mockImplementation(async (path, options = {}) => {
+    if(path === "/admin/courier-connections")return {data:statuses({providers:[{provider:"shiprocket",configured:true,verified:false},{provider:"delhivery",configured:false,verified:false}]})};
+    if(path.endsWith("/test"))return {data:{quote:{totalPaise:9550,currency:"INR",courierName:"Verified test carrier",service:"Surface",originPin:options.body.originPin,destinationPin:options.body.destinationPin}}};
+    return {data:{}};
+  });
+  render(<AdminCourierConnections originPin="110001" />);
+  const region = await screen.findByRole("region", { name: "Shiprocket" });
+  expect(boundary.api.mock.calls.filter(([,options]) => options?.method === "POST")).toHaveLength(0);
+  await userEvent.click(within(region).getByText(t("delivery.connection.testTitle")));
+  fill(field("courier-shiprocket-customerPin"), "560001"); fill(field("courier-shiprocket-weightGrams"), "750");
+  fill(field("courier-shiprocket-lengthCm"), "25"); fill(field("courier-shiprocket-widthCm"), "18"); fill(field("courier-shiprocket-heightCm"), "8");
+  await userEvent.click(within(region).getByRole("button", { name: t("delivery.connection.test") }));
+  await screen.findByText("Carrier quote: ₹95.5");
+  let calls = boundary.api.mock.calls.filter(([path]) => path.endsWith("/test"));
+  expect(calls).toHaveLength(1);
+  expect(calls[0][1].body).toEqual({direction:"outbound",originPin:"110001",destinationPin:"560001",parcel:{weightGrams:750,lengthCm:25,widthCm:18,heightCm:8}});
+  fill(field("courier-shiprocket-direction"), "inbound");
+  expect(field("courier-shiprocket-declaredValue")).toBeRequired();
+  expect(within(region).queryByText("Carrier quote: ₹95.5")).not.toBeInTheDocument();
+  await userEvent.click(within(region).getByRole("button", { name: t("delivery.connection.test") }));
+  expect(boundary.api.mock.calls.filter(([path]) => path.endsWith("/test"))).toHaveLength(1);
+  fill(field("courier-shiprocket-declaredValue"), "1200.50");
+  await userEvent.click(within(region).getByRole("button", { name: t("delivery.connection.test") }));
+  await waitFor(() => expect(boundary.api.mock.calls.filter(([path]) => path.endsWith("/test"))).toHaveLength(2));
+  calls = boundary.api.mock.calls.filter(([path]) => path.endsWith("/test"));
+  expect(calls[1][1].body).toMatchObject({direction:"inbound",originPin:"560001",destinationPin:"110001",parcel:{declaredValuePaise:120050}});
+});
+it("supports Delhivery mode and explicit disconnect without offering unused Blue Dart credential inputs", async () => {
+  let connected=true;
+  boundary.api.mockImplementation(async(path,options={})=>{
+    if(path==="/admin/courier-connections")return {data:statuses({providers:[{provider:"shiprocket",configured:false},{provider:"delhivery",configured:connected,verified:false}]})};
+    if(options.method==="DELETE")connected=false;
+    return {data:{configured:connected}};
+  });
+  render(<AdminCourierConnections />);
+  const region = await screen.findByRole("region", { name: "Delhivery" });
+  fill(within(region).getByLabelText(t("delivery.connection.token")), "unit-test-delhivery-token");
+  fill(field("courier-delhivery-mode"), "E");
+  await userEvent.click(within(region).getByRole("button",{name:t("delivery.connection.save")}));
+  await waitFor(()=>expect(boundary.api.mock.calls.some(([path,options])=>path.endsWith("/delhivery")&&options?.method==="PUT")).toBe(true));
+  const body=boundary.api.mock.calls.find(([path,options])=>path.endsWith("/delhivery")&&options?.method==="PUT")[1].body;
+  expect(body).toEqual({credentials:{apiToken:"unit-test-delhivery-token",mode:"E"}});
+  await userEvent.click(within(region).getByRole("button",{name:t("delivery.connection.disconnect")}));
+  await waitFor(()=>expect(within(region).getByText(t("delivery.connection.missing"))).toBeInTheDocument());
+  expect(within(screen.getByRole("region",{name:"Blue Dart"})).queryByRole("textbox")).not.toBeInTheDocument();
+  expect(screen.getByText(t("delivery.connection.blueDart"))).toBeInTheDocument();
+});
+it("blocks credential saving while secure server storage is unavailable and retries status failures", async()=>{
+  boundary.api.mockRejectedValueOnce(new Error("Status unavailable")).mockResolvedValue({data:statuses({storageReady:false})});
+  render(<AdminCourierConnections />);
+  await screen.findByText("Status unavailable");
+  await userEvent.click(screen.getByRole("button",{name:"Try again"}));
+  await screen.findByText(t("delivery.connection.storageMissing"));
+  screen.getAllByRole("button",{name:t("delivery.connection.save")}).forEach(button=>expect(button).toBeDisabled());
+  expect(boundary.api.mock.calls.every(([,options])=>!options?.method)).toBe(true);
+});

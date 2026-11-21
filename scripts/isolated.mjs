@@ -10,7 +10,7 @@ const temporary = path.join(root, "artifacts", "isolated-tmp");
 await fs.mkdir(temporary, { recursive: true });
 const env = { ...process.env, NODE_ENV: "test", KHWAB_NO_ENV_FILES: "1", VITE_API_BASE_URL: "/api", TMP: temporary, TEMP: temporary, TMPDIR: temporary,
   MONGOMS_DOWNLOAD_DIR: path.join(root, "server/node_modules/.cache/mongodb-memory-server"), MONGOMS_PREFER_GLOBAL_PATH: "false" };
-for (const key of ["MONGODB_URI", "TEST_MONGODB_URI", "ALLOW_EXTERNAL_TEST_DATABASE", "JWT_SECRET", "IMAGEKIT_PRIVATE_KEY", "IMAGEKIT_URL_ENDPOINT", "RESEND_API_KEY", "EMAIL_FROM", "PUBLIC_WEB_URL", "GOOGLE_CLIENT_ID", "MONGOMS_SYSTEM_BINARY", "KHWAB_BROWSER_AUTH", "KHWAB_BROWSER_AUTH_ONLY"]) delete env[key];
+for (const key of ["MONGODB_DNS_SERVERS", "COURIER_CREDENTIALS_KEY", "MONGODB_URI", "TEST_MONGODB_URI", "ALLOW_EXTERNAL_TEST_DATABASE", "JWT_SECRET", "IMAGEKIT_PRIVATE_KEY", "IMAGEKIT_URL_ENDPOINT", "RESEND_API_KEY", "EMAIL_FROM", "PUBLIC_WEB_URL", "GOOGLE_CLIENT_ID", "MONGOMS_SYSTEM_BINARY", "KHWAB_BROWSER_AUTH", "KHWAB_BROWSER_AUTH_ONLY"]) delete env[key];
 if(process.platform==="win32") {
   const runtime=path.join(root,"artifacts/isolated-runtime");
   try { await fs.access(path.join(runtime,"msvcp140.dll")); const key=Object.keys(env).find(key=>key.toLowerCase()==="path")||"PATH"; env[key]=runtime+path.delimiter+(env[key]||""); } catch { /* Standard OS runtime may already be installed. */ }

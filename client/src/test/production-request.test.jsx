@@ -120,7 +120,9 @@ it("treats alteration as an existing-garment service and drops garment-style cus
 it("uses an existing-garment acknowledgement for alteration review", async () => {
  currentDesign = { ...design, garment: "alteration", code: "A-0", title: "Garment Fitting & Alterations", startingPricePaise: 15000 };
  mount({step:"review",measurements:{method:"assistance",takenBy:"assistance",values:{},notes:"Shorten the hem"}});
- await screen.findByRole("heading",{name:"₹150"});
+ await screen.findByRole("heading",{name:t("public.design.alterationPrice")});
+ expect(screen.queryByRole("heading",{name:"₹0"})).not.toBeInTheDocument();
+ expect(screen.queryByText("₹150")).not.toBeInTheDocument();
  expect(screen.getByRole("checkbox",{name:/I will provide the existing garment/})).toBeInTheDocument();
  expect(screen.queryByRole("checkbox",{name:/I provide the fabric/})).not.toBeInTheDocument();
 });

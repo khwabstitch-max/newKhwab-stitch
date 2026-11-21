@@ -1,0 +1,11 @@
+.delivery-charge-details { display: block; min-width: 0; max-width: 100%; margin-top: 7px; overflow-wrap: anywhere; font-family: var(--font-body); font-size: 12px; line-height: 1.65; font-weight: 400; color: var(--color-muted); }
+.delivery-charge-details p { margin: 4px 0; font-size: inherit; line-height: inherit; font-weight: 400; }
+.delivery-charge-details .delivery-charge-carrier { color: var(--color-charcoal); font-weight: 600; }
+.delivery-charge-details .delivery-charge-source { font-size: 11px; }
+.delivery-charge-source a { color: var(--color-primary); text-underline-offset: 3px; }
+.delivery-charge-breakdown { display: grid; gap: 5px; margin: 6px 0; }
+.delivery-charge-breakdown > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0; border: 0; }
+.delivery-charge-breakdown :is(dt,dd) { margin: 0; font-size: inherit; line-height: inherit; font-weight: 400; color: inherit; }
+.delivery-charge-breakdown dt { min-width: 0; }
+.delivery-charge-breakdown dd { flex: 0 0 auto; white-space: nowrap; }
+@media (max-width: 420px) { .delivery-charge-breakdown > div { gap: 8px; } }

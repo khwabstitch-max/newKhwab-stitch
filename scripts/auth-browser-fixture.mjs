@@ -13,7 +13,7 @@ const require = createRequire(
 
 // The default fixture is in memory. Explicitly authorized configured runs use a
 // fresh random database name, never the database named in the connection URI.
-export async function startAuthFixture({ mediaUploads = false } = {}) {
+export async function startAuthFixture({ mediaUploads = false, courierQuote } = {}) {
   const mongoose = require("mongoose");
   const { MongoMemoryReplSet } = require("mongodb-memory-server");
   const pino = require("pino");
@@ -90,6 +90,7 @@ export async function startAuthFixture({ mediaUploads = false } = {}) {
       },
     };
     const app = createApp({
+      courierQuote,
       config,
       models,
       transaction: (work) => transaction(work, connection),

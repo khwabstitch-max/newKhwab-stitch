@@ -155,9 +155,10 @@ export function productionDesignContent(design) {
 }
 export function publicProductionDesign(design) {
   const profile = productionDesignProfile(design);
-  return profile && /^demo(?:\s|[·:.-])/i.test(design.title || "")
+  const enriched = profile && /^demo(?:\s|[·:.-])/i.test(design.title || "")
     ? { ...design, ...structuredClone(profile.content) }
     : design;
+  return enriched.garment === "alteration" ? { ...enriched, startingPricePaise: null, priceOptions: [] } : enriched;
 }
 export const SLEEVE_COMPATIBILITY = Object.freeze({
   "Straight plain sleeve": ["short", "elbow", "three_quarter", "full", "custom"],

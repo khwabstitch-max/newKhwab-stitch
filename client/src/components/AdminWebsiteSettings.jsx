@@ -5,10 +5,11 @@ import { t } from "../i18n/core";
 import { usePagedCollection } from "../lib/usePagedCollection";
 import { AdminHomepageEditor, AdminSettingsTabs, homepageDraft } from "./AdminHomepageEditor";
 import { SettingsEnhancements } from "./SettingsEnhancements";
+import { AdminCourierConnections } from "./AdminCourierConnections";
 import { AdminSection } from "./AdminFields";
 import { Button, ErrorMessage, Field, Notice, PageHeading } from "./ui";
 
-const settingsKeys = ["businessName", "tagline", "taglineHi", "whatsapp", "instagram", "facebook", "contactEmail", "announcement", "announcementHi", "about", "aboutHi", "faqs", "bannerMediaId", "revision", "serviceAreas", "garmentBasePrices", "welcome", "policies", "support", "homepage"];
+const settingsKeys = ["businessName", "tagline", "taglineHi", "whatsapp", "instagram", "facebook", "contactEmail", "announcement", "announcementHi", "about", "aboutHi", "faqs", "bannerMediaId", "revision", "serviceAreas", "deliveryPricing", "garmentBasePrices", "welcome", "policies", "support", "homepage"];
 const initialDraft = settings => ({ businessName: "Khwab Stitch", tagline: "", whatsapp: "", instagram: "", contactEmail: "", announcement: "", about: "", faqs: [], bannerMediaId: null, ...structuredClone(settings), homepage: homepageDraft(settings.homepage) });
 
 export function AdminWebsiteSettings({ settings, onSave }) {
@@ -61,5 +62,6 @@ export function AdminWebsiteSettings({ settings, onSave }) {
       </AdminSection>}
       <div className="admin-save-bar"><Button className="button" busy={busy}>{t("Save website content")}</Button><button data-admin-discard type="button" className="button secondary" onClick={() => { setDraft(initialDraft(settings)); setError(""); setSaved(false); const form = document.getElementById("owner-website-settings"); if (form) form.dataset.adminDirty = "false"; }}>{t("Cancel changes")}</button></div>
     </fieldset></form>
+    {section === "business" && <AdminCourierConnections originPin={draft.deliveryPricing?.originPin || ""} />}
   </>;
 }

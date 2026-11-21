@@ -281,7 +281,7 @@ export function DesignPresentation({ design, preview = false }) {
   useLanguage();
   design = withProductionDesignDetails(withDesignPhotography(design));
   const isAlteration = design.garment === "alteration";
-  const hasPrice = Number.isSafeInteger(design.startingPricePaise) && design.startingPricePaise >= 0;
+  const hasPrice = !isAlteration && Number.isSafeInteger(design.startingPricePaise) && design.startingPricePaise >= 0;
   const Heading = preview ? "h2" : "h1";
   return (
     <div className="detail-grid design-presentation">
@@ -293,7 +293,7 @@ export function DesignPresentation({ design, preview = false }) {
         <Heading>{localize(design, "title")}</Heading>
         <p className="detail-price">
           {hasPrice && <span>{t(isAlteration ? "public.design.alterationPrice" : "Stitching starting from")}</span>}
-          <strong>{hasPrice ? money(design.startingPricePaise) : t("public.design.pricePending")}</strong>
+          <strong>{hasPrice ? money(design.startingPricePaise) : t(isAlteration ? "public.design.alterationPrice" : "public.design.pricePending")}</strong>
         </p>
         {!preview && (
           <Link

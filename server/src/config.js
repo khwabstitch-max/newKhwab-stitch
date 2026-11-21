@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { validJwtSecret } from "./auth.js";
+import { mongoDnsServers } from "./database-connect.js";
 const schema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   MONGODB_URI: z.string().regex(/^mongodb(\+srv)?:\/\//),
+  MONGODB_DNS_SERVERS: z.string().default("").refine(value => { try { mongoDnsServers(value); return true; } catch { return false; } }, "Use up to four comma-separated DNS server IP addresses."),
   CORS_ORIGINS: z.string().min(1),
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(3).default(0),
   JWT_SECRET: z
@@ -15,6 +17,7 @@ const schema = z.object({
       "Use canonical base64url encoding of at least 48 random bytes.",
     ),
   RESEND_API_KEY: z.string().default(""),
+  COURIER_CREDENTIALS_KEY: z.string().default(""),
   GOOGLE_CLIENT_ID: z
     .union([
       z.literal(""),

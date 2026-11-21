@@ -169,7 +169,9 @@ export function publicRoutes(app, ctx, auth) {
         : null,
     ]);
     const bannerImageUrl = bannerAsset ? ctx.images.url(bannerAsset.filePath, 3600) : null;
-    res.set("Cache-Control", publicEdgeCache).json({ data: { ...safe, ...(homepage ? { homepage } : {}), bannerImageUrl } });
+    const publicBasePrices = safe.garmentBasePrices && typeof safe.garmentBasePrices === "object"
+      ? Object.fromEntries(Object.entries(safe.garmentBasePrices).filter(([garment]) => garment !== "alteration")) : safe.garmentBasePrices;
+    res.set("Cache-Control", publicEdgeCache).json({ data: { ...safe, garmentBasePrices: publicBasePrices, ...(homepage ? { homepage } : {}), bannerImageUrl } });
   });
   app.get("/api/me", auth, async (req, res) => {
     const identity = models.AccountIdentity

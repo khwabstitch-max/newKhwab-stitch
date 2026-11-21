@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { connectDatabase } from "./database-connect.js";
 import pino from "pino";
 import { loadConfig } from "./config.js";
 import { createModels, transaction } from "./models.js";
@@ -16,11 +17,12 @@ export { createApplicationLoader, createServerlessHandler } from "./startup.js";
 // sessions and limits remain in MongoDB, never in this cache.
 export const getApplication = createApplicationLoader(async()=>{
   const config=await startupStep("configuration",()=>loadConfig());
+  const logger=pino({level:config.LOG_LEVEL});
   mongoose.set("bufferCommands",false);
-  if(mongoose.connection.readyState!==1) await startupStep("database",()=>mongoose.connect(config.MONGODB_URI,{
+  if(mongoose.connection.readyState!==1) await startupStep("database",()=>connectDatabase(mongoose,config,{
     autoIndex:false,maxPoolSize:5,minPoolSize:0,maxIdleTimeMS:60000,
     serverSelectionTimeoutMS:8000,connectTimeoutMS:8000,socketTimeoutMS:20000,
-  }));
+  },{logger}));
   const models=createModels();
   await Promise.all([
     startupStep("credential_indexes",()=>assertCredentialIndexes(models)),
@@ -28,6 +30,6 @@ export const getApplication = createApplicationLoader(async()=>{
     ...(config.GOOGLE_CLIENT_ID ? [startupStep("google_indexes",()=>assertGoogleIndexes(models))] : []),
     startupStep("deployment_indexes",()=>assertDeploymentIndexes(models)),
   ]);
-  return startupStep("application",()=>createApp({config:{...config,SERVERLESS:true},models,transaction,images:imageProvider(config),logger:pino({level:config.LOG_LEVEL}),dbReady:()=>databaseReady(mongoose.connection)}));
+  return startupStep("application",()=>createApp({config:{...config,SERVERLESS:true},models,transaction,images:imageProvider(config),logger,dbReady:()=>databaseReady(mongoose.connection)}));
 });
 export default createServerlessHandler(getApplication);

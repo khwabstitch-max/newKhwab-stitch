@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 import { setLanguage } from "../i18n/core";
-import { estimateLineLabel } from "../lib/order-labels";
+import { estimateLineLabel, knownTransportAmount } from "../lib/order-labels";
 
 afterEach(() => setLanguage("en", false));
 it("localizes authoritative estimate labels and option snapshots without changing money, codes or authored text", () => {
@@ -33,4 +33,10 @@ it("shows included components once and keeps unquoted custom work distinct from 
   setLanguage("hi", false);
   expect(estimateLineLabel({ code: "neck:reference", label: "Front neck design" })).toBe("आगे के गले का डिज़ाइन");
   expect(estimateLineLabel({ code: "transport:outbound", label: "outbound transport · Owner area" })).toContain("Owner area");
+});
+
+it("separates known shipment charges from legacy alteration work estimates without mutating history",()=>{
+ const estimate={knownSubtotalPaise:23000,lineItems:[{code:"stitching",scope:"garment",amountPaise:15000},{code:"transport:inbound",scope:"shipment",amountPaise:8000}]};
+ const before=JSON.stringify(estimate);expect(knownTransportAmount(estimate)).toBe(8000);expect(JSON.stringify(estimate)).toBe(before);
+ expect(knownTransportAmount({knownTransportSubtotalPaise:0,lineItems:estimate.lineItems})).toBe(0);
 });

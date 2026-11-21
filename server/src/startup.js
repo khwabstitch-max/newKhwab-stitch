@@ -10,7 +10,7 @@ const codes = {
   runtime_import: "RUNTIME_IMPORT_FAILED",
   application: "APPLICATION_STARTUP_FAILED",
 };
-const configNames = new Set(["NODE_ENV","PORT","MONGODB_URI","CORS_ORIGINS","TRUST_PROXY_HOPS","JWT_SECRET","RESEND_API_KEY","EMAIL_FROM","PUBLIC_WEB_URL","GOOGLE_CLIENT_ID","IMAGEKIT_PRIVATE_KEY","IMAGEKIT_URL_ENDPOINT","IMAGEKIT_PRIVATE_POLICY_VERIFIED","LOG_LEVEL"]);
+const configNames = new Set(["NODE_ENV","PORT","MONGODB_URI","MONGODB_DNS_SERVERS","CORS_ORIGINS","TRUST_PROXY_HOPS","JWT_SECRET","RESEND_API_KEY","EMAIL_FROM","PUBLIC_WEB_URL","GOOGLE_CLIENT_ID","IMAGEKIT_PRIVATE_KEY","IMAGEKIT_URL_ENDPOINT","IMAGEKIT_PRIVATE_POLICY_VERIFIED","LOG_LEVEL"]);
 export class StartupError extends Error {
   constructor(stage, cause) { super("The application could not initialize.",{cause});this.name="StartupError";this.stage=stage;this.code=codes[stage]||"SERVICE_UNAVAILABLE";this.fields=cause?.name==="ConfigurationError"?(cause.fields||[]).filter(field=>configNames.has(field)):[]; }
 }

@@ -1,3 +1,7 @@
+import { rateLimitFor } from "./rate-limits.js";
+import { deliveryPricingInput, distanceDeliveryCharge, DISTANCE_PENDING_REASON, courierDeliveryCharge, transportPriceFingerprint } from "./delivery-pricing.js";
+import { resolveTransportDistances } from "./pin-distance.js";
+import { resolveTransportQuotes } from "./courier-accounts.js";
 import { z } from "zod";
 import { GARMENTS, objectId } from "./domain.js";
 import { configurationInput, logisticsInput } from "./workflow-input.js";
@@ -14,7 +18,7 @@ export const estimateInput = z
     logistics: logisticsInput.optional(),
   })
   .strict();
-export const PRICING_VERSION = "2026-11-production-review-v4";
+export const PRICING_VERSION = "2026-11-production-review-v6";
 const componentNames = {
   sleeve: "Sleeve design",
   sleeveLength: "Sleeve length",
@@ -69,7 +73,7 @@ export function matchingServiceArea(serviceAreas, pin) {
 }
 export function calculateEstimate(
   input,
-  { design = null, options = [], settings = {} } = {},
+  { design = null, options = [], settings = {}, transportDistances = {}, transportQuotes = {}, now = Date.now() } = {},
 ) {
   const lineItems = [],
     pendingItems = [],
@@ -109,7 +113,10 @@ export function calculateEstimate(
   const base =
     design?.startingPricePaise ?? settings.garmentBasePrices?.[input.garment];
   const uploadedDesign = config?.source === "reference";
-  if (uploadedDesign)
+  const alteration = input.garment === "alteration";
+  if (alteration)
+    pending("alteration:assessment", "Garment assessment", "Alteration work and the final price are confirmed after we review the garment.");
+  else if (uploadedDesign)
     pending(
       "stitching",
       "Custom design stitching",
@@ -122,12 +129,7 @@ export function calculateEstimate(
       "Stitching price after tailor review.",
     );
   else add("stitching", `Base stitching · ${design?.title || input.garment}`, base);
-  if (input.garment === "alteration")
-    pending(
-      "alteration:assessment",
-      "Garment assessment",
-      "Alteration work and the final price are confirmed after we review the garment.",
-    );
+
   const usedOptions = new Set();
   const includedAddons = new Set((config?.source === "catalogue" ? design?.includedAddonIds || [] : []).map(String));
   const chargeOption = (kind, id, isAddon = false, included = false) => {
@@ -155,6 +157,10 @@ export function calculateEstimate(
     else addons.push(snapshot);
     const label = isAddon ? option.name : `${componentNames[kind]} adjustment · ${option.name}`;
     const details = isAddon ? { materialCoverage: snapshot.materialCoverage, materialNotes: snapshot.materialNotes } : {};
+    if (alteration) {
+      pending(`${kind}:${id}`, label, "Alteration work and the final price are confirmed after we review the garment.");
+      return;
+    }
     if (uploadedDesign && kind !== "sleeveLength") {
       pending(
         `${kind}:${id}`,
@@ -198,7 +204,7 @@ export function calculateEstimate(
         included: true,
       };
       usedOptions.add(String(id));
-      add(`${kind}:included`, `${componentNames[kind]} · ${option.name} · included`, 0, "garment", {
+      if (!alteration) add(`${kind}:included`, `${componentNames[kind]} · ${option.name} · included`, 0, "garment", {
         included: true,
       });
     } else if (!["fit", "sleeveLength"].includes(kind)) {
@@ -308,6 +314,22 @@ export function calculateEstimate(
       continue;
     }
     const pin = transport.address?.pin;
+    if (settings.deliveryPricing?.mode === "courier") {
+      const charge = courierDeliveryCharge(settings.deliveryPricing, direction, pin, transport.parcel, transportQuotes?.[direction], now);
+      const details = { direction, method: "business", postalCode: pin || "", ...charge.details };
+      if (charge.amountPaise === null) pending(`transport:${direction}`, `${direction} transport`, charge.reason, details);
+      else add(`transport:${direction}`, `${direction} transport · ${charge.details.courierName}`, charge.amountPaise, "shipment", details);
+      continue;
+    }
+    const hasDeliveryConfig = settings.deliveryPricing !== undefined;
+    const validDeliveryConfig = !hasDeliveryConfig || deliveryPricingInput.safeParse(settings.deliveryPricing).success;
+    if (settings.deliveryPricing?.mode === "distance" || !validDeliveryConfig) {
+      const charge = distanceDeliveryCharge(settings.deliveryPricing, direction, pin, transportDistances?.[direction]);
+      const details = { direction, method: "business", postalCode: pin || "", ...charge.details };
+      if (charge.amountPaise === null) pending(`transport:${direction}`, `${direction} transport`, DISTANCE_PENDING_REASON, details);
+      else add(`transport:${direction}`, `${direction} transport · ${charge.details.billableKm} km`, charge.amountPaise, "shipment", details);
+      continue;
+    }
     const area = matchingServiceArea(settings.serviceAreas, pin);
     const rate = area?.[`${direction}Paise`];
     if (!area || rate === null || rate === undefined)
@@ -362,6 +384,8 @@ export function calculateEstimate(
         revision: o.revision || 0,
       })),
       settingsRevision: settings.revision || 0,
+      deliveryPricing: settings.deliveryPricing || null,
+      transportPricing: [...lineItems.filter(item => item.scope === "shipment"), ...pendingItems.filter(item => item.code.startsWith("transport:"))].map(transportPriceFingerprint),
     }),
     lineItems,
     pendingItems,
@@ -406,14 +430,21 @@ export async function loadEstimate(ctx, input, session = null) {
       .lean(),
     ctx.models.SiteSettings.findOne({ key: "main" }).session(session).lean(),
   ]);
+  const [transportDistances, transportQuotes] = await Promise.all([
+    resolveTransportDistances(input, settings || {}),
+    resolveTransportQuotes(ctx, input, settings || {}, session),
+  ]);
   return calculateEstimate(input, {
     design,
     options,
     settings: settings || {},
+    transportDistances,
+    transportQuotes,
   });
 }
 export function pricingRoutes(app, ctx) {
-  app.post("/api/pricing/estimate", async (req, res) => {
+  const estimateLimit = rateLimitFor(ctx, "pricing_estimate", { windowMs: 15 * 60 * 1000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false, handler: ctx.limitHandler });
+  app.post("/api/pricing/estimate", estimateLimit, async (req, res) => {
     const body = estimateInput.parse(req.body);
     // This public endpoint returns configured costs only; it never dereferences private reference IDs.
     res

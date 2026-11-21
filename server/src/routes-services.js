@@ -138,7 +138,11 @@ export function serviceRoutes(app, ctx, auth) {
     );
     res.json(
       pageResult(
-        available.slice((q.page - 1) * q.limit, q.page * q.limit),
+        available.slice((q.page - 1) * q.limit, q.page * q.limit).map(service => {
+          if (service.serviceType !== "alteration" && !service.itemTypes?.includes("alteration")) return service;
+          const { basePricePaise: _reviewPrice, ...publicService } = service;
+          return publicService;
+        }),
         available.length,
         q,
       ),

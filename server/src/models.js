@@ -1,3 +1,4 @@
+import { deliveryPricingInput, COURIER_PROVIDERS } from "./delivery-pricing.js";
 import mongoose from "mongoose";
 import { GARMENTS, STATUSES } from "./domain.js";
 import { createExtensionSchemas } from "./models-extension.js";
@@ -15,6 +16,18 @@ const text = (max = 2000) => ({
 });
 export function createModels(connection = mongoose) {
   const schemas = {
+    CourierConnection: new Schema({
+      provider: { type: String, enum: COURIER_PROVIDERS, required: true, unique: true },
+      encryptedCredentials: { type: new Schema({
+        ciphertext: { type: String, required: true, maxlength: 65536 },
+        iv: { type: String, required: true, maxlength: 256 },
+        tag: { type: String, required: true, maxlength: 256 },
+        keyVersion: { type: Number, required: true, default: 1, min: 1, max: 65535, validate: Number.isInteger },
+      }, { _id: false, strict: "throw" }), required: true, select: false },
+      lastVerifiedAt: Date, lastCheckedAt: Date,
+      lastErrorCode: { type: String, maxlength: 80 },
+      updatedBy: { type: oid, ref: "User" },
+    }, opts),
     CatalogueCodeSequence: new Schema({ _id: { type: String }, value: { type: Number, required: true, min: 0, default: 0 } }, opts),
     RequestLimit: new Schema({ key: {type:String,required:true}, bucket:{type:Number,required:true}, hits:{type:Number,default:0,min:0}, expiresAt:{type:Date,required:true} }, opts),
     User: new Schema(
@@ -288,6 +301,7 @@ export function createModels(connection = mongoose) {
       {
         key: { type: String, required: true, unique: true },
         serviceAreas: { type: [Schema.Types.Mixed], default: undefined },
+        deliveryPricing: { type: Schema.Types.Mixed, default: undefined, validate: { validator: value => value === undefined || deliveryPricingInput.safeParse(value).success, message: "Choose complete, valid delivery pricing settings." } },
         garmentBasePrices: { type: Schema.Types.Mixed, default: undefined },
         policies: Schema.Types.Mixed,
         support: Schema.Types.Mixed,

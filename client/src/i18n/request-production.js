@@ -1,4 +1,27 @@
 export const requestProductionCopy = {
+"shipping.parcel.inbound":{"en":"Pickup parcel details","hi":"पिकअप पार्सल की जानकारी"},
+"shipping.parcel.outbound":{"en":"Delivery parcel details","hi":"डिलीवरी पार्सल की जानकारी"},
+"shipping.parcel.hint":{"en":"A live courier estimate needs packed weight and all three dimensions. If these are unknown, leave them blank; the atelier will confirm the charge after checking the parcel.","hi":"लाइव कूरियर अनुमान के लिए पैक किए पार्सल का वज़न और तीनों माप चाहिए। जानकारी न हो तो खाली छोड़ें; पार्सल की जाँच के बाद शुल्क तय होगा।"},
+"shipping.parcel.known":{"en":"I can provide the packed parcel measurements","hi":"मैं पैक किए पार्सल का वज़न और माप बता सकती हूँ"},
+"shipping.parcel.weightGrams":{"en":"Packed weight (grams)","hi":"पैक किया वज़न (ग्राम)"},
+"shipping.parcel.lengthCm":{"en":"Length (cm)","hi":"लंबाई (सेमी)"},
+"shipping.parcel.widthCm":{"en":"Width (cm)","hi":"चौड़ाई (सेमी)"},
+"shipping.parcel.heightCm":{"en":"Height (cm)","hi":"ऊँचाई (सेमी)"},
+"shipping.parcel.value":{"en":"Declared fabric / garment value (INR, optional)","hi":"कपड़े का घोषित मूल्य (₹, वैकल्पिक)"},
+"shipping.parcel.valueRequired":{"en":"Shiprocket needs this value for a pickup estimate. If unknown, the pickup charge stays pending until review.","hi":"Shiprocket के पिकअप अनुमान के लिए यह मूल्य चाहिए। जानकारी न हो तो जाँच तक पिकअप शुल्क लंबित रहेगा।"},
+"shipping.parcel.valueHint":{"en":"Enter the actual declared value if known. This does not add insurance or book a shipment.","hi":"मूल्य पता हो तो सही घोषित मूल्य भरें। इससे बीमा या शिपमेंट बुक नहीं होता।"},
+"shipping.parcel.privacy":{"en":"For a live estimate, the selected courier receives the two PIN codes and these parcel details.","hi":"लाइव अनुमान के लिए चुने गए कूरियर को दोनों PIN कोड और पार्सल की यह जानकारी भेजी जाएगी।"},
+"shipping.parcel.summary":{"en":"Packed parcel: {0} g · {1} × {2} × {3} cm","hi":"पैक किया पार्सल: {0} ग्राम · {1} × {2} × {3} सेमी"},
+"shipping.parcel.declared":{"en":"Declared value: {0}","hi":"घोषित मूल्य: {0}"},
+"Pickup or delivery charges are pending until we can confirm the distance between the atelier PIN and your PIN.":{"en":"Pickup or delivery charges are pending until we can confirm the distance between the atelier PIN and your PIN.","hi":"अटेलियर और आपके PIN के बीच दूरी तय होने तक पिकअप या डिलीवरी शुल्क लंबित है।"},
+"The connected courier's shipping rate is not available yet. We will confirm the transport charge before stitching.":{"en":"The connected courier's shipping rate is not available yet. We will confirm the transport charge before stitching.","hi":"जुड़े कूरियर का शुल्क अभी उपलब्ध नहीं है। सिलाई से पहले परिवहन शुल्क तय किया जाएगा।"},
+"Enter parcel weight and dimensions to check the connected courier's pickup or delivery charge.":{"en":"Enter parcel weight and dimensions to check the connected courier's pickup or delivery charge.","hi":"जुड़े कूरियर का पिकअप या डिलीवरी शुल्क जानने के लिए पार्सल का वज़न और माप भरें।"},
+"Enter the fabric or garment's declared value to check the courier pickup charge.":{"en":"Enter the fabric or garment's declared value to check the courier pickup charge.","hi":"कूरियर पिकअप शुल्क जानने के लिए कपड़े का घोषित मूल्य भरें।"},
+"The courier quote has expired. Check the shipping rate again before submitting.":{"en":"The courier quote has expired. Check the shipping rate again before submitting.","hi":"कूरियर अनुमान की अवधि समाप्त हो गई है। अनुरोध भेजने से पहले शुल्क दोबारा जाँचें।"},
+"Courier credential storage is not configured on the server.":{"en":"Courier credential storage is not configured on the server.","hi":"सर्वर पर कूरियर क्रेडेंशियल का सुरक्षित भंडारण कॉन्फ़िगर नहीं है।"},
+"Check the required courier account credentials.":{"en":"Check the required courier account credentials.","hi":"कूरियर खाते के आवश्यक क्रेडेंशियल जाँचें।"},
+"A live courier estimate is unavailable. Check the account, PIN codes and package details.":{"en":"A live courier estimate is unavailable. Check the account, PIN codes and package details.","hi":"लाइव कूरियर अनुमान उपलब्ध नहीं है। खाता, PIN कोड और पार्सल की जानकारी जाँचें।"},
+  "request.alterationPriceNote": { en: "We will review your garment and requested changes, then send a quote for your approval. Pickup and delivery charges are shown separately.", hi: "हम आपके कपड़े और ज़रूरी बदलावों की जाँच करके आपकी मंज़ूरी के लिए कोटेशन भेजेंगे। पिकअप और डिलीवरी का शुल्क अलग दिखाया गया है।" },
   "request.references.count": { en: "{0} of {1} reference files added", hi: "{1} में से {0} संदर्भ फ़ाइलें जोड़ी गई हैं" },
 "The prepared PDF exceeds 3 MiB. Export a smaller PDF.":{"en":"The prepared PDF exceeds 3 MiB. Export a smaller PDF.","hi":"तैयार PDF का आकार 3 MiB से अधिक है। छोटी PDF बनाकर अपलोड करें।"},
 "PDF files may be uploaded only as design references. Use an image for this upload.":{"en":"PDF files may be uploaded only as design references. Use an image for this upload.","hi":"PDF केवल डिज़ाइन संदर्भ के लिए अपलोड कर सकती हैं। इस अपलोड के लिए तस्वीर चुनें।"},
@@ -33,8 +56,8 @@ export const requestProductionCopy = {
     "hi": "अल्टरेशन का अनुरोध करें"
   },
   "public.design.alterationPrice": {
-    "en": "Alterations starting from",
-    "hi": "अल्टरेशन की शुरुआती कीमत"
+    "en": "Price after garment review",
+    "hi": "कपड़े की जाँच के बाद कीमत"
   },
   "public.design.alterationBring": {
     "en": "Bring the garment you want altered.",

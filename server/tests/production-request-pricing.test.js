@@ -91,7 +91,9 @@ test("unchanged catalogue parts are included once and unresolved originals use c
 
 test("alterations request a garment assessment without irrelevant sleeve and neckline defaults", () => {
   const result = priced(input({ garment: "alteration" }), { design: { _id: ids.design, title: "Fit adjustments", garment: "alteration", startingPricePaise: 15000, defaultComponents: {} }, options: [] });
-  assert.equal(result.knownSubtotalPaise, 15000);
+  assert.equal(result.knownSubtotalPaise, 0);
+  assert.equal(result.knownGarmentSubtotalPaise, 0);
+  assert.equal(result.lineItems.some(item => item.scope === "garment"), false);
   assert.equal(result.estimatedTotalPaise, null);
   assert.deepEqual(result.components, {});
   assert.deepEqual(result.pendingItems.map(item => item.code), ["alteration:assessment"]);
@@ -140,4 +142,29 @@ test("optional preferred-date reasons are trimmed and preserved without changing
   await saved.validate();
   assert.equal(saved.toObject().preferredDateReason, "Family wedding");
   await connection.close();
+});
+
+test("alteration assessment ignores legacy catalogue and service base prices while charging only configured PIN transport", () => {
+  const logistics = { inbound: { method: "business", address: address("110001") }, outbound: { method: "business", address: address("110002") } };
+  for (const base of [undefined, 0, 15000, 99000]) {
+    const result = calculateEstimate({ garment: "alteration", quantity: 4, logistics }, { settings: { garmentBasePrices: { alteration: base }, serviceAreas } });
+    assert.equal(result.knownGarmentSubtotalPaise, 0); assert.equal(result.knownTransportSubtotalPaise, 23000);
+    assert.equal(result.knownSubtotalPaise, 23000); assert.equal(result.estimatedTotalPaise, null);
+    assert.equal(result.hasPending, true); assert.ok(result.pendingItems.some(item => item.code === "alteration:assessment"));
+    assert.ok(result.lineItems.every(item => item.scope === "shipment"));
+  }
+});
+test("configured alteration fit and add-on fees remain pending before garment review", () => {
+  const fit = { ...original("sleeve", "fit"), garments: ["alteration"], priceMode: "additional", amountPaise: 7000 };
+  const extra = { ...original("addon", "extra"), garments: ["alteration"], priceMode: "replacement", replacementAdjustmentPaise: 8000 };
+  const alterationDesign = { ...design, garment: "alteration", startingPricePaise: 15000, defaultComponents: {}, includedAddonIds: [] };
+  const value = input({ garment: "alteration", configuration: { source: "catalogue", mode: "custom", components: { fit: { source: "option", optionId: fit._id } }, addonIds: [extra._id] } });
+  const result = calculateEstimate(value, { design: alterationDesign, options: [fit, extra] });
+  assert.equal(result.knownGarmentSubtotalPaise, 0); assert.equal(result.knownSubtotalPaise, 0);
+  assert.equal(result.estimatedTotalPaise, null); assert.ok(result.lineItems.every(item => item.scope === "shipment"));
+  assert.deepEqual(result.pendingItems.map(item => item.code), ["alteration:assessment", "fit:" + fit._id, "extra:" + extra._id]);
+  assert.equal(result.components.fit.optionId, fit._id); assert.equal(result.addons[0].optionId, extra._id);
+  const exact = calculateEstimate({ ...value, configuration: { source: "catalogue", mode: "exact", components: {}, addonIds: [] } }, { design: { ...alterationDesign, defaultComponents: { fit: fit._id }, includedAddonIds: [extra._id] }, options: [fit, extra] });
+  assert.equal(exact.knownGarmentSubtotalPaise, 0); assert.equal(exact.estimatedTotalPaise, null);
+  assert.ok(exact.lineItems.every(item => item.scope === "shipment"));
 });

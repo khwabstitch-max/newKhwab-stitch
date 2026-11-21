@@ -1,3 +1,4 @@
+import { deliveryPricingInput } from "./delivery-pricing.js";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { homepageInput } from "./homepage-input.js";
@@ -467,6 +468,7 @@ export const settingsInput = z
     businessName: z.string().trim().min(2).max(100),
     homepage: homepageInput.optional(),
     serviceAreas: z.array(serviceAreaInput).max(100).optional(),
+    deliveryPricing: deliveryPricingInput.optional(),
     garmentBasePrices: z
       .object(
         Object.fromEntries(
