@@ -163,8 +163,19 @@ export function SleeveLengthOptions({
             <article
               key={idOf(option)}
               className={`sleeve-length-card${selected ? " is-selected" : ""}`}
+              onDoubleClick={(event) => {
+                event.preventDefault();
+                onSelect(selected ? null : idOf(option));
+              }}
             >
-              <label>
+              <label
+                onClick={(event) => {
+                  if (selected) {
+                    event.preventDefault();
+                    onSelect(null);
+                  }
+                }}
+              >
                 <input
                   type="radio"
                   name={radioName}

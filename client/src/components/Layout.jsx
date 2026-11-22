@@ -5,7 +5,7 @@ import { DEFAULT_HOMEPAGE } from "../data/homepage";
 import { homepageBlock, homepageText, formatSupportSummary } from "../lib/public-homepage";
 import "./public-experience.css";
 import { Link, NavLink, Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { ArrowUpRight, Menu, X, Scissors, UserRound, LogOut, Search, ChevronDown, MessageCircle, Mail } from "lucide-react";
+import { ArrowUpRight, Menu, X, Scissors, UserRound, LogOut, Search, ChevronDown, MessageCircle, Mail, Home, Sparkles } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useSite, prefetchPublicResource } from "../lib/hooks";
 import { ErrorMessage, Spinner } from "./ui";
@@ -119,6 +119,16 @@ export function Layout() {
               </div>
             </details>
             <NavLink className="public-nav-link" to="/how-it-works">{t("public.nav.how")}</NavLink>
+            <button
+              type="button"
+              className="public-nav-link atelier-nav-tailor-btn"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("open-atelier-chat"));
+                setOpen(false);
+              }}
+            >
+              {t("Master tailor guidance")}
+            </button>
             <NavLink className="public-nav-link" to="/contact">{t("public.nav.help")}</NavLink>
           </div>
           <div className="atelier-nav-tools">
@@ -137,6 +147,9 @@ export function Layout() {
             </NavLink>
           </div>
         </nav>
+        <div className="header-mobile-tools">
+          <LanguageSwitcher />
+        </div>
         <Link ref={requestLink} className="button small atelier-request-link" to="/request" aria-label={t("public.action.start")} onClick={() => setOpen(false)}>
           <Scissors size={17} aria-hidden="true" /><span>{t("public.action.start")}</span><ArrowUpRight className="atelier-request-arrow" size={15} aria-hidden="true" />
         </Link>
@@ -207,7 +220,68 @@ export function Layout() {
       </div>
     </footer>
     <CustomerChatWidget />
+    <MobileBottomNav user={user} onOpenChat={() => window.dispatchEvent(new CustomEvent("open-atelier-chat"))} />
   </>;
+}
+
+function MobileBottomNav({ user, onOpenChat }) {
+  const location = useLocation();
+  const userName = user?.name ? user.name.trim().split(" ")[0] : null;
+
+  return (
+    <nav className="mobile-bottom-app-bar" aria-label={t("Mobile navigation")}>
+      <NavLink
+        to="/"
+        className={({ isActive }) =>
+          `mobile-nav-item${isActive && location.pathname === "/" ? " is-active" : ""}`
+        }
+      >
+        <Home size={20} aria-hidden="true" />
+        <span>{t("Home")}</span>
+      </NavLink>
+      <NavLink
+        to="/catalogue"
+        className={({ isActive }) =>
+          `mobile-nav-item${isActive || location.pathname.startsWith("/designs") ? " is-active" : ""}`
+        }
+      >
+        <Sparkles size={20} aria-hidden="true" />
+        <span>{t("public.nav.designs")}</span>
+      </NavLink>
+      <NavLink
+        to="/request"
+        className={({ isActive }) =>
+          `mobile-nav-item mobile-nav-stitch${isActive ? " is-active" : ""}`
+        }
+        aria-label={t("public.action.start")}
+      >
+        <div className="mobile-stitch-circle">
+          <Scissors size={20} aria-hidden="true" />
+        </div>
+        <span>{t("Stitch")}</span>
+      </NavLink>
+      <button
+        type="button"
+        className="mobile-nav-item mobile-nav-chat"
+        onClick={onOpenChat}
+        aria-label={t("Master tailor guidance")}
+      >
+        <MessageCircle size={20} aria-hidden="true" />
+        <span>{t("Chat")}</span>
+      </button>
+      <NavLink
+        to={user ? "/account" : "/login"}
+        className={({ isActive }) =>
+          `mobile-nav-item mobile-nav-profile${isActive ? " is-active" : ""}`
+        }
+      >
+        <UserRound size={20} aria-hidden="true" />
+        <span className="mobile-nav-user-label">
+          {userName || t(user ? "public.nav.account" : "Sign in")}
+        </span>
+      </NavLink>
+    </nav>
+  );
 }
 
 export function Protected({ admin = false }) {

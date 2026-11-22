@@ -1250,6 +1250,36 @@ export function RequestWizard() {
                           <label
                             className={`request-design ${draft.designId === d._id ? "selected" : ""}`}
                             key={d._id}
+                            onClick={(e) => {
+                              if (draft.designId === d._id) {
+                                e.preventDefault();
+                                patch({
+                                  designId: "",
+                                  configuration: {
+                                    ...config,
+                                    mode: "custom",
+                                    changedParts: [],
+                                    components: {},
+                                    addonIds: [],
+                                    extraInitialized: false,
+                                  },
+                                });
+                              }
+                            }}
+                            onDoubleClick={(e) => {
+                              e.preventDefault();
+                              patch({
+                                designId: draft.designId === d._id ? "" : d._id,
+                                configuration: {
+                                  ...config,
+                                  mode: draft.designId === d._id ? "custom" : "exact",
+                                  changedParts: [],
+                                  components: {},
+                                  addonIds: [],
+                                  extraInitialized: false,
+                                },
+                              });
+                            }}
                           >
                             <input
                               type="radio"
@@ -1529,7 +1559,20 @@ export function RequestWizard() {
                   ])
                     .filter((option) => isEnabledAddon(option, draft.garment))
                     .map((o) => (
-                      <label className="request-design" key={o._id}>
+                      <label
+                        className="request-design"
+                        key={o._id}
+                        onDoubleClick={(e) => {
+                          e.preventDefault();
+                          const isChecked = config.addonIds?.includes(o._id) || false;
+                          nested("configuration", {
+                            addonIds: isChecked
+                              ? (config.addonIds || []).filter((id) => id !== o._id)
+                              : [...(config.addonIds || []), o._id],
+                            extraInitialized: true,
+                          });
+                        }}
+                      >
                         <input
                           type="checkbox"
                           checked={config.addonIds?.includes(o._id) || false}
@@ -1625,13 +1668,23 @@ export function RequestWizard() {
                       ? original
                       : selected.optionId,
                   originalId: original,
-                  onSelect: (id) =>
-                    selectPart(kind, {
-                      ...selected,
-                      source: "option",
-                      optionId: id,
-                      notes: selected?.notes || "",
-                    }),
+                  onSelect: (id) => {
+                    if (!id || id === selected?.optionId) {
+                      selectPart(kind, {
+                        ...selected,
+                        source: config.source === "catalogue" ? "original" : "",
+                        optionId: "",
+                        notes: selected?.notes || "",
+                      });
+                    } else {
+                      selectPart(kind, {
+                        ...selected,
+                        source: "option",
+                        optionId: id,
+                        notes: selected?.notes || "",
+                      });
+                    }
+                  },
                   onReset:
                     config.source === "catalogue"
                       ? () =>

@@ -349,8 +349,20 @@ export function VisualOptions({
             <article
               className={`visual-option-card${selected ? " is-selected" : ""}`}
               key={idOf(option)}
+              onDoubleClick={(event) => {
+                event.preventDefault();
+                onSelect(selected ? null : idOf(option));
+              }}
             >
-              <label className="visual-option-selection">
+              <label
+                className="visual-option-selection"
+                onClick={(event) => {
+                  if (selected) {
+                    event.preventDefault();
+                    onSelect(null);
+                  }
+                }}
+              >
                 <input
                   type="radio"
                   name={radioName}
