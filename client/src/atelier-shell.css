@@ -247,6 +247,9 @@
   .atelier-header .brand-wordmark { font-size: 25px; }
   .atelier-header .logo .brand-tagline { font-size: 8px; }
   .atelier-footer .brand-wordmark { font-size: 31px; }
+  .header-mobile-tools .language-picker { height: 38px; min-height: 38px; padding: 0 6px; gap: 3px; }
+  .header-mobile-tools .language-picker select { font-size: 11.5px; max-width: 68px; }
+  .mobile-nav-item span { font-size: 9px; max-width: 52px; }
 }
 html[lang="hi"] .atelier-header .brand-wordmark, html[lang="hi"] .atelier-footer .brand-wordmark { font-family: var(--font-brand); }
 html[lang="hi"] .atelier-footer .atelier-footer-invitation h2 { font-weight: 600; line-height: 1.5; }

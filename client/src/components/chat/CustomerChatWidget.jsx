@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import {
   MessageSquare,
   X,
@@ -10,6 +11,7 @@ import {
   User,
   Download,
   Share2,
+  Compass,
 } from "lucide-react";
 import { t } from "../../i18n/core";
 import { useLanguage } from "../../i18n/Language";
@@ -45,8 +47,107 @@ function formatMessageDate(dateString) {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+function getPageContext(location) {
+  const pathname = location?.pathname || "";
+  const search = location?.search || "";
+
+  if (pathname.startsWith("/catalogue") || pathname.startsWith("/designs")) {
+    return {
+      title: "Catalogue & Design Help",
+      prompts: [
+        "Which fabric works best with this design?",
+        "Can the neck and sleeves be customized?",
+        "What is the estimated stitching price?",
+        "Can you stitch from my own photo reference?",
+      ],
+    };
+  }
+
+  if (pathname.startsWith("/request")) {
+    if (search.includes("measurements")) {
+      return {
+        title: "Stitching Request Guidance",
+        prompts: [
+          "How do I measure myself accurately at home?",
+          "Can I send a well-fitting sample garment?",
+          "Can tailor take my measurements via video call?",
+          "What is the total stitching estimate?",
+        ],
+      };
+    }
+    if (search.includes("fabric") || search.includes("delivery")) {
+      return {
+        title: "Stitching Request Guidance",
+        prompts: [
+          "How does fabric doorstep pickup work?",
+          "How much fabric is required for this garment?",
+          "What is the delivery turnaround time?",
+          "What is the total stitching estimate?",
+        ],
+      };
+    }
+    return {
+      title: "Stitching Request Guidance",
+      prompts: [
+        "Can you help me choose the best design options?",
+        "How do I provide my measurements?",
+        "Can I send my own fabric for stitching?",
+        "What is the total stitching estimate?",
+      ],
+    };
+  }
+
+  if (pathname.startsWith("/account/orders") || pathname.startsWith("/account/tracking")) {
+    return {
+      title: "Order Status & Delivery",
+      prompts: [
+        "What is the current status of my outfit?",
+        "Can I update my delivery address or phone?",
+        "When will my stitched order be delivered?",
+        "Can I speak with the master tailor working on my dress?",
+      ],
+    };
+  }
+
+  if (pathname.startsWith("/how-it-works")) {
+    return {
+      title: "How Atelier Stitching Works",
+      prompts: [
+        "How does doorstep fabric pickup and delivery work?",
+        "Do you provide fabric or do I send my own?",
+        "What if the dress needs alteration after delivery?",
+        "How do I place my first stitching request?",
+      ],
+    };
+  }
+
+  if (pathname.startsWith("/contact")) {
+    return {
+      title: "Master Tailor Support",
+      prompts: [
+        "I have a question about a bespoke design",
+        "I need help choosing fabric for an occasion",
+        "Can you duplicate a designer outfit from photo?",
+        "What are your working hours and response time?",
+      ],
+    };
+  }
+
+  return {
+    title: "Master Tailor Guidance",
+    prompts: [
+      "Custom Stitching Enquiry",
+      "How to provide measurements?",
+      "Price estimate for suit / kurti / blouse",
+      "Turnaround and delivery time",
+    ],
+  };
+}
+
 export function CustomerChatWidget() {
   useLanguage();
+  const location = useLocation();
+  const pageContext = getPageContext(location);
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window !== "undefined") {
       return (
@@ -1003,23 +1104,33 @@ export function CustomerChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Customer Question Prompt Chips */}
-          {customerPrompts && customerPrompts.length > 0 && (
+          {/* Customer Question Prompt Chips & Page Context */}
+          <div className="khwab-chat-context-section" aria-label={t("Page context suggestions")}>
+            <div className="khwab-chat-context-bar">
+              <div className="khwab-chat-context-tag">
+                <Compass size={13} aria-hidden="true" />
+                <span>{t(pageContext.title)}</span>
+              </div>
+              <span className="khwab-chat-context-hint">
+                {t("Tap a quick question or type your own below:")}
+              </span>
+            </div>
+
             <div className="khwab-chat-quick-prompts" aria-label={t("Customer Question Prompts")}>
-              {customerPrompts.map((prompt, idx) => (
+              {(pageContext.prompts?.length ? pageContext.prompts : customerPrompts).map((prompt, idx) => (
                 <button
                   key={idx}
                   type="button"
                   className="khwab-chat-prompt-chip"
                   onClick={() => handleSendPrompt(prompt)}
                   disabled={isSending}
-                  title={prompt}
+                  title={t(prompt)}
                 >
                   <span>{t(prompt)}</span>
                 </button>
               ))}
             </div>
-          )}
+          </div>
 
           {/* Composer Footer */}
           <footer className="khwab-chat-composer">

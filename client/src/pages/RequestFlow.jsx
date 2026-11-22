@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Check, CircleHelp, LoaderCircle, Save, Search, X } from "lucide-react";
+import { Check, LoaderCircle, Save, Search, X } from "lucide-react";
 import { api, money, readable } from "../lib/api";
 import { uploadMedia, REFERENCE_ACCEPT, REFERENCE_FILE_LIMIT } from "../lib/media";
 import { ReferenceFilePreview } from "../components/ReferenceFilePreview";
@@ -1048,16 +1048,6 @@ export function RequestWizard() {
               <Save size={15} aria-hidden="true" />
               {t("Save draft")}
             </button>
-            <Link
-              className="text-link wizard-tailor-help"
-              onClick={(e) => {
-                if (!persist()) e.preventDefault();
-              }}
-              to={`/account/support?draft=${cloud.current?.id || draft.id}&step=${step}`}
-            >
-              <CircleHelp size={16} aria-hidden="true" />
-              {t("Need Help from a Master Tailor?")}
-            </Link>
           </div>
         </div>
       <div className="wizard-request-section">
@@ -1622,15 +1612,6 @@ export function RequestWizard() {
                     {t("Load more additions")}
                   </button>
                 )}
-                <Link
-                  className="text-link"
-                  onClick={(event) => {
-                    if (!persist()) event.preventDefault();
-                  }}
-                  to={`/account/support?draft=${cloud.current?.id || draft.id}&step=component-extra`}
-                >
-                  {t("Need Help from a Master Tailor?")}
-                </Link>
               </>
             )}
             {step.startsWith("component-") &&
@@ -1888,15 +1869,6 @@ export function RequestWizard() {
                           </button>
                         </Notice>
                       )}
-                    <Link
-                      className="text-link"
-                      onClick={(event) => {
-                        if (!persist()) event.preventDefault();
-                      }}
-                      to={`/account/support?draft=${cloud.current?.id || draft.id}&step=${step}`}
-                    >
-                      {t("Need Help from a Master Tailor?")}
-                    </Link>
                     <ErrorMessage
                       message={originals?.error}
                       retry={() => setOriginalRefresh((value) => value + 1)}
@@ -2566,15 +2538,6 @@ export function RequestWizard() {
               )}
             </p>
           </details>
-          <Link
-            className="text-link"
-            onClick={(e) => {
-              if (!persist()) e.preventDefault();
-            }}
-            to={`/account/support?draft=${cloud.current?.id || draft.id}&step=${step}`}
-          >
-            {t("Need Help from a Master Tailor?")}
-          </Link>
         </aside>
       </div>
       </div>

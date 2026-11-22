@@ -191,17 +191,14 @@ it("can remove a saved addition that is no longer available without clearing unr
   expect(loadDraft(draft.id).notes).toBe("Keep unrelated request notes");
 });
 
-it("saves the latest private component note immediately before opening its tailor-help link", async () => {
+it("saves the latest private component note immediately before saving draft", async () => {
   const draft = mount({ step: "component-sleeve" });
   const user = userEvent.setup();
   await user.type(
     await screen.findByLabelText("Notes for this part (optional)"),
     " + latest edit",
   );
-  const links = screen.getAllByRole("link", {
-    name: "Need Help from a Master Tailor?",
-  });
-  await user.click(links[1]);
+  await user.click(screen.getByRole("button", { name: "Save draft" }));
   expect(loadDraft(draft.id).configuration.components.sleeve.notes).toBe(
     "Keep puff note + latest edit",
   );
