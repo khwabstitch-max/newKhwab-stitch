@@ -1,0 +1,191 @@
+/* KhwabStitch Atelier Direct Chat Concierge Page */
+
+.direct-chat-concierge {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 80px 20px;
+}
+
+.direct-chat-hero {
+  text-align: center;
+  background: linear-gradient(180deg, #faf7f2 0%, #f4ede2 100%);
+  border: 1px solid #e7ded2;
+  border-radius: 20px;
+  padding: 44px 24px;
+  margin-bottom: 36px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  position: relative;
+}
+
+.direct-chat-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #145d58;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  margin-bottom: 16px;
+  transition: opacity 0.15s ease;
+}
+
+.direct-chat-back-link:hover {
+  opacity: 0.8;
+}
+
+.direct-chat-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e6dfd3;
+  color: #145d58;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+  border: 1px solid #dcd3c5;
+}
+
+.direct-chat-title {
+  font-family: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  color: #241f1a;
+  margin: 0 0 10px 0;
+  line-height: 1.25;
+}
+
+.direct-chat-subtitle {
+  font-size: 16px;
+  color: #665e55;
+  margin: 0 0 8px 0;
+}
+
+.direct-chat-hint {
+  font-size: 13px;
+  color: #8c8275;
+  max-width: 540px;
+  margin: 0 auto 28px auto;
+  line-height: 1.45;
+}
+
+.direct-chat-cta-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.direct-chat-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #145d58;
+  color: #fffdf9;
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(20, 93, 88, 0.25);
+  transition: all 0.2s ease;
+}
+
+.direct-chat-open-btn:hover {
+  background: #0d4440;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(20, 93, 88, 0.35);
+}
+
+.direct-chat-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  color: #145d58;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid #dcd3c5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.direct-chat-share-btn:hover {
+  background: #f7f2eb;
+  border-color: #145d58;
+}
+
+.direct-chat-features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.direct-chat-feature-card {
+  background: #fffdf9;
+  border: 1px solid #e8e0d5;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.direct-chat-feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+.direct-chat-feature-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #f0e9dc;
+  color: #145d58;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.direct-chat-feature-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #241f1a;
+  margin: 0 0 8px 0;
+}
+
+.direct-chat-feature-card p {
+  font-size: 13.5px;
+  color: #665e55;
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .direct-chat-hero {
+    padding: 30px 16px;
+  }
+  .direct-chat-title {
+    font-size: 22px;
+  }
+  .direct-chat-subtitle {
+    font-size: 14.5px;
+  }
+  .direct-chat-cta-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  .direct-chat-open-btn,
+  .direct-chat-share-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

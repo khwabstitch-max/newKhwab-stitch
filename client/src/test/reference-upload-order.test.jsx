@@ -9,7 +9,7 @@ import { SiteProvider } from "../lib/hooks";
 import { setLanguage } from "../i18n/core";
 beforeEach(()=>{localStorage.clear();sessionStorage.clear();setLanguage("en",false);});
 afterEach(()=>vi.restoreAllMocks());
-it("opens an uploaded-reference order with configured WhatsApp support and a PDF attachment",async()=>{
+it("opens an uploaded-reference order with Atelier chat support and a PDF attachment",async()=>{
  const orderId="b".repeat(24),mediaId="c".repeat(24);
  boundary.api.mockImplementation(async path=>{
   if(path==="/settings")return{data:{whatsapp:"919368136683",policies:{},support:{}}};
@@ -18,9 +18,9 @@ it("opens an uploaded-reference order with configured WhatsApp support and a PDF
   return{data:[]};
  });
  render(<MemoryRouter initialEntries={["/orders/"+orderId]}><SiteProvider><Routes><Route path="/orders/:id" element={<OrderDetails/>}/></Routes></SiteProvider></MemoryRouter>);
- const contact=await screen.findByRole("link",{name:/Ask on WhatsApp/});
- expect(contact.href).toContain("https://wa.me/919368136683");
- expect(contact.href).toContain("KS-REFERENCE-TEST");
+ const contact=await screen.findByRole("button",{name:/Chat with Atelier/});
+ expect(contact).toBeInTheDocument();
+ expect(screen.queryByRole("link",{name:/Ask on WhatsApp/})).not.toBeInTheDocument();
  expect(await screen.findByRole("link",{name:/Open PDF/})).toHaveAttribute("href","/private/front-side-back.pdf");
  expect(screen.getByRole("heading",{name:"Your design and reference files"})).toBeInTheDocument();
 });

@@ -19,6 +19,7 @@ const entries = [
   ["admin.nav.addons", "Extra add-ons", "अतिरिक्त सजावट"],
   ["admin.nav.orders", "Stitching requests", "सिलाई के अनुरोध"],
   ["admin.nav.customers", "Customers", "ग्राहक"],
+  ["admin.nav.chat", "Customer chats", "ग्राहक बातचीत"],
   ["admin.nav.homepage", "Homepage content", "होमपेज की जानकारी"],
   ["admin.nav.slides", "Homepage slides", "होमपेज की स्लाइड"],
   ["admin.nav.website", "Contact, FAQs and social links", "संपर्क, सवाल-जवाब और सोशल लिंक"],

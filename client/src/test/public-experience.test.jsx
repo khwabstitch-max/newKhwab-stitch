@@ -340,7 +340,8 @@ it("uses only configured contact links and retains owner FAQs", () => {
     faqs: [{ question: "Can I bring my own fabric?", questionHi: "क्या मैं अपना कपड़ा ला सकती हूँ?", answer: "Yes, please arrange handover first.", answerHi: "हाँ, पहले कपड़ा देने का समय तय करें।" }],
   };
   mount(<Contact />);
-  expect(screen.getByRole("link", { name: "Chat on WhatsApp" })).toHaveAttribute("href", "https://wa.me/919876543210");
+  expect(screen.queryByRole("link", { name: "Chat on WhatsApp" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Chat with Atelier" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "atelier@example.test" })).toHaveAttribute("href", "mailto:atelier@example.test");
   expect(screen.getByRole("link", { name: "Visit Instagram" })).toHaveAttribute("href", "https://www.instagram.com/khwab_stitch/");
   expect(screen.queryByRole("link", { name: t("public.action.guidance") })).not.toBeInTheDocument();

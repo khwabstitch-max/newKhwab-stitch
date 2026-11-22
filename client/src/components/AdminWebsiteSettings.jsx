@@ -45,7 +45,7 @@ export function AdminWebsiteSettings({ settings, onSave }) {
       <AdminHomepageEditor homepage={draft.homepage} onChange={value => patch("homepage", value)} section={section} busy={busy} onBusyChange={setBusy} />
       {section === "contact" && <>
         <AdminSection title="admin.home.contact"><div className="form-grid">{[
-          ["businessName", "Business name", "text"], ["contactEmail", "Contact email", "email"], ["whatsapp", "WhatsApp number", "tel"], ["instagram", "Instagram URL", "url"], ["facebook", "Facebook URL", "url"],
+          ["businessName", "Business name", "text"], ["contactEmail", "Contact email", "email"], ["whatsapp", "Contact phone number", "tel"], ["instagram", "Instagram URL", "url"], ["facebook", "Facebook URL", "url"],
           ["tagline", "Tagline", "text"], ["taglineHi", "Hindi tagline (optional)", "text"], ["announcement", "Announcement bar", "text"], ["announcementHi", "Hindi announcement (optional)", "text"],
         ].map(([key, label, type]) => <Field key={key} label={t(label)} name={`setting-${key}`} type={type} required={key === "businessName"} maxLength={key.startsWith("announcement") ? 300 : 200} value={draft[key] || ""} onChange={event => patch(key, event.target.value)} />)}</div>
           {["about", "aboutHi"].map(key => <Field key={key} label={t(key === "about" ? "About the atelier" : "Hindi about text (optional)")} name={key}><textarea id={key} rows={4} maxLength={5000} value={draft[key] || ""} onChange={event => patch(key, event.target.value)} /></Field>)}

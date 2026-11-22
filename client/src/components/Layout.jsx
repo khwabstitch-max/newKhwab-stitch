@@ -9,6 +9,7 @@ import { ArrowUpRight, Menu, X, Scissors, UserRound, LogOut, Search, ChevronDown
 import { useAuth } from "../lib/auth";
 import { useSite, prefetchPublicResource } from "../lib/hooks";
 import { ErrorMessage, Spinner } from "./ui";
+import { CustomerChatWidget } from "./chat/CustomerChatWidget";
 
 export function Logo({ variant = "horizontal" }) {
   useLanguage();
@@ -39,7 +40,6 @@ export function Layout() {
   const footer = homepageBlock(site.homepage?.footer, DEFAULT_HOMEPAGE.footer, ["description"], language);
   const announcement = homepageText(site, "announcement", language);
   const supportHours = formatSupportSummary(site.support, t);
-  const whatsapp = /^[+\d\s()-]{10,25}$/.test(site.whatsapp || "") ? site.whatsapp.replace(/\D/g, "") : "";
   const garments = ["kurti", "suit", "blouse", "alteration"];
 
   useEffect(() => {
@@ -184,7 +184,17 @@ export function Layout() {
           {user && <button type="button" className="text-button" onClick={async () => { await logout(); navigate("/login", { replace: true }); }}><LogOut size={14} aria-hidden="true" />{t("Sign out")}</button>}
         </div>
         <div className="atelier-footer-contact"><h3>{t("atelier.footer.contact")}</h3>
-          {whatsapp && <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} aria-hidden="true" />WhatsApp<ArrowUpRight size={13} aria-hidden="true" /></a>}
+          <button
+            type="button"
+            className="text-link footer-chat-link"
+            onClick={() => window.dispatchEvent(new CustomEvent("open-atelier-chat"))}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", textDecoration: "none", background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer", color: "inherit" }}
+            aria-label={t("Chat with Atelier")}
+          >
+            <MessageCircle size={16} aria-hidden="true" />
+            {t("Chat with Atelier")}
+            <ArrowUpRight size={13} aria-hidden="true" />
+          </button>
           {site.contactEmail && <a href={`mailto:${site.contactEmail}`}><Mail size={16} aria-hidden="true" />{site.contactEmail}</a>}
           <Link to="/contact">{t("public.footer.contact")}<ArrowUpRight size={13} aria-hidden="true" /></Link>
           {supportHours && <p className="public-footer-hours">{supportHours}</p>}
@@ -196,6 +206,7 @@ export function Layout() {
         <span>{t("Fabric provided by customer.")}</span>
       </div>
     </footer>
+    <CustomerChatWidget />
   </>;
 }
 

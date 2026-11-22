@@ -1,3 +1,4 @@
+import http from "node:http";
 import mongoose from "mongoose";
 import { connectDatabase } from "./database-connect.js";
 import "dotenv/config";
@@ -11,6 +12,7 @@ import { assertCredentialIndexes } from "./index-migration.js";
 import { assertGoogleIndexes } from "./routes-google.js";
 import { assertEnhancementIndexes } from "./enhancement-indexes.js";
 import { assertDeploymentIndexes } from "./deployment-indexes.js";
+import { initChatSocket } from "./chat-socket.js";
 const config = loadConfig();
 const logger = pino({ level: config.LOG_LEVEL });
 mongoose.set("bufferCommands", false);
@@ -37,9 +39,12 @@ const app = createApp({
   dbReady: () => databaseReady(mongoose.connection),
 });
 let server;
+let io;
 if (!process.env.VERCEL) {
-  server = app.listen(config.PORT, "0.0.0.0", () =>
-    logger.info({ port: config.PORT }, "API listening"),
+  const httpServer = http.createServer(app);
+  io = initChatSocket(httpServer, { config, models, logger });
+  server = httpServer.listen(config.PORT, "0.0.0.0", () =>
+    logger.info({ port: config.PORT }, "API listening with Socket.IO"),
   );
   server.requestTimeout = 30000;
   server.headersTimeout = 15000;
@@ -53,6 +58,13 @@ if (!process.env.VERCEL) {
       process.exit(1);
     }, 20000);
     timer.unref();
+    if (io) {
+      try {
+        io.close();
+      } catch (err) {
+        logger.warn({ err }, "Error closing socket server");
+      }
+    }
     server.close(async () => {
       await mongoose.disconnect();
       clearTimeout(timer);

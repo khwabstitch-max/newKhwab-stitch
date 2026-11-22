@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { GARMENTS, STATUSES } from "./domain.js";
 import { createExtensionSchemas } from "./models-extension.js";
 import { createCommerceSchemas } from "./commerce-models.js";
+import { createChatSchemas } from "./chat-models.js";
 import { OPTION_KINDS, SLEEVE_LENGTH_STYLES } from "./workflow-input.js";
 const { Schema } = mongoose;
 const oid = Schema.Types.ObjectId;
@@ -308,6 +309,12 @@ export function createModels(connection = mongoose) {
         welcome: Schema.Types.Mixed,
         homepage: Schema.Types.Mixed,
         features: Schema.Types.Mixed,
+        chatQuickReplies: { type: [String], default: undefined },
+        chatAutoGreeting: {
+          enabled: { type: Boolean, default: true },
+          message: { type: String, default: undefined },
+        },
+        chatCustomerPrompts: { type: [String], default: undefined },
         facebook: text(250),
         businessName: text(100),
         tagline: text(180),
@@ -367,6 +374,7 @@ export function createModels(connection = mongoose) {
     schemas,
     createExtensionSchemas({ Schema, oid, opts, revision, text }),
     createCommerceSchemas({ Schema, oid, opts, revision, text }),
+    createChatSchemas(),
   );
   schemas.Draft.index({ owner: 1, clientId: 1 }, { unique: true });
   schemas.RequestLimit.index({key:1,bucket:1},{unique:true,name:"request_limit_bucket_unique"});

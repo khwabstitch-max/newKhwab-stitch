@@ -12,11 +12,12 @@ import { Link, useLocation, useParams, useSearchParams } from "react-router-dom"
 import {
   ArrowRight,
   ExternalLink,
+  MessageSquare,
   Printer,
 } from "lucide-react";
 import { api, date, dateTime, idOf, money, readable } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { useResource, useSite } from "../lib/hooks";
+import { useResource } from "../lib/hooks";
 import { estimateLineLabel, knownTransportAmount } from "../lib/order-labels";
 import {
   OrderFulfilment,
@@ -230,7 +231,6 @@ export function OrderDetails({ admin = false }) {
     [busy, setBusy] = useState(false),
     [success, setSuccess] = useState("");
   const location = useLocation();
-  const site = useSite();
   const [quote, setQuote] = useState({
     amount: "",
     deliveryDate: "",
@@ -843,26 +843,31 @@ export function OrderDetails({ admin = false }) {
           <section className="panel no-print">
             <h3>{t("Need a little help?")}</h3>
             <p>{t("Talk to the atelier about this request.")}</p>
-            {site.whatsapp && (
-              <a
-                className="text-link"
-                target="_blank"
-                rel="noreferrer"
-                href={`https://wa.me/${(site.whatsapp || "").replace(/\D/g, "")}?text=${encodeURIComponent(
-                  t(
-                    "Hello Khwab Stitch, I have a question about request {0}.",
-                    {
-                      0: order.orderNumber,
+            <button
+              type="button"
+              className="text-link"
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent("open-atelier-chat", {
+                    detail: {
+                      orderCode: order.orderNumber,
+                      defaultMessage: t(
+                        "Hello Khwab Stitch, I have a question about request {0}.",
+                        {
+                          0: order.orderNumber,
+                        },
+                      ),
                     },
-                  ),
-                )}`}
-              >
-                {t("Ask on WhatsApp ")}
-                <ExternalLink size={15} />
-              </a>
-            )}
+                  }),
+                );
+              }}
+            >
+              {t("Chat with Atelier")}
+              <MessageSquare size={15} />
+            </button>
             <p className="small-print">
-              {t("Only your request number is included in this link.")}
+              {t("Real-time messaging with our master tailor.")}
             </p>
           </section>
         </aside>

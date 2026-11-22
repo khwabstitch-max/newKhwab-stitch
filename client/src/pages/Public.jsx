@@ -509,7 +509,6 @@ export function HowItWorks() {
 export function Contact() {
   useLanguage();
   const site = useSite();
-  const phone = /^[+\d\s()-]{10,25}$/.test(site.whatsapp || "") ? site.whatsapp.replace(/\D/g, "") : "";
   const instagram = /^https:\/\/(?:www\.)?instagram\.com\//.test(site.instagram || "") ? site.instagram : "";
   const supportHours = formatSupportSummary(site.support, t);
   return (
@@ -518,11 +517,20 @@ export function Contact() {
         {t("Questions about fabric, fit, or an idea you cannot quite put into words? Say hello.")}
       </PageHeading>
       <div className="contact-grid">
-        {phone && <article className="contact-card">
+        <article className="contact-card">
           <MessageCircle size={25} aria-hidden="true" />
           <h2>{t("Let's talk stitching")}</h2>
-          <a className="button" href={`https://wa.me/${phone}`} target="_blank" rel="noopener noreferrer">{t("Chat on WhatsApp")}<ArrowUpRight size={17} aria-hidden="true" /></a>
-        </article>}
+          <button
+            type="button"
+            className="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("open-atelier-chat"));
+            }}
+          >
+            {t("Chat with Atelier")}
+            <ArrowUpRight size={17} aria-hidden="true" />
+          </button>
+        </article>
         {site.contactEmail && <article className="contact-card">
           <Mail size={25} aria-hidden="true" />
           <h2>{t("Write to us")}</h2>
@@ -533,7 +541,7 @@ export function Contact() {
           <h2>{t("A little inspiration")}</h2>
           <a className="text-link" href={instagram} target="_blank" rel="noopener noreferrer">{t("Visit Instagram")}<ArrowUpRight size={17} aria-hidden="true" /></a>
         </article>}
-        {!phone && !site.contactEmail && !instagram && <article className="contact-card">
+        {!site.contactEmail && !instagram && <article className="contact-card">
           <MessageCircle size={25} aria-hidden="true" />
           <h2>{t("Let's talk stitching")}</h2>
           <Link className="button" to="/account/support">{t("public.action.guidance")}<ArrowUpRight size={17} aria-hidden="true" /></Link>

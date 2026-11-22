@@ -17,6 +17,7 @@ import {
   FolderOpen,
   Image,
   LayoutDashboard,
+  MessageSquare,
   Pencil,
   Plus,
   Save,
@@ -62,7 +63,7 @@ const optionKindLabels = {
 const ownerGroups = [
   { id: "overview", tasks: [["", "admin.nav.dashboard", LayoutDashboard], ["?view=attention", "admin.nav.attention", Activity]] },
   { id: "catalogue", tasks: [["designs", "admin.nav.designs", Shirt], ["categories", "admin.nav.categories", FolderOpen], ["options?kind=neck", "admin.nav.front", Pencil], ["options?kind=back", "admin.nav.back", Pencil], ["options?kind=sleeve", "admin.nav.sleeve", Pencil], ["options?kind=sleeveLength", "admin.nav.length", Pencil], ["options?kind=extra", "admin.nav.addons", Pencil]] },
-  { id: "orders", tasks: [["orders", "admin.nav.orders", ClipboardList], ["customers", "admin.nav.customers", Users]] },
+  { id: "orders", tasks: [["orders", "admin.nav.orders", ClipboardList], ["customers", "admin.nav.customers", Users], ["chat", "admin.nav.chat", MessageSquare]] },
   { id: "marketing", tasks: [["settings?section=hero", "admin.nav.homepage", Settings], ["settings?section=slides", "admin.nav.slides", Image], ["settings?section=contact", "admin.nav.website", Settings], ["media", "admin.nav.media", Image]] },
   { id: "team", tasks: [["support", "admin.nav.support", ClipboardList], ["reviews", "admin.nav.reviews", Pencil], ["work", "admin.nav.work", Users]] },
   { id: "business", tasks: [["measurement-guides", "admin.nav.guides", Activity], ["settings?section=business", "admin.nav.pricing", Settings]] },

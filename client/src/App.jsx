@@ -72,6 +72,16 @@ const AdminServices = lazy(() =>
 const AdminMeasurementGuides = lazy(() => import("./pages/AdminMeasurementGuides").then(module=>({default:module.AdminMeasurementGuides})));
 const AccountCommerce = lazy(() => import("./pages/Commerce").then(module=>({default:module.AccountCommerce})));
 const AdminCommerce = lazy(() => import("./pages/Commerce").then(module=>({default:module.AdminCommerce})));
+const AdminChatDashboard = lazy(() =>
+  import("./pages/AdminChatDashboard").then((module) => ({
+    default: module.AdminChatDashboard,
+  })),
+);
+const DirectCustomerChat = lazy(() =>
+  import("./pages/DirectCustomerChat").then((module) => ({
+    default: module.DirectCustomerChat,
+  })),
+);
 function ScrollToTop() {
   useLanguage();
   const { pathname } = useLocation();
@@ -120,6 +130,7 @@ export function AppRoutes() {
             <Route path="designs/:slug" element={<DesignDetails />} />
             <Route path="how-it-works" element={<HowItWorks />} />
             <Route path="contact" element={<Contact />} />
+            <Route path="chat" element={<DirectCustomerChat />} />
             <Route path="privacy" element={<Policy type="privacy" />} />
             <Route path="terms" element={<Policy type="terms" />} />
             <Route path="login" element={<Login />} />
@@ -162,6 +173,7 @@ export function AppRoutes() {
                 <Route path="services" element={<AdminServices />} />
                 <Route path="measurement-guides" element={<AdminMeasurementGuides />} />
                 <Route path="commerce" element={<AdminCommerce />} />
+                <Route path="chat" element={<AdminChatDashboard />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

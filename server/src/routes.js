@@ -18,6 +18,8 @@ import { googleRoutes } from "./routes-google.js";
 import { proposalRoutes } from "./routes-proposals.js";
 import { visualCatalogueRoutes } from "./visual-catalogue.js";
 import { registerCommerceRoutes } from "./commerce-routes.js";
+import { chatRoutes } from "./routes-chat.js";
+import { adminChatRoutes } from "./routes-admin-chat.js";
 export function registerRoutes(app, ctx) {
   const auth = authentication(ctx);
   const orderLimit = rateLimitFor(ctx, "order", {
@@ -30,6 +32,13 @@ export function registerRoutes(app, ctx) {
   const uploadLimit = rateLimitFor(ctx, "upload", {
     windowMs: 60 * 60 * 1000,
     limit: 100,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    handler: ctx.limitHandler,
+  });
+  const chatLimit = rateLimitFor(ctx, "chat", {
+    windowMs: 60 * 1000,
+    limit: 60,
     standardHeaders: "draft-8",
     legacyHeaders: false,
     handler: ctx.limitHandler,
@@ -52,4 +61,6 @@ export function registerRoutes(app, ctx) {
   reviewRoutes(app, ctx, auth);
   serviceRoutes(app, ctx, auth);
   proposalRoutes(app, ctx, auth);
+  chatRoutes(app, ctx, { chatLimit, uploadLimit });
+  adminChatRoutes(app, ctx, auth, adminOnly);
 }
