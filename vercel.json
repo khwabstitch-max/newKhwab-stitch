@@ -6,7 +6,7 @@
       "framework": "vite",
       "routes": [
         { "handle": "filesystem" },
-        { "src": "/(?:assets|brand|design-library|design-guides|images)/.*", "status": 404 },
+        { "src": "/(?:(?:assets|brand|design-library|design-guides|images|atelier|guides|crops)/.*|favicon\\.svg)", "status": 404 },
         { "src": "/.*", "dest": "/index.html" }
       ]
     },

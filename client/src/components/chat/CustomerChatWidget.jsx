@@ -16,6 +16,7 @@ import {
 import { t } from "../../i18n/core";
 import { useLanguage } from "../../i18n/Language";
 import { api } from "../../lib/api";
+import { claimChatPhotoRefresh, mergeChatMessages } from "../../lib/chat-messages";
 import {
   getStoredChatSession,
   saveChatSession,
@@ -159,6 +160,7 @@ export function CustomerChatWidget() {
   });
   const [session, setSession] = useState(() => getStoredChatSession());
   const [messages, setMessages] = useState([]);
+  const [socketConnected, setSocketConnected] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -182,6 +184,12 @@ export function CustomerChatWidget() {
 
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const historyPendingRef = useRef(null);
+  const lightboxMessageIdRef = useRef(null);
+  const readHistoryMessageRef = useRef(null);
+  const photoRefreshAttemptsRef = useRef(new Map());
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
   const fileInputRef = useRef(null);
   const typingTimerRef = useRef(null);
   const isTypingRef = useRef(false);
@@ -317,6 +325,12 @@ export function CustomerChatWidget() {
           conversationId: res.data.conversationId,
         };
         saveChatSession(nextSession);
+        if (sessionRef.current?.customerId !== nextSession.customerId) {
+          setMessages([]);
+          setUnreadCount(0);
+          setLightboxImage(null);
+        }
+        sessionRef.current = nextSession;
         setSession(nextSession);
         setDisplayNameInput(nextSession.displayName || "");
         return nextSession;
@@ -343,7 +357,13 @@ export function CustomerChatWidget() {
               conversationId: freshRes.data.conversationId,
             };
             saveChatSession(freshSession);
-            setSession(freshSession);
+            if (sessionRef.current?.customerId !== freshSession.customerId) {
+          setMessages([]);
+          setUnreadCount(0);
+          setLightboxImage(null);
+        }
+        sessionRef.current = freshSession;
+        setSession(freshSession);
             return freshSession;
           }
         } catch {
@@ -351,6 +371,12 @@ export function CustomerChatWidget() {
         }
       } else if (stored) {
         // Network drop, timeout, or 500: retain stored session so customer ID is preserved
+        if (sessionRef.current?.customerId !== stored.customerId) {
+          setMessages([]);
+          setUnreadCount(0);
+          setLightboxImage(null);
+        }
+        sessionRef.current = stored;
         setSession(stored);
         return stored;
       }
@@ -359,8 +385,10 @@ export function CustomerChatWidget() {
   }, []);
 
   // Load message history from REST API
-  const loadMessages = useCallback(async (activeSession) => {
+  const loadMessages = useCallback(async (activeSession, { scroll = true, forcePhotoRefresh = false } = {}) => {
     if (!activeSession?.guestToken || !activeSession?.customerId) return;
+    if (historyPendingRef.current?.guestToken === activeSession.guestToken && historyPendingRef.current?.customerId === activeSession.customerId) return;
+    historyPendingRef.current = activeSession;
     try {
       const res = await api("/chat/messages?limit=50", {
         method: "GET",
@@ -371,14 +399,50 @@ export function CustomerChatWidget() {
         },
       });
 
+      if (sessionRef.current?.guestToken !== activeSession.guestToken || sessionRef.current?.customerId !== activeSession.customerId) return;
       if (res?.data?.messages) {
-        setMessages(res.data.messages);
-        setTimeout(() => scrollToBottom("auto"), 50);
+        setMessages((previous) => mergeChatMessages(previous, res.data.messages, { forcePhotoRefresh }));
+        if (scroll) setTimeout(() => scrollToBottom("auto"), 50);
       }
     } catch {
       // Retrying silently on reconnect
+    } finally {
+      if (historyPendingRef.current === activeSession) historyPendingRef.current = null;
     }
   }, [scrollToBottom]);
+
+  // Keep signed private photo URLs usable in an open chat, including after tab suspension.
+  useEffect(() => {
+    if (!isOpen || !session?.guestToken || !session?.customerId) return;
+    const refresh = (event) => {
+      if (document.visibilityState !== "hidden") loadMessages(session, { scroll: false, forcePhotoRefresh: event?.type === "focus" || event?.type === "visibilitychange" });
+    };
+    const timer = setInterval(refresh, socketConnected ? 240_000 : 5_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [isOpen, session, loadMessages, socketConnected]);
+
+  const handlePhotoError = async (message) => {
+    const activeSession = sessionRef.current;
+    if (!activeSession?.customerId || !activeSession?.guestToken) return;
+    const before = claimChatPhotoRefresh(photoRefreshAttemptsRef.current, message);
+    if (!before) return;
+    try {
+      const res = await api(`/chat/messages?limit=100&before=${encodeURIComponent(before)}`, {
+        auth: false,
+        headers: { "x-guest-token": activeSession.guestToken, "x-customer-id": activeSession.customerId },
+      });
+      if (sessionRef.current?.guestToken !== activeSession.guestToken || sessionRef.current?.customerId !== activeSession.customerId || !res?.data?.messages) return;
+      setMessages((previous) => mergeChatMessages(previous, res.data.messages, { forcePhotoRefresh: true }));
+      const renewed = res.data.messages.find((entry) => entry._id === message._id)?.attachment?.url;
+      if (renewed) setLightboxImage((previous) => previous === message.attachment.url ? renewed : previous);
+    } catch { /* A missing provider image must not trigger automatic request loops. */ }
+  };
 
   // Mark messages as read by customer
   const markMessagesRead = useCallback(async (activeSession) => {
@@ -386,14 +450,14 @@ export function CustomerChatWidget() {
     setUnreadCount(0);
 
     // REST mark read
-    api("/chat/read", {
+    const readRequest = api("/chat/read", {
       method: "PATCH",
       auth: false,
       headers: {
         "x-guest-token": activeSession.guestToken,
         "x-customer-id": activeSession.customerId,
       },
-    }).catch(() => {});
+    });
 
     // Socket mark read
     if (socketRef.current?.connected) {
@@ -401,7 +465,26 @@ export function CustomerChatWidget() {
         customerId: activeSession.customerId,
       });
     }
+    try { await readRequest; return true; } catch { return false; }
   }, []);
+
+  // Acknowledge newly displayed messages during REST fallback, without repeating every poll.
+  useEffect(() => {
+    if (!isOpen || !session?.guestToken || !session?.customerId) return;
+    const unread = messages.filter((message) => message.senderType === "admin" && message.deliveryStatus !== "read").at(-1);
+    if (!unread?._id) return;
+    const key = `${session.customerId}:${unread._id}`;
+    if (readHistoryMessageRef.current === key) return;
+    readHistoryMessageRef.current = key;
+    markMessagesRead(session).then((success) => {
+      if (!success) {
+        if (readHistoryMessageRef.current === key) readHistoryMessageRef.current = null;
+        return;
+      }
+      if (sessionRef.current?.guestToken !== session.guestToken || sessionRef.current?.customerId !== session.customerId) return;
+      setMessages((previous) => previous.map((message) => message.senderType === "admin" ? { ...message, deliveryStatus: "read" } : message));
+    });
+  }, [isOpen, session, messages, markMessagesRead]);
 
   // Bootstrap guest session if absent on mount
   useEffect(() => {
@@ -435,27 +518,17 @@ export function CustomerChatWidget() {
     socketRef.current = socket;
 
     socket.on("connect", () => {
+      setSocketConnected(true);
       // Mark read if chat is currently open
       if (isOpenRef.current) {
         markMessagesRead(session);
       }
     });
 
+    socket.on("disconnect", () => setSocketConnected(false));
+
     socket.on("new_message", ({ message }) => {
-      setMessages((prev) => {
-        // Prevent duplicate if already received
-        const exists = prev.some(
-          (m) =>
-            m._id === message._id ||
-            (m.clientMessageId && m.clientMessageId === message.clientMessageId)
-        );
-        if (exists) {
-          return prev.map((m) =>
-            m.clientMessageId === message.clientMessageId ? message : m
-          );
-        }
-        return [...prev, message];
-      });
+      setMessages((prev) => mergeChatMessages(prev, [message]));
 
       if (message.senderType === "admin") {
         setAdminTyping(false);
@@ -871,6 +944,7 @@ export function CustomerChatWidget() {
       if (res?.data?.displayName) {
         const updated = { ...session, displayName: res.data.displayName };
         saveChatSession(updated);
+        sessionRef.current = updated;
         setSession(updated);
         setEditingName(false);
       }
@@ -1053,13 +1127,14 @@ export function CustomerChatWidget() {
                       {msg.attachment?.url && (
                         <div
                           className="khwab-chat-image-wrap"
-                          onClick={() => setLightboxImage(msg.attachment.url)}
+                          onClick={() => { lightboxMessageIdRef.current = msg._id; setLightboxImage(msg.attachment.url); }}
                           role="button"
                           tabIndex={0}
                           aria-label={t("View photo")}
                         >
                           <img
                             src={msg.attachment.url}
+                            onError={() => handlePhotoError(msg)}
                             alt={t("Shared design reference")}
                             loading="lazy"
                           />
@@ -1229,7 +1304,11 @@ export function CustomerChatWidget() {
           >
             <X size={24} />
           </button>
-          <img src={lightboxImage} alt={t("Enlarged reference")} />
+          <img src={lightboxImage} alt={t("Enlarged reference")} onError={() => {
+            const message = messages.find((entry) => entry._id === lightboxMessageIdRef.current);
+            if (message?.attachment?.url && message.attachment.url !== lightboxImage) setLightboxImage(message.attachment.url);
+            else if (message) handlePhotoError(message);
+          }} />
         </div>
       )}
     </>

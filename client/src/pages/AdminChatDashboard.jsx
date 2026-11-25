@@ -26,6 +26,7 @@ import { useLanguage } from "../i18n/Language";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { sessionStore } from "../lib/session";
+import { claimChatPhotoRefresh, mergeChatMessages } from "../lib/chat-messages";
 import { createAdminSocket } from "../lib/chat-socket";
 import "./admin-chat.css";
 
@@ -115,6 +116,10 @@ export function AdminChatDashboard() {
   const selectedCustomerIdRef = useRef(selectedCustomerId);
   selectedCustomerIdRef.current = selectedCustomerId;
   const prevCustomerIdRef = useRef(null);
+  const selectionGenerationRef = useRef(0);
+  const photoRefreshAttemptsRef = useRef(new Map());
+  const lightboxMessageIdRef = useRef(null);
+  const readHistoryMessageRef = useRef(null);
 
   const scrollToBottom = useCallback((behavior = "smooth") => {
     if (threadRef.current) {
@@ -153,6 +158,18 @@ export function AdminChatDashboard() {
     loadConversations(tab, searchTerm);
   }, [tab, searchTerm, loadConversations]);
 
+  // REST delivery remains available when the deployed entry does not route Socket.IO.
+  useEffect(() => {
+    if (socketConnected) return;
+    let pending = false;
+    const timer = setInterval(async () => {
+      if (pending || document.visibilityState === "hidden") return;
+      pending = true;
+      try { await loadConversations(); } finally { pending = false; }
+    }, 10_000);
+    return () => clearInterval(timer);
+  }, [socketConnected, loadConversations]);
+
   // Load configurable chat automation & quick replies
   useEffect(() => {
     api("/admin/chat/settings", { auth: true })
@@ -170,12 +187,19 @@ export function AdminChatDashboard() {
   const selectConversation = useCallback(async (customerId) => {
     setSelectedCustomerId(customerId);
     selectedCustomerIdRef.current = customerId;
+    const generation = ++selectionGenerationRef.current;
+    const isCurrent = () => generation === selectionGenerationRef.current && selectedCustomerIdRef.current === customerId;
+    setActiveConversation(null);
+    setCustomerNotes("");
+    setInputText("");
+    setLightboxImage(null);
     setMessages([]);
     setCustomerTyping(false);
 
     try {
       // Fetch conversation metadata
       const convRes = await api(`/admin/chat/conversations/${customerId}`, { auth: true });
+      if (!isCurrent()) return;
       if (convRes?.data?.conversation) {
         setActiveConversation(convRes.data.conversation);
         setCustomerNotes(convRes.data.customer?.notes || "");
@@ -183,8 +207,9 @@ export function AdminChatDashboard() {
 
       // Fetch messages
       const msgRes = await api(`/admin/chat/conversations/${customerId}/messages?limit=60`, { auth: true });
+      if (!isCurrent()) return;
       if (msgRes?.data?.messages) {
-        setMessages(msgRes.data.messages);
+        setMessages((previous) => mergeChatMessages(previous, msgRes.data.messages));
         setTimeout(() => scrollToBottom("auto"), 50);
       }
 
@@ -205,6 +230,66 @@ export function AdminChatDashboard() {
       // Error loading conversation
     }
   }, [scrollToBottom]);
+
+  // Renew private photo URLs before their five-minute expiry while this thread is open.
+  useEffect(() => {
+    if (!selectedCustomerId) return;
+    const generation = selectionGenerationRef.current;
+    let cancelled = false;
+    let pending = false;
+    const refresh = async (event) => {
+      if (pending || document.visibilityState === "hidden") return;
+      pending = true;
+      try {
+        const res = await api(`/admin/chat/conversations/${selectedCustomerId}/messages?limit=60`, { auth: true });
+        if (!cancelled && generation === selectionGenerationRef.current && selectedCustomerIdRef.current === selectedCustomerId && res?.data?.messages) {
+          setMessages((previous) => mergeChatMessages(previous, res.data.messages, { forcePhotoRefresh: event?.type === "focus" || event?.type === "visibilitychange" }));
+        }
+      } catch { /* Retain readable history during a temporary network failure. */ }
+      finally { pending = false; }
+    };
+    const timer = setInterval(refresh, socketConnected ? 240_000 : 5_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [selectedCustomerId, socketConnected]);
+
+  // A REST-delivered message is read once it appears in the selected conversation.
+  useEffect(() => {
+    if (!selectedCustomerId) return;
+    const unread = messages.filter((message) => message.senderType === "customer" && message.deliveryStatus !== "read").at(-1);
+    if (!unread?._id) return;
+    const key = `${selectedCustomerId}:${unread._id}`;
+    if (readHistoryMessageRef.current === key) return;
+    readHistoryMessageRef.current = key;
+    api(`/admin/chat/conversations/${selectedCustomerId}/read`, { method: "PATCH", auth: true }).then(() => {
+      if (selectedCustomerIdRef.current !== selectedCustomerId) return;
+      setMessages((previous) => previous.map((message) => message.senderType === "customer" ? { ...message, deliveryStatus: "read" } : message));
+      setConversations((previous) => previous.map((conversation) => conversation.customerId === selectedCustomerId ? { ...conversation, unreadCountAdmin: 0 } : conversation));
+    }).catch(() => {
+      if (readHistoryMessageRef.current === key) readHistoryMessageRef.current = null;
+    });
+  }, [messages, selectedCustomerId]);
+
+  const handlePhotoError = async (message) => {
+    const customerId = selectedCustomerIdRef.current;
+    if (!customerId) return;
+    const before = claimChatPhotoRefresh(photoRefreshAttemptsRef.current, message);
+    if (!before) return;
+    const generation = selectionGenerationRef.current;
+    try {
+      const res = await api(`/admin/chat/conversations/${customerId}/messages?limit=100&before=${encodeURIComponent(before)}`, { auth: true });
+      if (generation !== selectionGenerationRef.current || selectedCustomerIdRef.current !== customerId || !res?.data?.messages) return;
+      setMessages((previous) => mergeChatMessages(previous, res.data.messages, { forcePhotoRefresh: true }));
+      const renewed = res.data.messages.find((entry) => entry._id === message._id)?.attachment?.url;
+      if (renewed) setLightboxImage((previous) => previous === message.attachment.url ? renewed : previous);
+    } catch { /* Keep the image failure local; another attempt is bounded by the throttle. */ }
+  };
 
   // Keep auth token synced from sessionStore
   useEffect(() => {
@@ -236,19 +321,7 @@ export function AdminChatDashboard() {
     socket.on("new_message", ({ message, conversation }) => {
       // If message belongs to currently open customer
       if (message.customerId === selectedCustomerIdRef.current) {
-        setMessages((prev) => {
-          const exists = prev.some(
-            (m) =>
-              m._id === message._id ||
-              (m.clientMessageId && m.clientMessageId === message.clientMessageId)
-          );
-          if (exists) {
-            return prev.map((m) =>
-              m.clientMessageId === message.clientMessageId ? message : m
-            );
-          }
-          return [...prev, message];
-        });
+        setMessages((prev) => mergeChatMessages(prev, [message]));
 
         if (message.senderType === "customer") {
           setCustomerTyping(false);
@@ -414,9 +487,9 @@ export function AdminChatDashboard() {
       });
 
       if (res?.data?.message) {
-        setMessages((prev) =>
-          prev.map((m) => (m.clientMessageId === clientMessageId ? res.data.message : m))
-        );
+        if (selectedCustomerIdRef.current === selectedCustomerId) {
+          setMessages((prev) => mergeChatMessages(prev, [res.data.message]));
+        }
         setConversations((prev) => {
           const found = prev.find((c) => c.customerId === selectedCustomerId);
           if (found) {
@@ -450,6 +523,7 @@ export function AdminChatDashboard() {
     const file = e.target.files?.[0];
     if (!file || isUploading || !selectedCustomerId) return;
 
+    const uploadGeneration = selectionGenerationRef.current;
     setIsUploading(true);
     const formData = new FormData();
     formData.append("file", file);
@@ -484,10 +558,9 @@ export function AdminChatDashboard() {
         });
 
         if (msgRes?.data?.message) {
-          setMessages((prev) => {
-            const exists = prev.some((m) => m.clientMessageId === clientMessageId);
-            return exists ? prev : [...prev, msgRes.data.message];
-          });
+          if (selectionGenerationRef.current === uploadGeneration && selectedCustomerIdRef.current === selectedCustomerId) {
+            setMessages((prev) => mergeChatMessages(prev, [msgRes.data.message]));
+          }
           setConversations((prev) => {
             const found = prev.find((c) => c.customerId === selectedCustomerId);
             if (found) {
@@ -530,7 +603,7 @@ export function AdminChatDashboard() {
       });
 
       if (res?.data?.conversation) {
-        setActiveConversation(res.data.conversation);
+        if (selectedCustomerIdRef.current === selectedCustomerId) setActiveConversation(res.data.conversation);
         setConversations((prev) =>
           prev.map((c) =>
             c.customerId === selectedCustomerId ? { ...c, status: nextStatus } : c
@@ -552,7 +625,7 @@ export function AdminChatDashboard() {
         auth: true,
         body: { notes: customerNotes },
       });
-      alert(t("Notes saved."));
+      if (selectedCustomerIdRef.current === selectedCustomerId) alert(t("Notes saved."));
     } catch {
       alert(t("Failed to save notes."));
     } finally {
@@ -595,7 +668,7 @@ export function AdminChatDashboard() {
     if (!selectedCustomerId || isExporting) return;
     setIsExporting(true);
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = sessionStore.get()?.token;
       const base = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
       const res = await fetch(`${base}/admin/chat/conversations/${selectedCustomerId}/transcript`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -951,13 +1024,14 @@ export function AdminChatDashboard() {
                           {msg.attachment?.url && (
                             <div
                               className="admin-msg-image-wrap"
-                              onClick={() => setLightboxImage(msg.attachment.url)}
+                              onClick={() => { lightboxMessageIdRef.current = msg._id; setLightboxImage(msg.attachment.url); }}
                               role="button"
                               tabIndex={0}
                               aria-label={t("View photo")}
                             >
                               <img
                                 src={msg.attachment.url}
+                                onError={() => handlePhotoError(msg)}
                                 alt={t("Design reference")}
                                 loading="lazy"
                               />
@@ -1442,7 +1516,11 @@ export function AdminChatDashboard() {
           >
             <X size={24} />
           </button>
-          <img src={lightboxImage} alt={t("Enlarged design reference")} />
+          <img src={lightboxImage} alt={t("Enlarged design reference")} onError={() => {
+            const message = messages.find((entry) => entry._id === lightboxMessageIdRef.current);
+            if (message?.attachment?.url && message.attachment.url !== lightboxImage) setLightboxImage(message.attachment.url);
+            else if (message) handlePhotoError(message);
+          }} />
         </div>
       )}
     </div>

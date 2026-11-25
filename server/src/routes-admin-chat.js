@@ -1,4 +1,7 @@
 import multer from "multer";
+import { chatAttachmentInput, chatCustomerIdInput, chatHistoryQuery, attachmentForMessage, storeChatAttachment, resolveChatMessages, chatUploadGate } from "./chat-attachments.js";
+import { rateLimitFor } from "./rate-limits.js";
+import { escaped, pageQuery } from "./route-utils.js";
 import sharp from "sharp";
 import { z } from "zod";
 import { AppError, fail, requireFound } from "./errors.js";
@@ -10,19 +13,21 @@ import {
 } from "./chat-models.js";
 
 export function adminChatRoutes(app, ctx, auth, adminOnly) {
-  const { models, images } = ctx;
+  const { models } = ctx;
+  const uploadLimit = rateLimitFor(ctx, "admin-chat-upload", { windowMs: 60 * 60 * 1000, limit: 100, standardHeaders: "draft-8", legacyHeaders: false, handler: ctx.limitHandler });
 
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+    limits: { fileSize: (ctx.config.SERVERLESS ? 3 : 5) * 1024 * 1024, files: 1, fields: 0, parts: 1 },
   }).single("file");
 
   // 1. List conversations with filtering & search
   app.get("/api/admin/chat/conversations", auth, adminOnly, async (req, res, next) => {
     try {
-      const { status, search } = req.query;
-      const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 100);
-      const page = Math.max(Number(req.query.page) || 1, 1);
+      const { status, search, limit, page } = pageQuery(req.query, {
+        status: z.enum(["active", "closed", "unread", "all"]).optional(),
+        search: z.string().trim().max(100).optional(),
+      });
       const skip = (page - 1) * limit;
 
       const filter = {};
@@ -31,7 +36,7 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
       else if (status === "unread") filter.unreadCountAdmin = { $gt: 0 };
 
       if (search && typeof search === "string" && search.trim()) {
-        const term = search.trim();
+        const term = escaped(search.trim());
         // Match customerId or find customers whose displayName matches
         const matchingCustomers = await models.ChatCustomer.find({
           $or: [
@@ -127,7 +132,7 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
   // 2. Get single conversation detail
   app.get("/api/admin/chat/conversations/:customerId", auth, adminOnly, async (req, res, next) => {
     try {
-      const { customerId } = req.params;
+      const customerId = chatCustomerIdInput.parse(req.params.customerId);
       const conversation = await models.ChatConversation.findOne({ customerId }).lean();
       requireFound(conversation, "Conversation not found.");
 
@@ -165,19 +170,14 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
   // 3. Message history for admin view
   app.get("/api/admin/chat/conversations/:customerId/messages", auth, adminOnly, async (req, res, next) => {
     try {
-      const { customerId } = req.params;
+      const customerId = chatCustomerIdInput.parse(req.params.customerId);
       const conversation = await models.ChatConversation.findOne({ customerId }).lean();
       requireFound(conversation, "Conversation not found.");
 
-      const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
+      const { limit, before } = chatHistoryQuery.parse(req.query);
       const query = { conversationId: conversation._id };
 
-      if (req.query.before) {
-        const beforeDate = new Date(req.query.before);
-        if (!isNaN(beforeDate.getTime())) {
-          query.createdAt = { $lt: beforeDate };
-        }
-      }
+      if (before) query.createdAt = { $lt: new Date(before) };
 
       const messages = await models.ChatMessage.find(query)
         .sort({ createdAt: -1 })
@@ -187,16 +187,7 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
       const hasMore = messages.length > limit;
       const slice = hasMore ? messages.slice(0, limit) : messages;
 
-      const resolved = slice.map((msg) => {
-        if (msg.attachment?.filePath && images?.url) {
-          try {
-            msg.attachment.url = images.url(msg.attachment.filePath, 3600);
-          } catch {
-            // Keep stored URL
-          }
-        }
-        return msg;
-      });
+      const resolved = await resolveChatMessages(ctx, slice, customerId);
 
       res.json({
         data: {
@@ -212,25 +203,15 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
   // 4. Admin sends reply to customer
   app.post("/api/admin/chat/conversations/:customerId/messages", auth, adminOnly, async (req, res, next) => {
     try {
-      const { customerId } = req.params;
+      const customerId = chatCustomerIdInput.parse(req.params.customerId);
       const schema = z.object({
         clientMessageId: z.string().trim().min(1).max(80),
         content: z.string().trim().max(2000).optional().default(""),
-        attachment: z
-          .object({
-            fileId: z.string().optional(),
-            filePath: z.string().optional(),
-            url: z.string().optional(),
-            width: z.number().optional(),
-            height: z.number().optional(),
-            mime: z.string().optional(),
-            size: z.number().optional(),
-          })
-          .nullable()
-          .optional(),
+        attachment: chatAttachmentInput,
       });
 
-      const { clientMessageId, content, attachment } = schema.parse(req.body);
+      const { clientMessageId, content, attachment: suppliedAttachment } = schema.strict().parse(req.body);
+      const attachment = await attachmentForMessage(ctx, suppliedAttachment, `admin:${req.user._id}`, customerId);
 
       if (!content && !attachment) {
         fail(400, "MESSAGE_EMPTY", "Reply must contain text or an image.");
@@ -248,7 +229,8 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
       });
 
       if (existing) {
-        return res.json({ data: { message: existing } });
+        const [message] = await resolveChatMessages(ctx, [existing], customerId);
+        return res.json({ data: { message } });
       }
 
       const messageType = attachment ? "image" : "text";
@@ -278,11 +260,11 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
       await conversation.save();
 
       // Real-time broadcast
-      const msgObj = typeof message?.toObject === "function" ? message.toObject() : message;
+      const [msgObj] = await resolveChatMessages(ctx, [message], customerId);
       const convObj = typeof conversation?.toObject === "function" ? conversation.toObject() : conversation;
-      broadcastChatMessage(msgObj, convObj);
+      await broadcastChatMessage(msgObj, convObj);
 
-      res.status(201).json({ data: { message } });
+      res.status(201).json({ data: { message: msgObj } });
     } catch (err) {
       next(err);
     }
@@ -291,7 +273,7 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
   // 5. Close or reopen conversation
   app.patch("/api/admin/chat/conversations/:customerId/status", auth, adminOnly, async (req, res, next) => {
     try {
-      const { customerId } = req.params;
+      const customerId = chatCustomerIdInput.parse(req.params.customerId);
       const schema = z.object({
         status: z.enum(["active", "closed"]),
       });
@@ -304,7 +286,7 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
       await conversation.save();
 
       const convObj = typeof conversation?.toObject === "function" ? conversation.toObject() : conversation;
-      broadcastConversationStatus(convObj);
+      await broadcastConversationStatus(convObj);
 
       res.json({ data: { conversation } });
     } catch (err) {
@@ -315,7 +297,7 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
   // 6. Update customer notes
   app.patch("/api/admin/chat/conversations/:customerId/notes", auth, adminOnly, async (req, res, next) => {
     try {
-      const { customerId } = req.params;
+      const customerId = chatCustomerIdInput.parse(req.params.customerId);
       const schema = z.object({
         notes: z.string().trim().max(2000),
       });
@@ -336,7 +318,7 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
   // 7. Mark conversation read by admin
   app.patch("/api/admin/chat/conversations/:customerId/read", auth, adminOnly, async (req, res, next) => {
     try {
-      const { customerId } = req.params;
+      const customerId = chatCustomerIdInput.parse(req.params.customerId);
       const conversation = await models.ChatConversation.findOne({ customerId });
 
       if (conversation) {
@@ -356,11 +338,11 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
   });
 
   // 8. Admin upload image
-  app.post("/api/admin/chat/upload", auth, adminOnly, (req, res, next) => {
+  app.post("/api/admin/chat/upload", auth, adminOnly, uploadLimit, chatUploadGate, (req, res, next) => {
     upload(req, res, async (err) => {
       if (err) {
         if (err.code === "LIMIT_FILE_SIZE") {
-          return next(new AppError(413, "FILE_TOO_LARGE", "Image must be under 5 MiB."));
+          return next(new AppError(413, "FILE_TOO_LARGE", `Image must be under ${ctx.config.SERVERLESS ? 3 : 5} MiB.`));
         }
         return next(err);
       }
@@ -380,7 +362,7 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
           });
           const meta = await input.metadata();
 
-          if (!["jpeg", "png", "webp"].includes(meta.format)) {
+          if (!["jpeg", "png", "webp"].includes(meta.format) || (meta.pages || 1) > 1) {
             fail(400, "INVALID_FORMAT", "Use a standard JPEG, PNG or WebP image.");
           }
 
@@ -403,26 +385,8 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
           fail(400, "INVALID_IMAGE", "Could not process image file.");
         }
 
-        const uploadResult = await images.upload(buffer, {
-          private: false,
-          purpose: "chat",
-          owner: String(req.user._id),
-          mime: "image/webp",
-        });
-
-        const signedUrl = images.url(uploadResult.filePath, 3600);
-
-        res.status(201).json({
-          data: {
-            fileId: uploadResult.fileId,
-            filePath: uploadResult.filePath,
-            url: signedUrl,
-            width,
-            height,
-            mime: "image/webp",
-            size: buffer.length,
-          },
-        });
+        const attachment = await storeChatAttachment(ctx, buffer, { owner: `admin:${req.user._id}`, width, height, log: req.log });
+        res.status(201).json({ data: attachment });
       } catch (uploadFail) {
         next(uploadFail);
       }
@@ -432,7 +396,7 @@ export function adminChatRoutes(app, ctx, auth, adminOnly) {
   // 9. Admin export conversation transcript
   app.get("/api/admin/chat/conversations/:customerId/transcript", auth, adminOnly, async (req, res, next) => {
     try {
-      const { customerId } = req.params;
+      const customerId = chatCustomerIdInput.parse(req.params.customerId);
       const conversation = await models.ChatConversation.findOne({ customerId }).lean();
       requireFound(conversation, "Conversation not found.");
 

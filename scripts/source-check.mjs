@@ -6,7 +6,7 @@ const excluded=new Set([".git","node_modules","dist","artifacts","coverage",".ve
 const patterns=[[/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,"embedded private key"],[/mongodb(?:\+srv)?:\/\/[^\s/:'"<>]+:[^\s/'"<>]+@/,"embedded database credentials"]];
 let scanned=0;const findings=[];
 async function walk(directory){for(const entry of await fs.readdir(directory,{withFileTypes:true})){
- if(entry.name.startsWith(".env")||excluded.has(entry.name)||entry.isSymbolicLink())continue;
+ if(entry.name.startsWith(".env")||entry.name.startsWith(".end")||excluded.has(entry.name)||entry.isSymbolicLink())continue;
  const file=path.join(directory,entry.name);
  if(entry.isDirectory()){await walk(file);continue;}
  if(!/\.(?:[cm]?js|jsx|json|md|ya?ml|html|css)$/.test(entry.name)||entry.name.endsWith("lock.json"))continue;

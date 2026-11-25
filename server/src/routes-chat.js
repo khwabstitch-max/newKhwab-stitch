@@ -1,4 +1,5 @@
 import multer from "multer";
+import { chatAttachmentInput, chatCustomerIdInput, chatHistoryQuery, attachmentForMessage, storeChatAttachment, resolveChatMessages, requirePrivateChat, chatUploadGate } from "./chat-attachments.js";
 import sharp from "sharp";
 import { z } from "zod";
 import { AppError, fail } from "./errors.js";
@@ -11,14 +12,15 @@ import {
 import { broadcastChatMessage } from "./chat-socket.js";
 
 export function parseCookies(req) {
-  const list = {};
+  const list = Object.create(null);
   const rc = req.headers?.cookie;
   if (!rc) return list;
   for (const cookie of rc.split(";")) {
     const parts = cookie.split("=");
     const key = parts[0]?.trim();
     if (key) {
-      list[key] = decodeURIComponent(parts.slice(1).join("=").trim());
+      try { list[key] = decodeURIComponent(parts.slice(1).join("=").trim()); }
+      catch { /* Ignore malformed unrelated cookies. */ }
     }
   }
   return list;
@@ -30,6 +32,7 @@ export function chatGuestAuth(models) {
       const cookies = parseCookies(req);
       const headerToken = cookies.khwab_guest_token || req.get("x-guest-token") || req.get("authorization")?.replace(/^Bearer\s+/i, "");
       const headerCustomerId = req.get("x-customer-id") || req.query.customerId;
+      if (headerCustomerId) chatCustomerIdInput.parse(headerCustomerId);
 
       if (!headerToken) {
         fail(401, "GUEST_UNAUTHORIZED", "Guest session required to access chat.");
@@ -56,7 +59,7 @@ export function chatGuestAuth(models) {
 }
 
 export function chatRoutes(app, ctx, limits = {}) {
-  const { models, images, config } = ctx;
+  const { models, config } = ctx;
   const guestAuth = chatGuestAuth(models);
   const noop = (_req, _res, next) => next();
   const chatLimit = limits.chatLimit || noop;
@@ -64,11 +67,11 @@ export function chatRoutes(app, ctx, limits = {}) {
 
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: (config.SERVERLESS ? 3 : 5) * 1024 * 1024, files: 1 },
+    limits: { fileSize: (config.SERVERLESS ? 3 : 5) * 1024 * 1024, files: 1, fields: 0, parts: 1 },
   }).single("file");
 
   // 1. Initialize or resume anonymous guest customer session
-  app.post("/api/chat/guest", async (req, res, next) => {
+  app.post("/api/chat/guest", chatLimit, async (req, res, next) => {
     try {
       const schema = z.object({
         displayName: z.string().trim().max(60).optional(),
@@ -76,8 +79,8 @@ export function chatRoutes(app, ctx, limits = {}) {
         guestToken: z.string().trim().max(128).optional(),
       });
 
-      const parsed = schema.safeParse(req.body || {});
-      const { displayName, customerId, guestToken } = parsed.success ? parsed.data : {};
+      const { displayName, customerId, guestToken } = schema.strict().parse(req.body || {});
+      res.set("Cache-Control", "private, no-store");
 
       // If existing credentials supplied, verify them
       if (customerId && guestToken) {
@@ -218,15 +221,10 @@ export function chatRoutes(app, ctx, limits = {}) {
         return res.json({ data: { messages: [], hasMore: false } });
       }
 
-      const limit = Math.min(Math.max(Number(req.query.limit) || 40, 1), 100);
+      const { limit, before } = chatHistoryQuery.parse(req.query);
       const query = { conversationId: conversation._id };
 
-      if (req.query.before) {
-        const beforeDate = new Date(req.query.before);
-        if (!isNaN(beforeDate.getTime())) {
-          query.createdAt = { $lt: beforeDate };
-        }
-      }
+      if (before) query.createdAt = { $lt: new Date(before) };
 
       const messages = await models.ChatMessage.find(query)
         .sort({ createdAt: -1 })
@@ -236,17 +234,7 @@ export function chatRoutes(app, ctx, limits = {}) {
       const hasMore = messages.length > limit;
       const slice = hasMore ? messages.slice(0, limit) : messages;
 
-      // Ensure signed URLs for attachments are valid
-      const resolved = slice.map((msg) => {
-        if (msg.attachment?.filePath && images?.url) {
-          try {
-            msg.attachment.url = images.url(msg.attachment.filePath, 3600);
-          } catch {
-            // Keep stored URL as fallback
-          }
-        }
-        return msg;
-      });
+      const resolved = await resolveChatMessages(ctx, slice, customer.customerId);
 
       res.json({
         data: {
@@ -265,22 +253,12 @@ export function chatRoutes(app, ctx, limits = {}) {
       const schema = z.object({
         clientMessageId: z.string().trim().min(1).max(80),
         content: z.string().trim().max(2000).optional().default(""),
-        attachment: z
-          .object({
-            fileId: z.string().optional(),
-            filePath: z.string().optional(),
-            url: z.string().optional(),
-            width: z.number().optional(),
-            height: z.number().optional(),
-            mime: z.string().optional(),
-            size: z.number().optional(),
-          })
-          .nullable()
-          .optional(),
+        attachment: chatAttachmentInput,
         relatedOrderReference: z.string().trim().max(50).optional(),
       });
 
-      const { clientMessageId, content, attachment, relatedOrderReference } = schema.parse(req.body);
+      const { clientMessageId, content, attachment: suppliedAttachment, relatedOrderReference } = schema.strict().parse(req.body);
+      const attachment = await attachmentForMessage(ctx, suppliedAttachment, `guest:${req.chatCustomer.customerId}`, req.chatCustomer.customerId);
 
       if (!content && !attachment) {
         fail(400, "MESSAGE_EMPTY", "Message must contain either text or an attachment.");
@@ -303,7 +281,8 @@ export function chatRoutes(app, ctx, limits = {}) {
       });
 
       if (existing) {
-        return res.json({ data: { message: existing } });
+        const [message] = await resolveChatMessages(ctx, [existing], customer.customerId);
+        return res.json({ data: { message } });
       }
 
       const messageType = attachment ? "image" : "text";
@@ -338,7 +317,8 @@ export function chatRoutes(app, ctx, limits = {}) {
       await conversation.save();
 
       // Broadcast in real time
-      broadcastChatMessage(message.toObject(), conversation.toObject());
+      const [resolvedMessage] = await resolveChatMessages(ctx, [message], customer.customerId);
+      await broadcastChatMessage(resolvedMessage, conversation.toObject());
 
       // If this is the customer's very first message in the conversation, trigger auto-greeting if enabled
       let autoGreeting = null;
@@ -381,14 +361,16 @@ export function chatRoutes(app, ctx, limits = {}) {
 
           // Broadcast greeting to customer and admin
           setTimeout(() => {
-            broadcastChatMessage(autoGreeting.toObject(), conversation.toObject());
+            broadcastChatMessage(autoGreeting.toObject(), conversation.toObject()).catch(() => {
+              req.log?.warn({ event: "chat_broadcast_failed" }, "Chat notification unavailable");
+            });
           }, 300);
         }
       }
 
       res.status(201).json({
         data: {
-          message,
+          message: resolvedMessage,
           autoGreeting: autoGreeting ? autoGreeting.toObject() : null,
         },
       });
@@ -398,11 +380,11 @@ export function chatRoutes(app, ctx, limits = {}) {
   });
 
   // 5. Upload image for chat attachment
-  app.post("/api/chat/upload", guestAuth, uploadLimit, (req, res, next) => {
+  app.post("/api/chat/upload", guestAuth, uploadLimit, chatUploadGate, (req, res, next) => {
     upload(req, res, async (err) => {
       if (err) {
         if (err.code === "LIMIT_FILE_SIZE") {
-          return next(new AppError(413, "FILE_TOO_LARGE", "Image must be under 5 MiB."));
+          return next(new AppError(413, "FILE_TOO_LARGE", `Image must be under ${ctx.config.SERVERLESS ? 3 : 5} MiB.`));
         }
         return next(err);
       }
@@ -423,7 +405,7 @@ export function chatRoutes(app, ctx, limits = {}) {
           });
           const meta = await input.metadata();
 
-          if (!["jpeg", "png", "webp"].includes(meta.format)) {
+          if (!["jpeg", "png", "webp"].includes(meta.format) || (meta.pages || 1) > 1) {
             fail(400, "INVALID_FORMAT", "Use a standard JPEG, PNG or WebP image.");
           }
 
@@ -446,44 +428,9 @@ export function chatRoutes(app, ctx, limits = {}) {
           fail(400, "INVALID_IMAGE", "Could not process image file.");
         }
 
-        // Upload to ImageKit
-        const privatePolicy = config.IMAGEKIT_PRIVATE_POLICY_VERIFIED === "true";
-        let uploadResult;
-
-        try {
-          uploadResult = await images.upload(buffer, {
-            private: privatePolicy,
-            purpose: "chat",
-            owner: customer.customerId,
-            mime: "image/webp",
-          });
-        } catch (uploadErr) {
-          // If private media unverified, retry as standard upload
-          if (uploadErr.code === "PRIVATE_MEDIA_UNVERIFIED") {
-            uploadResult = await images.upload(buffer, {
-              private: false,
-              purpose: "chat",
-              owner: customer.customerId,
-              mime: "image/webp",
-            });
-          } else {
-            throw uploadErr;
-          }
-        }
-
-        const signedUrl = images.url(uploadResult.filePath, 3600);
-
-        res.status(201).json({
-          data: {
-            fileId: uploadResult.fileId,
-            filePath: uploadResult.filePath,
-            url: signedUrl,
-            width,
-            height,
-            mime: "image/webp",
-            size: buffer.length,
-          },
-        });
+        requirePrivateChat(config);
+        const attachment = await storeChatAttachment(ctx, buffer, { owner: `guest:${customer.customerId}`, customerId: customer.customerId, width, height, log: req.log });
+        res.status(201).json({ data: attachment });
       } catch (uploadFail) {
         next(uploadFail);
       }

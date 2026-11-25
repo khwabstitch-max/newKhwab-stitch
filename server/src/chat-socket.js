@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import jwt from "jsonwebtoken";
 import { tokenService } from "./auth.js";
 import { hashGuestToken } from "./chat-models.js";
 
@@ -23,6 +24,23 @@ function isValidCustomerId(id) {
 
 export function getChatIo() {
   return ioInstance;
+}
+
+export async function authorizeAdminSocket(models, tokens, token) {
+  const claims = tokens.verify(token);
+  const user = await models.User.findById(claims.sub);
+  if (!user || user.disabled || user.role !== "admin" || (user.authVersion ?? 0) !== claims.version)
+    throw new Error("UNAUTHORIZED");
+  return user;
+}
+
+async function refreshAdminSockets() {
+  if (!ioInstance) return;
+  await Promise.all([...ioInstance.sockets.sockets.values()].map(async socket => {
+    if (socket.data.user?.role !== "admin") return;
+    try { await socket.data.revalidate(); }
+    catch { socket.disconnect(true); }
+  }));
 }
 
 export function initChatSocket(httpServer, ctx) {
@@ -63,9 +81,10 @@ export function initChatSocket(httpServer, ctx) {
       // 1. Try admin authentication first
       if (token) {
         try {
-          const claims = tokens.verify(token);
-          const user = await models.User.findById(claims.sub);
-          if (user && user.role === "admin" && !user.disabled) {
+          const user = await authorizeAdminSocket(models, tokens, token);
+          if (user) {
+            socket.data.revalidate = () => authorizeAdminSocket(models, tokens, token);
+            socket.data.expiresAt = jwt.decode(token).exp * 1000;
             socket.data.user = {
               role: "admin",
               id: String(user._id),
@@ -80,6 +99,9 @@ export function initChatSocket(httpServer, ctx) {
 
       // 2. Try guest customer authentication
       if (guestToken) {
+        if (typeof guestToken !== "string" || guestToken.length > 128 ||
+            (requestedCustomerId && !isValidCustomerId(requestedCustomerId)))
+          return next(new Error("UNAUTHORIZED"));
         const hash = hashGuestToken(guestToken);
         const query = { guestTokenHash: hash };
         if (requestedCustomerId) {
@@ -99,13 +121,22 @@ export function initChatSocket(httpServer, ctx) {
 
       return next(new Error("UNAUTHORIZED"));
     } catch (err) {
-      logger.error({ err }, "Chat socket authentication error");
+      logger.error({ errorName: err.name }, "Chat socket authentication error");
       return next(new Error("AUTHENTICATION_FAILED"));
     }
   });
 
   io.on("connection", (socket) => {
     const user = socket.data.user;
+    let expiryTimer;
+    if (user.role === "admin") {
+      expiryTimer = setTimeout(() => socket.disconnect(true), Math.max(0, socket.data.expiresAt - Date.now()));
+      expiryTimer.unref?.();
+      socket.use(async (_packet, next) => {
+        try { await socket.data.revalidate(); next(); }
+        catch { socket.disconnect(true); next(new Error("UNAUTHORIZED")); }
+      });
+    }
 
     if (user.role === "admin") {
       // Admin joins the general inbox notifications room
@@ -204,11 +235,12 @@ export function initChatSocket(httpServer, ctx) {
           readAt: now.toISOString(),
         });
       } catch (err) {
-        logger.error({ err, customerId: targetCustomerId }, "Failed to mark messages read on socket");
+        logger.error({ errorName: err.name }, "Failed to mark messages read on socket");
       }
     });
 
     socket.on("disconnect", () => {
+      clearTimeout(expiryTimer);
       socketRateLimits.delete(socket.id);
       if (user.role === "customer") {
         io.to(`conversation:${user.customerId}`).emit("user_offline", {
@@ -229,13 +261,14 @@ export function initChatSocket(httpServer, ctx) {
   return io;
 }
 
-export function broadcastChatMessage(message, conversation) {
+export async function broadcastChatMessage(message, conversation) {
   if (!ioInstance) return;
+  await refreshAdminSockets();
   const customerId = message.customerId;
   const room = `conversation:${customerId}`;
 
   // Broadcast to customer and any admin who joined this conversation room
-  ioInstance.to(room).emit("new_message", {
+  ioInstance.to(room).to("admin:inbox").emit("new_message", {
     message,
     conversation: {
       _id: conversation._id,
@@ -254,22 +287,12 @@ export function broadcastChatMessage(message, conversation) {
     unreadCountAdmin: conversation.unreadCountAdmin,
   });
 
-  // Also broadcast to admin:inbox so viewing admin receives thread updates with zero latency
-  ioInstance.to("admin:inbox").emit("new_message", {
-    message,
-    conversation: {
-      _id: conversation._id,
-      customerId: conversation.customerId,
-      status: conversation.status,
-      unreadCountAdmin: conversation.unreadCountAdmin,
-      unreadCountCustomer: conversation.unreadCountCustomer,
-      lastMessageAt: conversation.lastMessageAt,
-    },
-  });
+
 }
 
-export function broadcastConversationStatus(conversation) {
+export async function broadcastConversationStatus(conversation) {
   if (!ioInstance) return;
+  await refreshAdminSockets();
   const customerId = conversation.customerId;
   const eventName = conversation.status === "closed" ? "conversation_closed" : "conversation_reopened";
 

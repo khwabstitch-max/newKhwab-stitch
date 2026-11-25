@@ -2,6 +2,16 @@
 
 A successful build or deployment is not a launch decision. Status terms: **Verified**, **Implemented but unverified**, **Missing configuration**, **Production blocker**, **Optional improvement**. Local/provider-mock evidence is distinct from live account and provider checks.
 
+## Local hardening review - 25 November 2026
+
+The current checkout passes 405 backend tests, 376 frontend tests, both linters/builds and 13 Chrome journey checks. Both production dependency audits report zero known vulnerabilities. Detailed evidence, fixed defects and remaining limits are in [current verification](review-verification.md).
+
+The source repairs chat privacy/attachment ownership, session revocation, frontend conversation races and photo renewal, required database indexes, operational DNS consistency and missing-asset routing. Environment files were not accessed or changed, and this source has not been deployed by this review.
+
+**Launch remains pending:** review old public chat uploads, verify private-provider policy, back up and verify/migrate required indexes, deploy with passing CI, then complete real-provider/workflow and restore/monitoring checks. Keep private uploads and optional commerce gated until their respective verification is complete. The new startup checks deliberately refuse incomplete database indexes.
+
+The following deployment evidence is historical and does not verify the current checkout on production.
+
 ## Deployment status on 11 November 2026
 
 The collection-network follow-up adds explicit anonymous public-read recovery and a native MongoDB readiness probe. Its local suites passed 234 server and 219 client tests, plus lint/build checks. The earlier deployment/account evidence below remains historical; exact follow-up CI and browser fault-injection results are tracked in the [collection incident](collection-network-incident-2026-11-11.md) and per-commit Actions checks. The original signed-in browser's transport trigger is not established by anonymous browser tests.

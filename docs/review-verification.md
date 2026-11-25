@@ -1,4 +1,42 @@
-# Current verification — 10 November 2026
+# Verification - 25 November 2026
+
+Local source hardening is verified. Live customer launch remains pending the operator checks below. The review preserved the existing React/Vite and Express/Mongoose architecture and did not read or modify .end or .env files, change live data, or publish a deployment.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Full backend suite | 405/405 passed | artifacts/verify-server-test.txt; disposable local MongoDB replica sets, actual transactions, provider mocks where noted |
+| Full frontend suite | 376/376 passed across 39 files | artifacts/verify-client-test.txt |
+| Final chat-focused frontend checks | 18/18 passed | artifacts/chat-focused-tests.txt |
+| Backend chat/security checks | 24/24 passed | artifacts/chat-security-review.txt; real HTTP/socket boundaries with mocked database/provider records |
+| Both linters | Passed | artifacts/verify-server-lint.txt and artifacts/verify-client-lint.txt |
+| Backend source build and frontend production build | Passed | artifacts/verify-server-build.txt and artifacts/verify-client-build.txt |
+| Headless Chrome authentication/order journey | 13 checks passed | artifacts/review-browser-auth.txt; actual local JWT/MongoDB, mocked providers |
+| Current production dependency audits | Zero known vulnerabilities in both projects | npm --prefix server audit --omit=dev --json and npm --prefix client audit --omit=dev --json; lockfiles unchanged |
+
+The frontend build retains an advisory for the approximately 780 kB main JavaScript chunk. It is a performance follow-up, not a failed build or proof of acceptable real-device loading time.
+
+## Changed behavior
+
+- Chat uploads require verified private storage. Server-owned, conversation-bound attachment metadata prevents forged paths, cross-customer attachment reuse, and signing of untrusted legacy objects. Upload/signing/persistence failure cleanup is covered.
+- Admin sockets check current role, disabled state, authVersion and JWT expiry. Revoked sessions are disconnected before new private content/status broadcasts, and duplicate room delivery is removed.
+- Frontend chat ignores stale customer/conversation responses, clears history on identity changes, supports REST delivery when sockets are unavailable, acknowledges displayed messages, and renews private photos including older history/lightbox images with throttled recovery. Routine polling keeps valid photo URLs stable for 240 seconds; focus and explicit image-error recovery can renew them immediately. Transcript export uses the current session token.
+- Startup checks every model's unique/TTL invariants and rejects missing or weakened indexes. Operator scripts share application DNS retries. Startup does not mutate live indexes.
+- Missing real public asset paths return 404. Unit-only selection excludes all MongoDB integration fixtures. Source scanning explicitly skips .end as well as .env files.
+- The failing banner regression now submits only editable website fields, matching the actual admin form; strict rejection of unrelated chat settings remains tested.
+- Chrome fixtures now follow current design summaries, automatic catalogue codes, assistance controls and enabled quote acceptance. No assertion timeouts or mutation retries were added to hide failures. The journey verifies accepted version 1, amount 140000 paise, customer_accepted status, and persistence after refresh.
+
+## Launch requirements
+
+1. Review and revoke any historical public ImageKit chat objects. Hiding legacy attachments does not invalidate previously distributed URLs. Verify private originals, transformations, expiry and ownership before enabling private uploads.
+2. Back up the intended database, review required indexes and run the existing explicit db:indexes operation if needed before rollout. New readiness checks can reveal incomplete prior migrations/restores.
+3. Deploy the reviewed source with a passing CI run and complete real-domain account, order, quote and restart smoke tests. Actual ImageKit, email, Google and courier behavior was not freshly verified.
+4. Verify encrypted backup/restore and monitoring/alert delivery, approve catalogue/pricing and retention rules, and keep optional commerce disabled until its production checks pass.
+
+The current Vercel entry uses REST rather than the standalone Socket.IO listener. Polling supplies message delivery; typing/presence still require a connected socket. Native multi-instance socket fanout and a deployed concurrency/capacity assessment remain separate work. See [operations](operations.md), [security](security.md) and [production readiness](production-readiness.md).
+
+---
+
+## Historical verification - 10 November 2026
 
 This report supersedes earlier counts/deployment assumptions. Tests were run through `scripts/isolated.mjs`: no dotenv loading, configured provider/database values removed from child environments, Vite envDir disabled, temporary files/runtime artifacts kept inside this repository.
 

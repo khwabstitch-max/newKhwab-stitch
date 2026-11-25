@@ -30,7 +30,7 @@ else if (["client-lint","server-lint"].includes(mode)) { cwd = path.join(root,pr
 else if (mode === "server-build") { cwd = path.join(root,"server"); args = ["scripts/check-source.js"]; }
 else if (["server-unit","server-test"].includes(mode)) {
   cwd = path.join(root,"server");
-  const files = extra.length ? extra : (await fs.readdir(path.join(cwd,"tests"))).filter(name => name.endsWith(".test.js") && (mode === "server-test" || !["api.test.js","account-extensions.test.js","commerce-api.test.js"].includes(name))).map(name=>`tests/${name}`);
+  const files = extra.length ? extra : (await fs.readdir(path.join(cwd,"tests"))).filter(name => name.endsWith(".test.js") && (mode === "server-test" || !["api.test.js","account-extensions.test.js","commerce-api.test.js","courier-accounts-api.test.js"].includes(name))).map(name=>`tests/${name}`);
   args = ["--test", "--test-concurrency=1", ...files];
 } else if (mode === "browser") args = ["scripts/browser-smoke.mjs", ...extra];
 else if (mode === "browser-auth") { env.KHWAB_BROWSER_AUTH="1";env.KHWAB_BROWSER_AUTH_ONLY="1";args=["scripts/browser-smoke.mjs",...extra]; }

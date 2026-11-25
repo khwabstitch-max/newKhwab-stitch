@@ -31,7 +31,7 @@ test("the deployment routes API and health before SPA, and missing assets never 
     const route=path=>frontend.routes.find(rule=>rule.src&&new RegExp(`^(?:${rule.src})$`).test(path));
     assert.equal(route("/login").dest,"/index.html");
     assert.equal(route("/account/orders").dest,"/index.html");
-    assert.equal(route("/assets/missing.js").status,404);
+    for (const asset of ["/assets/missing.js", "/atelier/catalogue/missing.webp", "/guides/measurement/missing.jpg", "/crops/sleeve/missing.jpg", "/favicon.svg"]) assert.equal(route(asset).status,404);
     assert.ok(config.rewrites.findIndex(r=>r.destination?.service==="khwab-stitch-api") < config.rewrites.findIndex(r=>r.source==="/(.*)"));
     assert.ok(config.rewrites.some(r => r.source === "/api/(.*)" && r.destination?.service === "khwab-stitch-api"));
     assert.ok(config.rewrites.some(r => r.source === "/health/(.*)" && r.destination?.service === "khwab-stitch-api"));
@@ -39,7 +39,7 @@ test("the deployment routes API and health before SPA, and missing assets never 
   } else {
     const route=url=>config.routes.find(rule=>rule.src&&new RegExp(`^(?:${rule.src})$`).test(url));
     assert.equal(route("/api/orders/123").dest,"/api/index.js");assert.equal(route("/health/ready").dest,"/api/index.js");
-    assert.equal(route("/account/drafts").dest,"/index.html");assert.equal(route("/assets/missing.js").status,404);
+    assert.equal(route("/account/drafts").dest,"/index.html");for (const asset of ["/assets/missing.js", "/atelier/catalogue/missing.webp", "/guides/measurement/missing.jpg", "/crops/sleeve/missing.jpg", "/favicon.svg"]) assert.equal(route(asset).status,404);
     assert.equal(config.outputDirectory,"client/dist");assert.equal(config.functions["api/index.js"].maxDuration,60);
   }
 });

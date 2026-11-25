@@ -802,38 +802,26 @@ test("settings banner reference integrity prevents deletion until removed", asyn
       .field("purpose", "banner")
       .attach("file", png, "banner.png")
   ).body.data;
-  const settings = (await auth("get", "/api/admin/settings", tokenAdmin)).body
-    .data;
-  const {
-    _id: _id,
-    key: _key,
-    createdAt: _created,
-    updatedAt: _updated,
-    ...fields
-  } = settings;
-  const update = await auth("patch", "/api/admin/settings", tokenAdmin).send({
-    ...fields,
-    bannerMediaId: asset._id,
-  });
+  const update = await auth("patch", "/api/admin/settings", tokenAdmin).send(
+    await homepageSettingsBody(tokenAdmin, { bannerMediaId: asset._id }),
+  );
   assert.equal(update.status, 200);
   assert.equal(
     (await auth("delete", "/api/media/" + asset._id, tokenAdmin).send({}))
       .status,
     409,
   );
-  const {
-    _id: _newId,
-    key: _newKey,
-    createdAt: _newCreated,
-    updatedAt: _newUpdated,
-    ...updated
-  } = update.body.data;
+  // Read responses also contain chat configuration and database metadata;
+  // submit only the editable website fields, as the admin form does.
+  await auth("patch", "/api/admin/settings", tokenAdmin).send({
+    ...await homepageSettingsBody(tokenAdmin),
+    chatAutoGreeting: { enabled: false },
+  }).expect(400);
   assert.equal(
     (
-      await auth("patch", "/api/admin/settings", tokenAdmin).send({
-        ...updated,
-        bannerMediaId: null,
-      })
+      await auth("patch", "/api/admin/settings", tokenAdmin).send(
+        await homepageSettingsBody(tokenAdmin, { bannerMediaId: null }),
+      )
     ).status,
     200,
   );

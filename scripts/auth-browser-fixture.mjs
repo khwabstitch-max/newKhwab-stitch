@@ -242,6 +242,12 @@ export async function startAuthFixture({ mediaUploads = false, courierQuote } = 
       adminEmail,
       customerEmail,
       designId: String(design._id),
+      designStartingPricePaise: design.startingPricePaise,
+      templateDesign: {
+        title: boardTemplate.design.title,
+        slug: boardTemplate.design.slug,
+        priceOptions: boardTemplate.design.priceOptions.map(({ label, amountPaise, isStartingPrice }) => ({ label, amountPaise, isStartingPrice })),
+      },
       mediaUploadsEnabled: mediaUploads,
       addFrontendOrigin(origin) {
         const parsed = new URL(origin);
@@ -443,11 +449,20 @@ export async function verifyAuthInBrowser({
     () => evaluate(`!document.querySelector('dialog[open]')`),
     "Escape did not close image zoom",
   );
+  const presentation = await evaluate(`({
+    price: document.querySelector('.design-summary .detail-price strong')?.textContent,
+    label: document.querySelector('.design-summary .detail-price span')?.textContent,
+    notes: document.querySelector('.design-essential-notes')?.innerText,
+    request: document.querySelector('.design-select-button')?.getAttribute('href')
+  })`);
+  const expectedPrice = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(fixture.designStartingPricePaise / 100);
   assert(
-    await evaluate(
-      `document.querySelector('.stitching-rates').innerText.includes('550+') && document.querySelector('.fabric-promise').innerText.includes('Fabric provided by customer')`,
-    ),
-    "Stitching rates or fabric promise missing",
+    presentation.price === expectedPrice &&
+      presentation.label === "Stitching starting from" &&
+      presentation.notes?.includes("Fabric provided by customer.") &&
+      presentation.notes.includes("Final quote and delivery date after review") &&
+      presentation.request === `/request?design=${fixture.designId}&garment=kurti`,
+    "Design summary did not show the fixture starting price, fabric/review terms and matching request link: " + JSON.stringify(presentation),
   );
   await navigate("/admin/designs");
   await waitFor(
@@ -477,14 +492,16 @@ export async function verifyAuthInBrowser({
     "Preset did not save through real API",
   );
   const saved = await evaluate(
-    `fetch('/api/admin/designs?limit=50',{headers:{Authorization:'Bearer '+JSON.parse(sessionStorage.getItem('khwab.session.v1')).token}}).then(response=>response.json()).then(result=>result.data.find(design=>design.code==='KS-TEAL-01')).then(design=>({views:design?.imageViews?.length,prices:design?.priceOptions?.length,neck:design?.designDetails?.neck,status:design?.status}))`,
+    `fetch('/api/admin/designs?limit=50',{headers:{Authorization:'Bearer '+JSON.parse(sessionStorage.getItem('khwab.session.v1')).token}}).then(response=>{if(!response.ok)throw new Error('Saved design lookup failed: '+response.status);return response.json();}).then(result=>result.data.find(design=>design.slug===${JSON.stringify(fixture.templateDesign.slug)})).then(design=>design?({code:design.code,title:design.title,views:design.imageViews?.length,prices:design.priceOptions?.map(({label,amountPaise,isStartingPrice})=>({label,amountPaise,isStartingPrice})),neck:design.designDetails?.neck,status:design.status}):null)`,
   );
   assert(
-    saved.views === 7 &&
-      saved.prices === 4 &&
+    saved && /^K-(0|[1-9]\d*)$/.test(saved.code) &&
+      saved.title === fixture.templateDesign.title &&
+      saved.views === 7 &&
+      JSON.stringify(saved.prices) === JSON.stringify(fixture.templateDesign.priceOptions) &&
       saved.neck === "Browser-edited neckline" &&
       saved.status === "draft",
-    "Saved board did not preserve admin edits",
+    "Saved board did not preserve admin edits, template rates or an allocated catalogue code: " + JSON.stringify(saved),
   );
   results.push(
     "Actual board gallery has seven views, modal/Escape support and stitching-only rates; an administrator saves edited template details/prices/previews through the real API without ImageKit.",
@@ -498,7 +515,7 @@ export async function verifyAuthInBrowser({
   await fill("quantity", "2");
   await evaluate("document.querySelector('.wizard-form').requestSubmit()");
   await waitFor(
-    () => evaluate("Boolean(document.getElementById('method'))"),
+    () => evaluate("new URLSearchParams(location.search).get('step') === 'measurements' && Boolean(document.querySelector('.request-measurement-plans input[name=measurement-plan][value=assistance]:checked'))"),
     "Exact copy failed to skip component selection",
   );
   await evaluate("document.querySelector('.wizard-form').requestSubmit()");
@@ -738,9 +755,9 @@ export async function verifyAuthInBrowser({
   await waitFor(
     () =>
       evaluate(
-        "Array.from(document.querySelectorAll('button')).some(b=>b.textContent.includes('Accept current quote'))",
+        "Array.from(document.querySelectorAll('button')).some(b=>b.textContent.includes('Accept current quote') && !b.disabled)",
       ),
-    "Quote acceptance missing",
+    "Current quote did not become ready for explicit acceptance",
   );
   await evaluate(
     "window.confirm=()=>true;Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('Accept current quote')).click()",
@@ -750,8 +767,12 @@ export async function verifyAuthInBrowser({
       evaluate("document.body.innerText.includes('Accepted quote version 1')"),
     "Customer quote acceptance did not persist",
   );
+  const accepted = await evaluate(`fetch('/api/orders/${receiptPath.split("/").pop()}',{headers:{Authorization:'Bearer '+JSON.parse(sessionStorage.getItem('khwab.session.v1')).token}}).then(response=>{if(!response.ok)throw new Error('Accepted order lookup failed: '+response.status);return response.json();}).then(result=>({status:result.data.status,version:result.data.acceptedQuote?.version,amount:result.data.acceptedQuote?.amountPaise}))`);
+  assert(accepted.status === "customer_accepted" && accepted.version === 1 && accepted.amount === 140000, "Quote acceptance did not persist the exact version, agreed amount and customer decision: " + JSON.stringify(accepted));
+  await navigate(receiptPath);
+  await waitFor(() => evaluate("document.body.innerText.includes('Accepted quote version 1')"), "Accepted quote did not survive page refresh");
   results.push(
-    "Admin reviews the saved request and sends a versioned final quote; the customer explicitly accepts the current version through browser UI.",
+    "Admin reviews the saved request and sends a versioned final quote; the customer explicitly accepts the current version, and its exact amount/status persist through API lookup and browser refresh.",
   );
   await navigate("/account/benefits");
   await waitFor(()=>evaluate("document.body.innerText.includes('Benefits are currently unavailable')"),"Customer disabled-benefits state did not load");

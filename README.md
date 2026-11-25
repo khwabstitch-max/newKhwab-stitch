@@ -1,5 +1,7 @@
 # Khwab Stitch
 
+Latest local review (25 November 2026): 405 backend and 376 frontend tests pass, both linters/builds pass, and 13 Chrome journey checks pass. Chat privacy/session handling, conversation refresh, required indexes and asset routing are repaired. No .end/.env files were accessed or changed. Live launch still requires the [documented provider, historical-media, backup/index and deployment checks](docs/review-verification.md). Earlier deployment evidence below is historical.
+
 Custom stitching and alterations using customer-provided fabric. A request is reviewed by the atelier; a current versioned quote must be explicitly accepted before work progresses. Fabric, delivery, materials and custom work are never silently promised.
 
 ## Current implementation

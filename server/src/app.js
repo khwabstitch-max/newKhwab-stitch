@@ -56,7 +56,7 @@ export function createApp(context) {
       },
       credentials: false,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Authorization", "Content-Type", "Idempotency-Key"],
+      allowedHeaders: ["Authorization", "Content-Type", "Idempotency-Key", "X-Guest-Token", "X-Customer-ID"],
     }),
   );
   const limitHandler = (_req, res, _next, options) =>

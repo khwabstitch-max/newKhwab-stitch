@@ -202,7 +202,19 @@ export function createChatSchemas() {
   ChatConversation.index({ status: 1, lastMessageAt: -1 });
   ChatCustomer.index({ guestTokenHash: 1 });
 
-  return { ChatCustomer, ChatConversation, ChatMessage };
+  // Provider IDs are immutable primary keys, so ownership lookup needs no new
+  // uniqueness migration. Existing untracked uploads are never trusted.
+  const ChatAttachment = new Schema({
+    _id: { type: String, required: true, maxlength: 256 },
+    owner: { type: String, required: true, maxlength: 100 },
+    customerId: { type: String, default: "", maxlength: 40 },
+    filePath: { type: String, required: true, maxlength: 2000 },
+    private: { type: Boolean, required: true, enum: [true] },
+    width: Number, height: Number,
+    mime: { type: String, required: true, enum: ["image/webp"] },
+    size: { type: Number, required: true, min: 0 },
+  }, opts);
+  return { ChatCustomer, ChatConversation, ChatMessage, ChatAttachment };
 }
 
 export const DEFAULT_AUTO_GREETING = {
